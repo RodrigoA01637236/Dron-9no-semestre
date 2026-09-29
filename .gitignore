@@ -61,10 +61,6 @@ runs/
 *.onnx
 *.engine
 
-# Imagen de prueba descargada por YOLO
-bus.jpg
-
-
 # =========================
 # VS Code / Windows
 # =========================
@@ -72,3 +68,6 @@ bus.jpg
 .vscode/
 Thumbs.db
 Desktop.ini
+
+# Resultados generados por nuestro sistema de vision
+/vision/resultados/
