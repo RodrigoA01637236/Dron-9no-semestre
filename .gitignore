@@ -1,3 +1,7 @@
+# =========================
+# C / C++
+# =========================
+
 # Prerequisites
 *.d
 
@@ -30,3 +34,41 @@
 *.exe
 *.out
 *.app
+
+
+# =========================
+# Python
+# =========================
+
+# Entorno virtual
+/.venv/
+
+# Cache de Python
+__pycache__/
+*.pyc
+*.pyo
+
+
+# =========================
+# YOLO / IA
+# =========================
+
+# Resultados automáticos de entrenamiento/detección
+runs/
+
+# Modelos y pesos
+*.pt
+*.onnx
+*.engine
+
+# Imagen de prueba descargada por YOLO
+bus.jpg
+
+
+# =========================
+# VS Code / Windows
+# =========================
+
+.vscode/
+Thumbs.db
+Desktop.ini
