@@ -34,38 +34,68 @@ modelo al dron" es copiar un archivo y correr un comando.
 ### Cuentas (todas gratis)
 - **Google** con Drive (~5 GB libres): respaldo del dataset y de los pesos entrenados.
 - **Kaggle**: para descargar datasets (crear token API en *Settings → API → Create New
-  Token*, descarga `kaggle.json`).
+  Token*, descarga `kaggle.json` y colócalo en `C:\Users\<tu-usuario>\.kaggle\kaggle.json`
+  — en Linux/Mac: `~/.kaggle/kaggle.json`).
 - **GitHub**: ya la tienes; trabaja en tu rama de visión.
 
-### Instalación
+### Instalación en Windows (PowerShell) — probada paso a paso
 
-```bash
-# Python 3.10+ y un entorno virtual para el proyecto
-python3 -m venv ~/venvs/dron-vision
-source ~/venvs/dron-vision/bin/activate        # Windows: ~\venvs\dron-vision\Scripts\activate
+⚠️ Usar **Python 3.13**, no 3.14: varios paquetes (Label Studio en particular) aún no
+tienen versión precompilada para 3.14 e intentan compilar desde código, lo que falla
+sin un compilador de C instalado.
 
-# Herramientas de datos y verificación
+```powershell
+# 1. Instalar Python 3.13 con el gestor de python.org
+#    (si "py" no existe: instala Python desde python.org marcando "Add python.exe to PATH",
+#     cierra la terminal y ábrela de nuevo)
+py install 3.13
+
+# 2. Crear el entorno virtual con 3.13
+py -V:3.13 -m venv $env:USERPROFILE\venvs\dron-vision
+
+# 3. Activarlo — la línea debe empezar con "(dron-vision)".
+#    OJO: esto se repite en CADA terminal nueva antes de trabajar.
+& $env:USERPROFILE\venvs\dron-vision\Scripts\Activate.ps1
+python --version    # debe decir Python 3.13.x
+
+# 4. Herramientas de datos y verificación
 pip install kaggle label-studio pillow pandas scikit-learn onnxruntime opencv-python
 
-# Entrenamiento local (instala PyTorch automáticamente)
+# 5. Entrenamiento (instala PyTorch automáticamente; ~2 GB, tarda varios minutos)
 pip install ultralytics
 ```
 
-### ¿Tu PC tiene GPU NVIDIA?
+Notas de instalación:
+- Si PowerShell rechaza el `Activate.ps1` por "execution policy": corre una vez
+  `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser` y reintenta.
+- En Linux/Mac los pasos 2–5 equivalen a `python3 -m venv ~/venvs/dron-vision` y
+  `source ~/venvs/dron-vision/bin/activate`.
 
-Corre `nvidia-smi` en una terminal:
+### Habilitar la GPU NVIDIA (si la tienes)
 
-- **Sí aparece tu GPU** → verifica que PyTorch la vea:
-  `python -c "import torch; print(torch.cuda.is_available())"` debe imprimir `True`.
-  Si imprime `False`, reinstala PyTorch con CUDA siguiendo el selector de
-  `pytorch.org/get-started` y vuelve a probar. Con GPU, una corrida tarda 10–30 min.
-- **No hay GPU** → todo funciona igual pero en CPU: una corrida con ~3,000 imágenes a
-  384 px puede tardar **varias horas**. Es viable, pero planea las corridas (déjalas de
-  noche) y usa `batch=16` y `workers=2`. Si la iteración se vuelve insoportable, la
-  alternativa gratis sin cambiar nada del código es Kaggle Notebooks (GPU ~30 h/semana).
+`pip install ultralytics` instala la versión de PyTorch **solo-CPU** en Windows. Si
+`nvidia-smi` muestra tu GPU pero `python -c "import torch; print(torch.cuda.is_available())"`
+imprime `False`, reinstala PyTorch con CUDA (con el venv activo):
 
-**Entregable fase 0:** `kaggle datasets list` responde sin error de autenticación y
-`python -c "from ultralytics import YOLO; print('ok')"` imprime `ok`.
+```powershell
+pip uninstall -y torch torchvision
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+python -c "import torch; print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))"
+```
+
+- La descarga es de ~2.8 GB y el paso de instalación puede quedarse callado 5–15 min
+  (el antivirus escanea miles de archivos): no está trabado, déjalo terminar.
+- Si `cu128` da "No matching distribution": copia el comando actual del selector de
+  [pytorch.org/get-started](https://pytorch.org/get-started/locally/) (Windows + Pip + CUDA).
+- La advertencia de conflicto con `setuptools` que imprime al final (por Label Studio)
+  es inofensiva; ignórala.
+- Con GPU, una corrida tarda 10–30 min. **Sin GPU NVIDIA** todo funciona igual pero en
+  CPU (horas por corrida): usa `--batch 16 --workers 2`, deja las corridas de noche, y
+  si se vuelve insoportable, la alternativa gratis es Kaggle Notebooks (GPU ~30 h/semana).
+
+**Entregable fase 0:** `kaggle datasets list` responde sin error de autenticación,
+`python -c "from ultralytics import YOLO; print('ok')"` imprime `ok`, y (con GPU)
+`torch.cuda.is_available()` imprime `True`.
 
 ---
 
