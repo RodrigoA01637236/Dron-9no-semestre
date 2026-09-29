@@ -9,7 +9,7 @@ from pathlib import Path
 CARPETA_VISION = Path(__file__).parent
 
 # Imagen que queremos analizar
-IMAGEN = CARPETA_VISION / "imagenes" / "bus.jpg"
+IMAGENES = CARPETA_VISION / "imagenes"
 
 # Carpeta donde guardaremos las detecciones
 RESULTADOS = CARPETA_VISION / "resultados"
@@ -27,7 +27,7 @@ modelo = YOLO("yolo11n.pt")
 # ==========================================
 
 resultados = modelo.predict(
-    source=str(IMAGEN),
+    source=str(IMAGENES),
     device=0,
     conf=0.50,
     save=True,
