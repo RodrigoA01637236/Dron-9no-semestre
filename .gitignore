@@ -1,73 +1,26 @@
-# =========================
-# C / C++
-# =========================
+# Datos e imágenes (se versionan solo manifiestos; ver docs/05-datos-dataset.md)
+data/raw/
+data/flights/
+*.jpg
+*.jpeg
+*.png
+!docs/**/*.png
 
-# Prerequisites
-*.d
+# Modelos pesados (versionar solo el JSON de metadata)
+*.engine
+*.onnx
+*.pt
 
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
-
-
-# =========================
 # Python
-# =========================
-
-# Entorno virtual
-/.venv/
-
-# Cache de Python
 __pycache__/
 *.pyc
-*.pyo
+.venv/
+venvs/
 
-
-# =========================
-# YOLO / IA
-# =========================
-
-# Resultados automáticos de entrenamiento/detección
+# Entrenamiento
 runs/
+wandb/
 
-# Modelos y pesos
-*.pt
-*.onnx
-*.engine
-
-# =========================
-# VS Code / Windows
-# =========================
-
-.vscode/
-Thumbs.db
-Desktop.ini
-
-# Resultados generados por nuestro sistema de vision
-/vision/resultados/
+# Sistema
+.DS_Store
+*.swp
