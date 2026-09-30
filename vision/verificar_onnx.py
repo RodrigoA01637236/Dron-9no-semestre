@@ -1,4 +1,4 @@
-"""Prueba de humo del paquete modelo (fase 5): corre el ONNX con onnxruntime.
+r"""Prueba de humo del paquete modelo (fase 5): corre el ONNX con onnxruntime.
 
 Usa EXACTAMENTE el preprocesado del contrato (resize 384x384, BGR->RGB,
 float32/255, CHW) y el JSON de metadata que acompaña al modelo. Es el mismo
