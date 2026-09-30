@@ -5,7 +5,7 @@ Regla: **cada corrida de entrenamiento agrega una fila aquí**, aunque haya sali
 
 | # | Fecha | Dataset (versión) | Modelo base | imgsz | epochs | batch | top1 test | F1 por clase (test) | Umbral | Pesos (ruta en Drive) | Notas / análisis de errores |
 |---|-------|-------------------|-------------|-------|--------|-------|-----------|---------------------|--------|-----------------------|------------------------------|
-| 1 | 2026-09-30 | v1_public_baseline (11,228 imgs: sana 3,029 / sigatoka 3,226 / otra 4,973) | yolov8n-cls (ImageNet) | 384 | 47 (early stop; mejor: 37) | 32 | **0.918** | pendiente (leer de `runs/classify/train/confusion_matrix.png`) | pendiente (fase 4) | pendiente subir a Drive (`best.pt`/`best.onnx` de `runs/classify/train/weights/`) | Primera corrida. RTX 4060 Laptop, 0.585 h. val top1 0.927. `model.names`: {0: otra_condicion, 1: sana, 2: sigatoka}. Métrica sobre dataset público — no representa campo. |
+| 1 | 2026-09-30 | v1_public_baseline (11,228 imgs: sana 3,029 / sigatoka 3,226 / otra 4,973) | yolov8n-cls (ImageNet) | 384 | 47 (early stop; mejor: 37) | 32 | **0.918** | sigatoka≈0.95, otra≈0.92, sana≈0.89 (de la matriz de val; recalls: sig 0.97 / otra 0.95 / sana 0.83) | 0.65 (default, por afinar con datos de campo) | Drive: `dron/pesos/2026-09-30/` (`best.pt`, `best.onnx`) | Primera corrida. RTX 4060 Laptop, 0.585 h. val top1 0.927. `model.names`: {0: otra_condicion, 1: sana, 2: sigatoka}. Error dominante: 16 % de `sana` predicha como `otra_condicion` (falsa alarma benigna); solo 1 % de `sigatoka` real marcada `sana`. Pendiente: revisar imágenes sanas mal clasificadas. Métrica sobre dataset público — no representa campo. |
 
 ## Convenciones
 
