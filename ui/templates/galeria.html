@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block contenido %}
+<h1>Fotos recolectadas</h1>
+<p class="sub">Haz clic en una foto para verla en grande y corregir su diagnóstico.</p>
+<div class="fila" style="margin-bottom:1rem">
+  <select id="vuelo"></select>
+  <select id="clase"></select>
+  <select id="filtro">
+    <option value="">Todas</option>
+    <option value="pendientes">Sin revisar</option>
+    <option value="revisadas">Revisadas</option>
+    <option value="sin_gps">Sin GPS</option>
+  </select>
+  <span class="mini-nota" id="total"></span>
+</div>
+<div class="rejilla" id="rejilla"></div>
+<div class="fila" style="justify-content:center; margin-top:1rem">
+  <button id="ant">← Anterior</button><span id="pag"></span><button id="sig">Siguiente →</button>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let pagina = 1;
+async function cargar() {
+  const q = new URLSearchParams({
+    vuelo: vuelo.value, clase: clase.value, filtro: filtro.value, pagina,
+  });
+  const r = await api("/api/fotos?" + q);
+  document.getElementById("total").textContent = `${r.total} fotos`;
+  const paginas = Math.max(1, Math.ceil(r.total / 60));
+  document.getElementById("pag").textContent = `Página ${pagina} de ${paginas}`;
+  document.getElementById("ant").disabled = pagina <= 1;
+  document.getElementById("sig").disabled = pagina >= paginas;
+  document.getElementById("rejilla").innerHTML = r.fotos.map(f => {
+    const d = diagnostico(f);
+    const marca = d.fuente === "humano" ? "✔ revisada" : d.fuente === "modelo" ? `${Math.round(f.conf * 100)} %` : "";
+    return `<a class="celda" href="/revisar?foto=${f.id}">
+      <img src="/mini/${f.id}" loading="lazy" alt="">
+      <div class="pie">${pildora(d)}<span class="mini-nota">${marca}${f.lat == null ? " · sin GPS" : ""}</span></div></a>`;
+  }).join("") || `<p>No hay fotos con ese filtro. <a href="/importar">Importa un vuelo</a>.</p>`;
+}
+const vuelo = document.getElementById("vuelo"), clase = document.getElementById("clase"),
+      filtro = document.getElementById("filtro");
+(async () => {
+  await cargarResumen();
+  llenarVuelos(vuelo);
+  clase.innerHTML = `<option value="">Todos los diagnósticos</option>` +
+    RESUMEN.categorias.map(c => `<option value="${c.clave}">${c.nombre}</option>`).join("") +
+    `<option value="${DESCARTAR}">Foto no sirve</option>`;
+  [vuelo, clase, filtro].forEach(s => s.onchange = () => { pagina = 1; cargar(); });
+  document.getElementById("ant").onclick = () => { pagina--; cargar(); };
+  document.getElementById("sig").onclick = () => { pagina++; cargar(); };
+  await cargar();
+})();
+</script>
+{% endblock %}

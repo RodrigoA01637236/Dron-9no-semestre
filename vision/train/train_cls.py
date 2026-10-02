@@ -9,6 +9,8 @@ runs/classify/<run>/weights/{best.pt,best.onnx} en Drive.
 Ver vision/GUIA-MODELO.md fase 3.
 """
 import argparse
+import json
+from pathlib import Path
 
 from ultralytics import YOLO
 
@@ -21,6 +23,8 @@ def main() -> None:
     ap.add_argument("--imgsz", type=int, default=384)
     ap.add_argument("--batch", type=int, default=32)
     ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--project", default=None, help="carpeta donde guardar la corrida (default: runs/classify)")
+    ap.add_argument("--name", default=None, help="nombre de la corrida (default: train, train2, ...)")
     args = ap.parse_args()
 
     model = YOLO(args.model)
@@ -43,6 +47,8 @@ def main() -> None:
         hsv_h=0.005,
         hsv_s=0.3,
         hsv_v=0.4,
+        project=args.project,
+        name=args.name,
     )
 
     # Evaluar SIEMPRE en test; las métricas de val no se reportan como finales.
@@ -57,6 +63,21 @@ def main() -> None:
     # Orden EXACTO de clases para el campo "classes" del JSON de metadata
     # (fase 5 de la guía): un orden equivocado cruza los diagnósticos.
     print(f"model.names (orden de salida): {model.names}")
+
+    # Metadata del paquete modelo junto al ONNX, con el orden de clases ya
+    # correcto: así nadie tiene que copiarlo a mano (contrato de la fase 5).
+    meta = {
+        "model": Path(onnx_path).name,
+        "input": [1, 3, args.imgsz, args.imgsz],
+        "preprocesado": "resize %dx%d, BGR->RGB, float32 /255, CHW" % (args.imgsz, args.imgsz),
+        "classes": [model.names[i] for i in sorted(model.names)],
+        "umbral_confianza": 0.65,
+        "dataset": str(args.data),
+        "top1_test": round(float(metrics.top1), 4),
+    }
+    meta_path = Path(onnx_path).with_suffix(".json")
+    meta_path.write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"Metadata: {meta_path}")
 
 
 if __name__ == "__main__":

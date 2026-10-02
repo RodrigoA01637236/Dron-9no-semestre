@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block contenido %}
+<h1>Modelo</h1>
+<p class="sub">Cada foto que revisas le enseña al modelo. Cuando juntes varias correcciones, reentrénalo aquí:
+  el modelo nuevo se compara con el actual en un <b>examen de campo</b> (fotos revisadas que nunca se usan
+  para entrenar) y tú decides si lo activas.</p>
+
+<div class="tarjeta" id="activo"></div>
+
+<h2>Datos disponibles por categoría</h2>
+<div class="tarjeta">
+  <table><thead><tr><th>Categoría</th><th>Fotos base (públicas)</th><th>Revisadas en campo<br><small>(para entrenar)</small></th>
+    <th>Examen de campo<br><small>(nunca se entrenan)</small></th><th></th></tr></thead><tbody id="datos"></tbody></table>
+  <p class="mini-nota" id="nota-datos"></p>
+</div>
+
+<h2>Reentrenar</h2>
+<div class="tarjeta">
+  <div id="form-entrenar">
+    <div class="fila">
+      <select id="epocas">
+        <option value="10">Prueba rápida (10 épocas, ~10 min)</option>
+        <option value="50" selected>Completo (50 épocas, ~35 min)</option>
+      </select>
+      <button class="primario" id="btn-entrenar">🧠 Reentrenar ahora</button>
+    </div>
+    <p class="mini-nota">La computadora debe quedarse encendida y con esta ventana de la estación abierta.
+      Puedes seguir revisando fotos mientras entrena.</p>
+  </div>
+  <div id="en-curso" class="oculto">
+    <div class="fila"><b id="fase"></b><span class="mini-nota" id="tiempo"></span></div>
+    <pre class="log" id="log"></pre>
+  </div>
+</div>
+
+<h2>Versiones del modelo</h2>
+<div class="tarjeta">
+  <table><thead><tr><th>Versión</th><th>Creado</th><th>Categorías</th><th>Examen de campo</th><th>Prueba (datos públicos)</th><th></th></tr></thead>
+    <tbody id="versiones"></tbody></table>
+  <div id="reproceso" class="oculto" style="margin-top:.8rem">
+    Rediagnosticando todas las fotos con el modelo nuevo… <span id="rep-txt"></span>
+    <div class="progreso"><div id="rep-barra"></div></div>
+  </div>
+</div>
+
+<details class="tarjeta">
+  <summary>🔧 Zona del equipo técnico: agregar una categoría nueva</summary>
+  <p>Una categoría nueva (por ejemplo <i>Fusarium</i> o <i>Daño por insecto</i>) aparece como botón en
+    <b>Revisar</b>. El modelo solo aprende a reconocerla después de juntar al menos
+    <b id="minimo"></b> fotos revisadas de ella y reentrenar.</p>
+  <p class="mini-nota">⚠️ Agrégala solo si un agrónomo puede distinguirla en las fotos: categorías confusas
+    empeoran el modelo para todas las demás.</p>
+  <div class="fila">
+    <input type="text" id="cat-nombre" placeholder="Nombre (ej. Fusarium)">
+    <input type="color" id="cat-color" value="#7b61ff">
+    <label><input type="checkbox" id="cat-ok"> Lo validé con el agrónomo</label>
+    <button id="btn-cat">Agregar categoría</button>
+  </div>
+  <p id="cat-msg" class="mini-nota"></p>
+</details>
+{% endblock %}
+{% block scripts %}
+<script>
+const pct = x => x == null ? "—" : `${Math.round(x * 100)} %`;
+let sondeo = null;
+
+function textoComparacion(m) {
+  if (m.acc_campo == null) return `<span class="mini-nota">Sin examen de campo aún</span>`;
+  let txt = `<b>${pct(m.acc_campo)}</b> <small>(${m.n_campo} fotos)</small>`;
+  if (m.acc_campo_anterior != null) {
+    const dif = m.acc_campo - m.acc_campo_anterior;
+    txt += dif > 0.005 ? ` <span style="color:#2e9e44">▲ mejor que el anterior (${pct(m.acc_campo_anterior)})</span>`
+         : dif < -0.005 ? ` <span style="color:#c62f3b">▼ peor que el anterior (${pct(m.acc_campo_anterior)})</span>`
+         : ` <span class="mini-nota">= igual que el anterior</span>`;
+  }
+  return txt;
+}
+
+async function cargar() {
+  const r = await api("/api/entrenamiento");
+  const activo = r.modelos.find(m => m.activo);
+  document.getElementById("activo").innerHTML = activo
+    ? `<b>Modelo en uso: versión ${activo.version}</b> · creado ${esc(activo.creado.replace("T", " "))}<br>
+       Categorías: ${JSON.parse(activo.clases).map(c => pildora(categoria(c))).join(" ")}<br>
+       Examen de campo: ${textoComparacion(activo)}`
+    : `⚠️ No hay modelo en uso. Copia <code>sigatoka_cls_v1.onnx</code> a <code>${esc(RESUMEN.modelo_inicial)}</code> y reinicia.`;
+
+  document.getElementById("datos").innerHTML = r.datos.map(d => `<tr>
+    <td>${pildora(d)}</td><td>${d.base}</td><td>${d.campo}</td><td>${d.examen}</td>
+    <td>${d.entrenable ? "✔ entra al entrenamiento" : `<span class="mini-nota">faltan ${r.min_por_clase - d.base - d.campo - d.examen} fotos</span>`}</td></tr>`).join("");
+  document.getElementById("nota-datos").textContent = r.dataset_base ? ""
+    : "⚠️ No se encontró el dataset base (data\\dataset). Se entrenará solo con las fotos revisadas.";
+  document.getElementById("minimo").textContent = r.min_por_clase;
+
+  document.getElementById("versiones").innerHTML = r.modelos.map(m => `<tr>
+    <td>v${m.version}${m.activo ? " <b>(en uso)</b>" : ""}</td><td>${esc(m.creado.replace("T", " "))}</td>
+    <td>${JSON.parse(m.clases).length}</td><td>${textoComparacion(m)}</td><td>${pct(m.top1_test)}</td>
+    <td>${m.activo ? "" : `<button data-v="${m.version}" class="${m.acc_campo_anterior != null && m.acc_campo < m.acc_campo_anterior ? "" : "primario"}">Usar este modelo</button>`}</td></tr>`).join("");
+  document.querySelectorAll("#versiones button").forEach(b => b.onclick = () => activar(+b.dataset.v));
+
+  const e = r.estado;
+  const corriendo = !!e.activo;
+  document.getElementById("form-entrenar").classList.toggle("oculto", corriendo);
+  document.getElementById("en-curso").classList.toggle("oculto", !e.fase);
+  if (e.fase) {
+    document.getElementById("fase").textContent = (corriendo ? "⏳ " : e.error ? "❌ " : "✅ ") + e.fase +
+      (e.error ? ` — ${e.error}` : e.version ? ` — se creó la versión v${e.version}; revisa abajo si conviene usarla.` : "");
+    document.getElementById("tiempo").textContent = e.transcurrido_s != null ? `${Math.floor(e.transcurrido_s / 60)} min ${e.transcurrido_s % 60} s` : "";
+    document.getElementById("log").textContent = (e.ultimas || []).join("\n");
+  }
+  const rp = r.reproceso;
+  document.getElementById("reproceso").classList.toggle("oculto", !rp.activo);
+  if (rp.activo) {
+    document.getElementById("rep-txt").textContent = `${rp.hechas} de ${rp.total}`;
+    document.getElementById("rep-barra").style.width = `${(rp.hechas / Math.max(rp.total, 1)) * 100}%`;
+  }
+  clearTimeout(sondeo);
+  if (corriendo || rp.activo) sondeo = setTimeout(cargar, 3000);
+}
+
+async function activar(v) {
+  if (!confirm(`¿Usar el modelo v${v}? Todas las fotos se volverán a diagnosticar con él.\n(Siempre puedes regresar a la versión anterior.)`)) return;
+  await post("/api/modelo/activar", { version: v });
+  await cargar();
+}
+
+document.getElementById("btn-entrenar").onclick = async () => {
+  const ep = +document.getElementById("epocas").value;
+  if (!confirm(`Se va a reentrenar el modelo (${ep} épocas). La computadora debe quedarse encendida. ¿Continuar?`)) return;
+  try { await post("/api/entrenamiento", { epocas: ep }); } catch (e) { alert(e.message); }
+  await cargar();
+};
+
+document.getElementById("btn-cat").onclick = async () => {
+  const msg = document.getElementById("cat-msg");
+  if (!document.getElementById("cat-ok").checked) { msg.textContent = "Marca la casilla de validación primero."; return; }
+  try {
+    await post("/api/categorias", { nombre: document.getElementById("cat-nombre").value,
+                                    color: document.getElementById("cat-color").value });
+    msg.textContent = "✅ Categoría agregada. Ya aparece en Revisar.";
+    await cargarResumen(); await cargar();
+  } catch (e) { msg.textContent = "❌ " + e.message; }
+};
+
+(async () => { await cargarResumen(); await cargar(); })();
+</script>
+{% endblock %}

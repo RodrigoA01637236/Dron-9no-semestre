@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block contenido %}
+<h1>Importar un vuelo</h1>
+<p class="sub">Sube las fotos de un vuelo. El modelo las diagnostica y aparecen en el mapa.</p>
+
+<div class="tarjeta">
+  <label><b>Nombre del vuelo</b> (ej. <code>2026-10-15_finca-lopez</code>)<br>
+    <input type="text" id="nombre" size="40"></label>
+</div>
+
+<div class="zona-subida">
+  <p style="font-size:1.1rem; margin-top:0"><b>Elige la carpeta del vuelo</b></p>
+  <p class="mini-nota">Fotos del dron con su archivo <code>.json</code> de GPS, o fotos de celular/GoPro con la
+    ubicación activada (el GPS va dentro de la foto).</p>
+  <div class="fila" style="justify-content:center">
+    <label class="boton primario">📁 Elegir carpeta<input type="file" id="carpeta" webkitdirectory multiple hidden></label>
+    <label class="boton">🖼️ Elegir fotos sueltas<input type="file" id="sueltas" multiple
+      accept=".jpg,.jpeg,.png,.bmp,.webp,.json" hidden></label>
+  </div>
+  <p id="seleccion" class="mini-nota"></p>
+  <button class="primario" id="btn-subir" disabled>Importar</button>
+</div>
+
+<div id="progreso-caja" class="tarjeta oculto" style="margin-top:1rem">
+  <div id="fase" style="margin-bottom:.4rem"></div>
+  <div class="progreso"><div id="barra"></div></div>
+</div>
+<div id="resultado" class="tarjeta oculto" style="margin-top:1rem"></div>
+
+<h2>Vuelos importados</h2>
+<div class="tarjeta"><table><thead><tr><th>Vuelo</th><th>Fotos</th><th>Con GPS</th><th>Revisadas</th><th>Importado</th></tr></thead>
+  <tbody id="tabla"></tbody></table></div>
+{% endblock %}
+{% block scripts %}
+<script>
+const EXT = /\.(jpe?g|png|bmp|webp|json)$/i;
+let archivos = [];
+
+function elegir(lista) {
+  archivos = [...lista].filter(f => EXT.test(f.name));
+  const fotos = archivos.filter(f => !/\.json$/i.test(f.name)).length;
+  document.getElementById("seleccion").textContent =
+    `${fotos} fotos y ${archivos.length - fotos} archivos de GPS seleccionados.`;
+  document.getElementById("btn-subir").disabled = !fotos;
+  const nombre = document.getElementById("nombre");
+  const carpeta = lista[0]?.webkitRelativePath?.split("/")[0];
+  if (!nombre.value && carpeta) nombre.value = carpeta;
+  if (!nombre.value) nombre.value = new Date().toISOString().slice(0, 10) + "_vuelo";
+}
+document.getElementById("carpeta").onchange = e => elegir(e.target.files);
+document.getElementById("sueltas").onchange = e => elegir(e.target.files);
+
+async function importar() {
+  const vuelo = document.getElementById("nombre").value.trim();
+  if (!vuelo) return alert("Escribe un nombre para el vuelo.");
+  document.getElementById("btn-subir").disabled = true;
+  document.getElementById("progreso-caja").classList.remove("oculto");
+  const fase = document.getElementById("fase"), barra = document.getElementById("barra");
+  const LOTE = 20;
+  let nombreFinal = vuelo;
+  for (let i = 0; i < archivos.length; i += LOTE) {
+    const datos = new FormData();
+    datos.append("vuelo", vuelo);
+    archivos.slice(i, i + LOTE).forEach(f => datos.append("archivos", f, f.name));
+    const r = await api("/api/subir", { method: "POST", body: datos });
+    nombreFinal = r.vuelo;
+    const hechos = Math.min(i + LOTE, archivos.length);
+    fase.textContent = `Subiendo… ${hechos} de ${archivos.length}`;
+    barra.style.width = `${(hechos / archivos.length) * 80}%`;
+  }
+  fase.textContent = "Leyendo GPS y diagnosticando con el modelo… (puede tardar un poco)";
+  const r = await post("/api/procesar", { vuelo: nombreFinal });
+  barra.style.width = "100%";
+  fase.textContent = "¡Listo!";
+  const res = document.getElementById("resultado");
+  res.classList.remove("oculto");
+  res.innerHTML = `<b>${r.nuevas} fotos nuevas</b> en el vuelo <b>${esc(r.vuelo)}</b>, ${r.con_gps} con GPS.
+    ${r.nuevas - r.con_gps > 0 ? `<br>⚠️ ${r.nuevas - r.con_gps} fotos sin GPS: se pueden revisar pero no salen en el mapa.` : ""}
+    ${r.sin_modelo ? "<br>⚠️ No hay modelo cargado: las fotos quedaron sin diagnóstico." : ""}
+    <div class="fila" style="margin-top:.8rem"><a class="boton primario" href="/mapa">Ver en el mapa</a>
+    <a class="boton" href="/revisar">Revisar fotos</a></div>`;
+  await tabla();
+}
+document.getElementById("btn-subir").onclick = () => importar().catch(e => {
+  document.getElementById("fase").textContent = "Error: " + e.message;
+  document.getElementById("btn-subir").disabled = false;
+});
+
+async function tabla() {
+  await cargarResumen();
+  document.getElementById("tabla").innerHTML = RESUMEN.vuelos.map(v => `<tr><td>${esc(v.vuelo)}</td>
+    <td>${v.fotos}</td><td>${v.con_gps}</td><td>${v.revisadas}</td><td>${esc(v.importada)}</td></tr>`).join("")
+    || `<tr><td colspan="5" class="mini-nota">Todavía no hay vuelos.</td></tr>`;
+}
+tabla();
+</script>
+{% endblock %}

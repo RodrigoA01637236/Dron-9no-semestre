@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='leaflet/leaflet.css') }}">{% endblock %}
+{% block clase_main %}ancho{% endblock %}
+{% block contenido %}
+<div class="mapa-wrap">
+  <aside class="panel">
+    <h1>Mapa del cultivo</h1>
+    <p class="sub">Cada punto es una foto en el lugar donde se tomó.</p>
+
+    <label>Vuelo<br><select id="vuelo" style="width:100%"></select></label>
+
+    <div class="cifras">
+      <div><div class="cifra" id="n-fotos">0</div>fotos en el mapa</div>
+      <div><div class="cifra" id="n-objetivo" style="color:#d7263d">0</div><span id="txt-objetivo">con Sigatoka</span></div>
+      <div><div class="cifra" id="n-revisadas">0</div>revisadas por humano</div>
+      <div><div class="cifra" id="n-singps">0</div>sin GPS (no salen)</div>
+    </div>
+
+    <h2>Vista</h2>
+    <div class="fila">
+      <label><input type="radio" name="vista" value="puntos" checked> Puntos</label>
+      <label><input type="radio" name="vista" value="zonas"> Zonas</label>
+    </div>
+    <div id="opciones-zona" class="oculto" style="margin-top:.5rem">
+      <label>Enfermedad a mapear <select id="objetivo"></select></label><br>
+      <label>Tamaño de zona
+        <select id="tam-zona"><option value="10">10 m</option><option value="20" selected>20 m</option>
+          <option value="50">50 m</option><option value="100">100 m</option></select></label>
+      <p class="mini-nota">Color por % de fotos con la enfermedad: verde 0 %, ámbar hasta 25 %, rojo más de 25 %.</p>
+    </div>
+
+    <h2>Leyenda</h2>
+    <div class="leyenda" id="leyenda"></div>
+    <p class="mini-nota">Borde grueso = revisada por un humano. Gris = el modelo duda (revisar).</p>
+
+    <p class="mini-nota">📍 Ubicación aproximada (GPS sin RTK, ±3 m): cada punto marca dónde estaba el dron,
+      no una planta exacta.</p>
+    <a id="geojson" class="boton" href="/api/geojson">⬇️ Descargar GeoJSON (Google Earth / QGIS)</a>
+  </aside>
+  <div id="mapa"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='leaflet/leaflet.js') }}"></script>
+<script>
+const mapa = L.map("mapa", { zoomControl: true }).setView([17.99, -92.95], 15);
+const fondos = {
+  "Satélite (requiere internet)": L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    { maxZoom: 20, maxNativeZoom: 19, attribution: "Imágenes © Esri" }),
+  "Calles (requiere internet)": L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    { maxZoom: 20, maxNativeZoom: 19, attribution: "© OpenStreetMap" }),
+  "Sin fondo (sin internet)": L.layerGroup(),
+};
+fondos["Satélite (requiere internet)"].addTo(mapa);
+L.control.layers(fondos).addTo(mapa);
+L.control.scale({ imperial: false }).addTo(mapa);
+
+const capa = L.layerGroup().addTo(mapa);
+let FOTOS = [];
+
+function popup(f) {
+  const d = diagnostico(f);
+  const fuente = d.fuente === "humano"
+    ? `Revisada${f.revisor ? " por " + esc(f.revisor) : ""}`
+    : d.fuente === "modelo" ? `Modelo: ${Math.round(f.conf * 100)} % (${textoConfianza(f.conf)})` : "";
+  return `<div class="popup"><img src="/mini/${f.id}" loading="lazy">
+    ${pildora(d)}<br><small>${fuente}<br>${esc(f.fecha || "")}${f.alt != null ? ` · ${f.alt.toFixed(1)} m` : ""}</small><br>
+    <a href="/revisar?foto=${f.id}">Revisar / corregir</a></div>`;
+}
+
+function dibujarPuntos() {
+  FOTOS.forEach(f => {
+    const d = diagnostico(f);
+    L.circleMarker([f.lat, f.lon], {
+      radius: 7, color: d.fuente === "humano" ? "#111" : "#fff", weight: d.fuente === "humano" ? 3 : 1.5,
+      fillColor: d.color, fillOpacity: .9,
+    }).bindPopup(popup(f)).addTo(capa);
+  });
+}
+
+function dibujarZonas() {
+  const metros = +document.getElementById("tam-zona").value;
+  const objetivo = document.getElementById("objetivo").value;
+  const lat0 = FOTOS.reduce((s, f) => s + f.lat, 0) / FOTOS.length;
+  const dLat = metros / 111320, dLon = metros / (111320 * Math.cos(lat0 * Math.PI / 180));
+  const celdas = new Map();
+  FOTOS.forEach(f => {
+    const d = diagnostico(f);
+    if (!d.clave || d.dudoso || d.clave === DESCARTAR) return;  // solo diagnósticos confiables
+    const k = `${Math.floor(f.lat / dLat)}|${Math.floor(f.lon / dLon)}`;
+    const c = celdas.get(k) || { i: Math.floor(f.lat / dLat), j: Math.floor(f.lon / dLon), n: 0, pos: 0 };
+    c.n++; c.pos += d.clave === objetivo;
+    celdas.set(k, c);
+  });
+  const nombre = categoria(objetivo).nombre;
+  celdas.forEach(c => {
+    const p = c.pos / c.n;
+    const color = p === 0 ? "#2e9e44" : p <= .25 ? "#f0a202" : "#d7263d";
+    L.rectangle([[c.i * dLat, c.j * dLon], [(c.i + 1) * dLat, (c.j + 1) * dLon]], {
+      color, weight: 1, fillColor: color, fillOpacity: .25 + .45 * Math.min(1, c.n / 10),
+    }).bindTooltip(`${c.n} fotos · ${c.pos} con ${nombre} (${Math.round(p * 100)} %)`).addTo(capa);
+  });
+}
+
+function dibujar() {
+  capa.clearLayers();
+  if (!FOTOS.length) return;
+  const vista = document.querySelector("input[name=vista]:checked").value;
+  document.getElementById("opciones-zona").classList.toggle("oculto", vista !== "zonas");
+  vista === "zonas" ? dibujarZonas() : dibujarPuntos();
+}
+
+async function cargar() {
+  const vuelo = document.getElementById("vuelo").value;
+  const r = await api("/api/mapa" + (vuelo ? `?vuelo=${encodeURIComponent(vuelo)}` : ""));
+  FOTOS = r.fotos;
+  const objetivo = document.getElementById("objetivo").value;
+  document.getElementById("n-fotos").textContent = FOTOS.length;
+  document.getElementById("n-objetivo").textContent = FOTOS.filter(f => diagnostico(f).clave === objetivo && !diagnostico(f).dudoso).length;
+  document.getElementById("txt-objetivo").textContent = "con " + categoria(objetivo).nombre;
+  document.getElementById("n-revisadas").textContent = FOTOS.filter(f => f.etiqueta).length;
+  document.getElementById("n-singps").textContent = r.sin_gps;
+  document.getElementById("geojson").href = "/api/geojson" + (vuelo ? `?vuelo=${encodeURIComponent(vuelo)}` : "");
+  dibujar();
+  if (FOTOS.length) mapa.fitBounds(L.latLngBounds(FOTOS.map(f => [f.lat, f.lon])), { padding: [40, 40], maxZoom: 19 });
+}
+
+(async () => {
+  await cargarResumen();
+  llenarVuelos(document.getElementById("vuelo"));
+  const obj = document.getElementById("objetivo");
+  obj.innerHTML = RESUMEN.categorias.map(c => `<option value="${c.clave}">${c.nombre}</option>`).join("");
+  obj.value = RESUMEN.categorias.some(c => c.clave === "sigatoka") ? "sigatoka" : RESUMEN.categorias[0]?.clave;
+  document.getElementById("leyenda").innerHTML = RESUMEN.categorias
+    .map(c => `<div><span class="punto" style="background:${c.color}"></span>${c.nombre}</div>`).join("") +
+    `<div><span class="punto" style="background:${GRIS}"></span>Dudoso / sin diagnóstico</div>`;
+  document.getElementById("vuelo").onchange = cargar;
+  document.querySelectorAll("input[name=vista]").forEach(r => r.onchange = dibujar);
+  document.getElementById("tam-zona").onchange = dibujar;
+  obj.onchange = cargar;
+  await cargar();
+})();
+</script>
+{% endblock %}

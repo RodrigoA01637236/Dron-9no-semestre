@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block contenido %}
+<div class="fila" style="justify-content:space-between; margin-bottom:.8rem">
+  <div>
+    <h1>Revisar fotos</h1>
+    <p class="sub" style="margin:0">Confirma o corrige el diagnóstico. Empezamos por las fotos donde el modelo tiene
+      <b>más dudas</b>: son las que más le enseñan.</p>
+  </div>
+  <div class="fila">
+    <label>Vuelo <select id="vuelo"></select></label>
+    <label>Revisor <input type="text" id="revisor" placeholder="Tu nombre" size="14"></label>
+  </div>
+</div>
+
+<div id="vacio" class="tarjeta oculto">
+  <h2 style="margin-top:0">🎉 No hay fotos pendientes</h2>
+  <p>Todas las fotos de este vuelo ya están revisadas. Importa un vuelo nuevo o ve a <a href="/modelo">Modelo</a>
+    para reentrenar con tus correcciones.</p>
+</div>
+
+<div id="area" class="revision oculto">
+  <div>
+    <div class="visor"><img id="img" alt="Foto a revisar"></div>
+    <p class="mini-nota" id="meta"></p>
+  </div>
+  <div>
+    <div class="tarjeta">
+      <div class="mini-nota">El modelo cree que es:</div>
+      <div id="sugerencia" style="margin:.3rem 0 .6rem"></div>
+      <div id="probs"></div>
+    </div>
+    <div class="tarjeta">
+      <div style="font-weight:600; margin-bottom:.5rem">¿Qué ves tú en la hoja?</div>
+      <div class="botones-etiqueta" id="botones"></div>
+      <div class="fila" style="margin-top:.6rem">
+        <button id="btn-saltar">Saltar <span class="tecla">S</span></button>
+        <button id="btn-deshacer" disabled>Deshacer <span class="tecla">Z</span></button>
+      </div>
+    </div>
+    <p class="mini-nota" id="contador"></p>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let actual = null, saltadas = [], historial = [];
+const params = new URLSearchParams(location.search);
+let fotoDirecta = params.get("foto");
+
+function guardarRevisor() { try { localStorage.setItem("revisor", revisor.value); } catch (e) {} }
+const revisor = document.getElementById("revisor");
+try { revisor.value = localStorage.getItem("revisor") || ""; } catch (e) {}
+revisor.onchange = guardarRevisor;
+
+function opciones() {
+  return [...RESUMEN.categorias, { clave: DESCARTAR, nombre: "Foto no sirve (borrosa, sin hoja…)", color: GRIS }];
+}
+
+function pintarBotones() {
+  document.getElementById("botones").innerHTML = opciones().map((c, i) => {
+    const tecla = c.clave === DESCARTAR ? "0" : String(i + 1);
+    return `<button data-clave="${c.clave}" style="border-color:${c.color}; color:${c.color}">
+      <span><span class="punto" style="background:${c.color}"></span> ${esc(c.nombre)}</span>
+      <span class="tecla">${tecla}</span></button>`;
+  }).join("");
+  document.querySelectorAll("#botones button").forEach(b => b.onclick = () => etiquetar(b.dataset.clave));
+}
+
+async function mostrar(f, pendientes) {
+  document.getElementById("vacio").classList.toggle("oculto", !!f);
+  document.getElementById("area").classList.toggle("oculto", !f);
+  actual = f;
+  if (!f) return;
+  const det = (await api(`/api/foto/${f.id}`)).foto;
+  document.getElementById("img").src = `/foto/${f.id}`;
+  document.getElementById("sugerencia").innerHTML = det.pred
+    ? `${pildora(categoria(det.pred))} <small>${Math.round(det.conf * 100)} % · ${textoConfianza(det.conf)}</small>`
+    : "<i>Sin modelo cargado</i>";
+  document.getElementById("probs").innerHTML = det.probs ? Object.entries(det.probs)
+    .sort((a, b) => b[1] - a[1]).map(([k, p]) => `<small>${esc(categoria(k).nombre)} ${Math.round(p * 100)} %</small>
+      <div class="barra-prob"><div style="width:${p * 100}%; background:${categoria(k).color}"></div></div>`).join("") : "";
+  const ya = det.etiqueta ? ` · Ya revisada como <b>${esc(categoria(det.etiqueta).nombre)}</b>${det.revisor ? " por " + esc(det.revisor) : ""}` : "";
+  document.getElementById("meta").innerHTML = `${esc(det.vuelo)} / ${esc(det.archivo)}` +
+    (det.lat != null ? ` · 📍 ${det.lat.toFixed(6)}, ${det.lon.toFixed(6)}` : " · sin GPS") + ya;
+  if (pendientes != null) document.getElementById("contador").textContent =
+    `${pendientes} fotos pendientes de revisar${document.getElementById("vuelo").value ? " en este vuelo" : ""}.`;
+}
+
+async function siguiente() {
+  if (fotoDirecta) {
+    const f = (await api(`/api/foto/${fotoDirecta}`)).foto;
+    fotoDirecta = null;
+    return mostrar(f, null);
+  }
+  const vuelo = document.getElementById("vuelo").value;
+  const q = new URLSearchParams({ vuelo, excluir: saltadas.join(",") });
+  const r = await api("/api/siguiente?" + q);
+  await mostrar(r.foto, r.pendientes);
+}
+
+async function etiquetar(clave) {
+  if (!actual) return;
+  if (!revisor.value.trim()) { revisor.focus(); revisor.placeholder = "¡Escribe tu nombre!"; return; }
+  guardarRevisor();
+  await post("/api/etiquetar", { id: actual.id, etiqueta: clave, revisor: revisor.value });
+  historial.push(actual.id);
+  document.getElementById("btn-deshacer").disabled = false;
+  await siguiente();
+}
+
+async function deshacer() {
+  const id = historial.pop();
+  if (id == null) return;
+  await post("/api/etiquetar", { id, etiqueta: null });
+  document.getElementById("btn-deshacer").disabled = !historial.length;
+  fotoDirecta = id;
+  await siguiente();
+}
+
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+  const ops = opciones();
+  if (e.key === "0") return etiquetar(DESCARTAR);
+  const n = parseInt(e.key, 10);
+  if (n >= 1 && n <= ops.length - 1) return etiquetar(ops[n - 1].clave);
+  if (e.key.toLowerCase() === "s" || e.key === "ArrowRight") { if (actual) saltadas.push(actual.id); siguiente(); }
+  if (e.key.toLowerCase() === "z") deshacer();
+});
+
+(async () => {
+  await cargarResumen();
+  llenarVuelos(document.getElementById("vuelo"));
+  pintarBotones();
+  document.getElementById("vuelo").onchange = () => { saltadas = []; siguiente(); };
+  document.getElementById("btn-saltar").onclick = () => { if (actual) saltadas.push(actual.id); siguiente(); };
+  document.getElementById("btn-deshacer").onclick = deshacer;
+  await siguiente();
+})();
+</script>
+{% endblock %}

@@ -71,3 +71,9 @@ Desktop.ini
 
 # Resultados generados por nuestro sistema de vision
 /vision/resultados/
+# =========================
+# Datos (pesan GB: viven en disco + respaldo en Drive, no en git)
+# =========================
+data/raw/
+data/dataset/
+data/estacion/

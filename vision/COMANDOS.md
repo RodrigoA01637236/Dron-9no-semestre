@@ -13,6 +13,19 @@ Sabes que estás listo cuando la línea se ve así:
 
 ---
 
+## 🛰️ Estación de tierra (mapa, revisión y reentrenamiento)
+
+Doble clic en `ui\Iniciar-Estacion.bat`, o:
+
+```powershell
+python ui\estacion.py            # se abre en http://localhost:5050
+python ui\estacion.py --red      # para abrirla desde otro equipo del mismo WiFi
+```
+
+Guía: `ui\ESTACION.md`. Datos en `data\estacion\` (respaldar en Drive).
+
+---
+
 ## 🎬 Demos (para presentar)
 
 ```powershell
