@@ -1,0 +1,14 @@
+{
+  "model": "sigatoka_cls_v1.onnx",
+  "input": [1, 3, 384, 384],
+  "preprocesado": "resize 384x384, BGR->RGB, float32 /255, CHW",
+  "classes": ["otra_condicion", "sana", "sigatoka"],
+  "umbral_confianza": 0.65,
+  "dataset": "v1_public_baseline",
+  "top1_test": 0.918,
+  "f1_val_aprox": {"sana": 0.89, "sigatoka": 0.95, "otra_condicion": 0.92},
+  "recall_val": {"sana": 0.83, "sigatoka": 0.97, "otra_condicion": 0.95},
+  "entrenado": "2026-09-30, yolov8n-cls, 47 epochs (best 37), batch 32, RTX 4060 Laptop",
+  "verificacion_onnx": "2026-09-30 con onnxruntime en PC (fase 5): test sigatoka 447/474 (94.3%), test sana 364/430 (84.7%) — paridad con el entrenamiento confirmada",
+  "notas": "Baseline con datasets publicos; el orden de classes viene de model.names y NO debe cambiarse. f1_test y umbral pendientes de la fase 4. Renombrar runs/classify/train/weights/best.onnx a sigatoka_cls_v1.onnx al empaquetar."
+}
