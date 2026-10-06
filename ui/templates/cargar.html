@@ -55,6 +55,9 @@
           <a class="boton claro grande" id="btn-revisar-esta" href="/revisar" style="flex:1 1 12rem">Revisar esta imagen</a>
           <button class="boton grande" id="btn-otra" type="button" style="flex:1 1 8rem">Cargar más</button>
         </div>
+        <button class="boton" id="btn-borrar-esta" type="button" style="justify-self:start">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+          Borrar esta imagen</button>
       </div>
     </div>
   </div>
@@ -143,11 +146,10 @@ async function cargarLote() {
   $("rejilla").innerHTML = fotos.map(f => {
     const d = diagnostico(f);
     const marca = d.fuente === "humano" ? "Revisada" : d.fuente === "modelo" ? pct(f.conf) : "";
-    return `<button class="celda" type="button" data-id="${f.id}" aria-pressed="false" style="font:inherit; text-align:left; cursor:pointer; padding:0">
-      <img src="/mini/${f.id}" loading="lazy" alt="">
-      <span class="celda-pie">${ficha(d)}<span class="nota"><span>${marca}</span><span title="${esc(f.archivo)}">${esc(f.archivo.replace(/^\d{6}_/, ""))}</span></span></span></button>`;
+    return celdaImagen(f, `${ficha(d)}<span class="nota"><span>${marca}</span><span title="${esc(f.archivo)}">${esc(f.archivo.replace(/^\d{6}_/, ""))}</span></span>`);
   }).join("") || `<p class="nota" style="grid-column:1/-1">Hoy todavía no se ha cargado ninguna imagen.</p>`;
   $("rejilla").querySelectorAll(".celda").forEach(c => c.onclick = () => seleccionar(+c.dataset.id));
+  activarBorrado($("rejilla"), alBorrar);
   marcarSeleccion();
   return fotos;
 }
@@ -325,6 +327,18 @@ $("btn-capturar").onclick = async () => {
   subir([{ f: blob, ruta: `camara_${hora}.jpg` }]);
 };
 $("btn-otra").onclick = reiniciar;
+
+// Al borrar una imagen: si era la que estaba abierta, se cierra; y se actualiza la lista.
+async function alBorrar(id) {
+  if (id === seleccion) reiniciar();
+  await cargarLote();
+  $("resumen-lote").textContent = "";
+}
+dosPasos($("btn-borrar-esta"), "Confirmar: borrar la imagen", async () => {
+  if (seleccion == null) return;
+  try { await borrarImagen(seleccion); await cargarResumen(); await alBorrar(seleccion); }
+  catch (e) { pintarError(e.message); }
+});
 window.addEventListener("pagehide", detenerCamara);
 
 (async () => { await LISTO; await cargarLote(); })();

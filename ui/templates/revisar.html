@@ -42,6 +42,9 @@
             <div class="fila" style="margin-top:.9rem">
               <button class="boton" id="btn-saltar" type="button">Saltar <kbd>S</kbd></button>
               <button class="boton" id="btn-deshacer" type="button" disabled>Deshacer <kbd>Z</kbd></button>
+              <button class="boton" id="btn-borrar" type="button" style="margin-left:auto">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+                Borrar imagen</button>
             </div>
             <p class="mensaje error" id="msg" role="alert"></p>
           </div>
@@ -214,9 +217,7 @@ async function cargarTodas() {
   $("rejilla").innerHTML = r.fotos.map(f => {
     const d = diagnostico(f);
     const marca = d.fuente === "humano" ? "Revisada" : d.fuente === "modelo" ? `Modelo ${pct(f.conf)}` : "Sin resultado";
-    return `<button class="celda" type="button" data-id="${f.id}" style="font:inherit; text-align:left; cursor:pointer; padding:0">
-      <img src="/mini/${f.id}" loading="lazy" alt="">
-      <span class="celda-pie">${ficha(d)}<span class="nota"><span>${marca}</span><span>${esc(nombreFecha(f.vuelo))}</span></span></span></button>`;
+    return celdaImagen(f, `${ficha(d)}<span class="nota"><span>${marca}</span><span>${esc(nombreFecha(f.vuelo))}</span></span>`);
   }).join("") || `<p class="nota" style="grid-column:1/-1">No hay imágenes con ese filtro.</p>`;
   $("rejilla").querySelectorAll(".celda").forEach(c => c.onclick = () => {
     fotoDirecta = +c.dataset.id;
@@ -224,6 +225,7 @@ async function cargarTodas() {
     vista = "una"; actualizarURL(); recargar();
     document.querySelector(".hoja-flotante").scrollTo({ top: 0 });
   });
+  activarBorrado($("rejilla"), async () => { pintarFechas(); await cargarTodas(); });
 }
 
 (async () => {
@@ -239,6 +241,16 @@ async function cargarTodas() {
   document.querySelectorAll("input[name=vista]").forEach(r => r.onchange = () => { vista = r.value; actualizarURL(); recargar(); });
   $("btn-saltar").onclick = () => { if (actual) saltadas.push(actual.id); siguiente(); };
   $("btn-deshacer").onclick = deshacer;
+  dosPasos($("btn-borrar"), "Confirmar: borrar", async () => {
+    if (!actual) return;
+    try {
+      await borrarImagen(actual.id);
+      historial = historial.filter(id => id !== actual.id);
+      $("btn-deshacer").disabled = !historial.length;
+      await cargarResumen(); pintarFechas();
+      await siguiente();
+    } catch (e) { $("msg").textContent = e.message; }
+  });
   pintarFechas();
   await recargar();
 })();

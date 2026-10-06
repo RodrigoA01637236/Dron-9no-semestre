@@ -26,6 +26,13 @@ Requisitos: el entorno `dron-vision` de la guía del modelo, más `pip install f
 (el `.bat` lo instala solo la primera vez), y el modelo `sigatoka_cls_v1.onnx`
 (de tu Drive) copiado en `vision\models\`.
 
+## Borrar imágenes
+
+Cada imagen tiene una **X arriba a la derecha** (en Cargar y en Revisar, vista *Todas las
+imágenes*). El primer clic cambia la X por **Borrar**; un segundo clic la borra (si no
+confirmas en 3 segundos, vuelve a ser X). También hay un botón *Borrar esta imagen* junto a la
+imagen abierta. Borrar quita la imagen de la estación y del disco: no se puede deshacer.
+
 ## Cómo se lee el resultado
 
 - Cada imagen muestra el diagnóstico, su seguridad y una barra por condición. La línea

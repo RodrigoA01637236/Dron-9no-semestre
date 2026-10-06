@@ -251,6 +251,24 @@ def api_identificar():
                    modelo_version=version, ms=ms, ancho=int(img.shape[1]), alto=int(img.shape[0]))
 
 
+@app.delete("/api/foto/<int:fid>")
+def api_borrar_foto(fid):
+    """Borra una imagen cargada: la quita de la base y borra el archivo, su miniatura
+    y su archivo de ubicación (.json) si lo tiene."""
+    with conectar() as con:
+        f = con.execute("SELECT vuelo, archivo FROM fotos WHERE id=?", (fid,)).fetchone()
+        if not f:
+            return jsonify(ok=False, error="Esa imagen ya no existe"), 404
+        con.execute("DELETE FROM fotos WHERE id=?", (fid,))
+    ruta = carpeta_vuelo(f["vuelo"]) / f["archivo"]
+    for archivo in (ruta, ruta.with_suffix(".json"), datos.MINIS / f["vuelo"] / (ruta.stem + ".jpg")):
+        try:
+            archivo.unlink(missing_ok=True)
+        except OSError:
+            pass  # p. ej. abierto en otro programa en Windows; la imagen ya no cuenta
+    return jsonify(ok=True)
+
+
 @app.post("/api/etiquetar")
 def api_etiquetar():
     d = request.get_json(force=True)

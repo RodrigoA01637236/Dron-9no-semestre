@@ -134,3 +134,41 @@ function dosPasos(boton, textoConfirmar, accion) {
     await accion();
   });
 }
+
+// Tarjeta de imagen con una X arriba a la derecha para borrarla.
+// El primer clic pide confirmar ("Borrar"); el segundo la borra. Se desarma a los 3 s.
+const ICONO_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+function celdaImagen(f, pie) {
+  return `<div class="celda-caja">
+    <button class="celda" type="button" data-id="${f.id}" aria-pressed="false">
+      <img src="/mini/${f.id}" loading="lazy" alt="">
+      <span class="celda-pie">${pie}</span></button>
+    <button class="borrar" type="button" data-borrar="${f.id}" aria-label="Borrar esta imagen" title="Borrar esta imagen">${ICONO_X}</button>
+  </div>`;
+}
+const borrarImagen = id => api(`/api/foto/${id}`, { method: "DELETE" });
+function activarBorrado(contenedor, alBorrar) {
+  contenedor.querySelectorAll("[data-borrar]").forEach(b => b.onclick = async e => {
+    e.stopPropagation();
+    if (!b.classList.contains("confirmando")) {
+      b.classList.add("confirmando");
+      b.textContent = "Borrar";
+      b.setAttribute("aria-label", "Confirmar: borrar esta imagen");
+      b._t = setTimeout(() => { b.classList.remove("confirmando"); b.innerHTML = ICONO_X; b.setAttribute("aria-label", "Borrar esta imagen"); }, 3000);
+      return;
+    }
+    clearTimeout(b._t);
+    b.disabled = true;
+    const id = +b.dataset.borrar;
+    try {
+      await borrarImagen(id);
+      b.closest(".celda-caja").remove();
+      await cargarResumen();
+      if (alBorrar) await alBorrar(id);
+    } catch (err) {
+      b.disabled = false;
+      b.textContent = "Error";
+      b.title = err.message;
+    }
+  });
+}
