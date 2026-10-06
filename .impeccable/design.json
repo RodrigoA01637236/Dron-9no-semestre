@@ -1,570 +1,714 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-06T22:00:00Z",
+  "generatedAt": "2026-10-06T23:06:43+00:00",
   "title": "Design System: Estación Sigatoka",
   "extensions": {
     "colorMeta": {
-      "papel": {
+      "fondo-mapa": {
         "role": "neutral",
-        "displayName": "Chart Paper",
-        "canonical": "#f3f5f2",
-        "purpose": "Page ground, table header rows, drop zone at rest.",
+        "displayName": "Map Ground",
+        "canonical": "#142019",
         "tonalRamp": [
-          "oklch(15% 0.002 135)",
-          "oklch(26% 0.003 135)",
-          "oklch(38% 0.003 135)",
-          "oklch(49% 0.004 135)",
-          "oklch(61% 0.004 135)",
-          "oklch(72% 0.004 135)",
-          "oklch(84% 0.003 135)",
-          "oklch(95% 0.003 135)"
+          "#040e08",
+          "#1b2720",
+          "#36433b",
+          "#546259",
+          "#738178",
+          "#94a399",
+          "#b9c9bf",
+          "#e3f3e9"
         ]
       },
-      "hoja": {
+      "panel": {
         "role": "neutral",
-        "displayName": "Sheet",
-        "canonical": "#ffffff",
-        "purpose": "Panels, title bar, map margin panel, controls.",
+        "displayName": "Panel Navy",
+        "canonical": "#0f171d",
         "tonalRamp": [
-          "oklch(15% 0.000 90)",
-          "oklch(26% 0.000 90)",
-          "oklch(38% 0.000 90)",
-          "oklch(49% 0.000 90)",
-          "oklch(61% 0.000 90)",
-          "oklch(72% 0.000 90)",
-          "oklch(84% 0.000 90)",
-          "oklch(95% 0.000 90)"
+          "#050c12",
+          "#1d252c",
+          "#384148",
+          "#555f67",
+          "#757f87",
+          "#95a0a8",
+          "#bbc6ce",
+          "#e5f0f9"
         ]
       },
-      "margen": {
+      "panel-2": {
         "role": "neutral",
-        "displayName": "Margin",
-        "canonical": "#e8ecec",
-        "purpose": "Recessed tone: empty tracks, disabled buttons, placeholders.",
+        "displayName": "Inner Panel",
+        "canonical": "#1a2833",
         "tonalRamp": [
-          "oklch(15% 0.002 197)",
-          "oklch(26% 0.003 197)",
-          "oklch(38% 0.003 197)",
-          "oklch(49% 0.004 197)",
-          "oklch(61% 0.004 197)",
-          "oklch(72% 0.004 197)",
-          "oklch(84% 0.003 197)",
-          "oklch(95% 0.003 197)"
+          "#020c16",
+          "#182631",
+          "#33424e",
+          "#50606c",
+          "#6f808d",
+          "#90a1af",
+          "#b5c7d5",
+          "#e0f1ff"
         ]
       },
-      "tinta": {
+      "panel-3": {
         "role": "neutral",
-        "displayName": "Chart Ink",
-        "canonical": "#13202b",
-        "purpose": "Text, headings, major edge rules, corner ticks, threshold line, selected segment.",
+        "displayName": "Hover Panel",
+        "canonical": "#22323e",
         "tonalRamp": [
-          "oklch(15% 0.015 245)",
-          "oklch(26% 0.019 245)",
-          "oklch(38% 0.022 245)",
-          "oklch(49% 0.025 245)",
-          "oklch(61% 0.028 245)",
-          "oklch(72% 0.025 245)",
-          "oklch(84% 0.021 245)",
-          "oklch(95% 0.018 245)"
+          "#010c17",
+          "#162631",
+          "#31424f",
+          "#4f606d",
+          "#6e808e",
+          "#8ea1b0",
+          "#b4c7d6",
+          "#e0f1ff"
         ]
       },
-      "tinta-2": {
+      "riel-activo": {
         "role": "neutral",
-        "displayName": "Ink 2",
-        "canonical": "#3f4d59",
-        "purpose": "Secondary text, labels, unselected segments and nav.",
+        "displayName": "Rail Active",
+        "canonical": "#1f3346",
         "tonalRamp": [
-          "oklch(15% 0.015 244)",
-          "oklch(26% 0.018 244)",
-          "oklch(38% 0.021 244)",
-          "oklch(49% 0.024 244)",
-          "oklch(61% 0.027 244)",
-          "oklch(72% 0.024 244)",
-          "oklch(84% 0.021 244)",
-          "oklch(95% 0.017 244)"
+          "#000c1b",
+          "#122638",
+          "#2d4256",
+          "#4a6075",
+          "#698096",
+          "#8aa1b8",
+          "#afc7df",
+          "#e2f0fe"
         ]
       },
-      "tinta-3": {
-        "role": "neutral",
-        "displayName": "Ink 3",
-        "canonical": "#5d6a75",
-        "purpose": "Notes, placeholders, doubtful hatch, disabled text.",
-        "tonalRamp": [
-          "oklch(15% 0.013 244)",
-          "oklch(26% 0.016 244)",
-          "oklch(38% 0.018 244)",
-          "oklch(49% 0.021 244)",
-          "oklch(61% 0.023 244)",
-          "oklch(72% 0.021 244)",
-          "oklch(84% 0.018 244)",
-          "oklch(95% 0.015 244)"
-        ]
-      },
-      "regla": {
+      "borde": {
         "role": "neutral",
         "displayName": "Rule",
-        "canonical": "#cfd6da",
-        "purpose": "Default 1px hairline.",
+        "canonical": "#263844",
         "tonalRamp": [
-          "oklch(15% 0.005 232)",
-          "oklch(26% 0.006 232)",
-          "oklch(38% 0.007 232)",
-          "oklch(49% 0.008 232)",
-          "oklch(61% 0.009 232)",
-          "oklch(72% 0.008 232)",
-          "oklch(84% 0.007 232)",
-          "oklch(95% 0.006 232)"
+          "#010d17",
+          "#152632",
+          "#30424f",
+          "#4d616e",
+          "#6c808e",
+          "#8da2b0",
+          "#b2c8d7",
+          "#dff2ff"
         ]
       },
-      "regla-fuerte": {
+      "borde-fuerte": {
         "role": "neutral",
         "displayName": "Strong Rule",
-        "canonical": "#9aa6ae",
-        "purpose": "Control borders, 8px tick ruler.",
+        "canonical": "#36505f",
         "tonalRamp": [
-          "oklch(15% 0.010 237)",
-          "oklch(26% 0.012 237)",
-          "oklch(38% 0.014 237)",
-          "oklch(49% 0.016 237)",
-          "oklch(61% 0.018 237)",
-          "oklch(72% 0.016 237)",
-          "oklch(84% 0.014 237)",
-          "oklch(95% 0.012 237)"
+          "#000d16",
+          "#0e2735",
+          "#2a4352",
+          "#476271",
+          "#668292",
+          "#87a3b4",
+          "#acc9db",
+          "#def2fe"
         ]
       },
-      "azul": {
+      "visor": {
+        "role": "neutral",
+        "displayName": "Viewer Black",
+        "canonical": "#060a0d",
+        "tonalRamp": [
+          "#070c0f",
+          "#202528",
+          "#3b4144",
+          "#595f63",
+          "#787e83",
+          "#999fa4",
+          "#bec5ca",
+          "#e8f0f4"
+        ]
+      },
+      "texto": {
+        "role": "neutral",
+        "displayName": "Text",
+        "canonical": "#eaf0f4",
+        "tonalRamp": [
+          "#080c0e",
+          "#202528",
+          "#3c4044",
+          "#595e62",
+          "#797e82",
+          "#9a9fa3",
+          "#bfc5c9",
+          "#e9eff3"
+        ]
+      },
+      "texto-2": {
+        "role": "neutral",
+        "displayName": "Body Text",
+        "canonical": "#c9d5dd",
+        "tonalRamp": [
+          "#050c11",
+          "#1c252b",
+          "#374148",
+          "#555f66",
+          "#747f86",
+          "#95a0a8",
+          "#bac6ce",
+          "#e4f1f9"
+        ]
+      },
+      "texto-3": {
+        "role": "neutral",
+        "displayName": "Quiet Text",
+        "canonical": "#9fb0bc",
+        "tonalRamp": [
+          "#020d15",
+          "#18262f",
+          "#33424c",
+          "#51606b",
+          "#70808b",
+          "#90a1ad",
+          "#b6c7d3",
+          "#dff1fe"
+        ]
+      },
+      "acento": {
         "role": "primary",
-        "displayName": "Aeronautical Blue",
-        "canonical": "#1d5fa6",
-        "purpose": "The only action and selection colour.",
+        "displayName": "Sky Signal Blue",
+        "canonical": "#4da3ff",
         "tonalRamp": [
-          "oklch(15% 0.072 254)",
-          "oklch(26% 0.087 254)",
-          "oklch(38% 0.102 254)",
-          "oklch(49% 0.117 254)",
-          "oklch(61% 0.130 254)",
-          "oklch(72% 0.115 254)",
-          "oklch(84% 0.100 254)",
-          "oklch(95% 0.085 254)"
+          "#000b1d",
+          "#022447",
+          "#094075",
+          "#135ea6",
+          "#247fd8",
+          "#4ba1fd",
+          "#9bc8fd",
+          "#e4f0fe"
         ]
       },
-      "azul-hondo": {
+      "acento-hondo": {
         "role": "primary",
-        "displayName": "Deep Blue",
-        "canonical": "#154a84",
-        "purpose": "Hover for primary buttons and links.",
+        "displayName": "Lifted Blue",
+        "canonical": "#7bbcff",
         "tonalRamp": [
-          "oklch(15% 0.061 254)",
-          "oklch(26% 0.074 254)",
-          "oklch(38% 0.087 254)",
-          "oklch(49% 0.099 254)",
-          "oklch(61% 0.111 254)",
-          "oklch(72% 0.098 254)",
-          "oklch(84% 0.085 254)",
-          "oklch(95% 0.072 254)"
+          "#000c1c",
+          "#022545",
+          "#084172",
+          "#1e609d",
+          "#4181c0",
+          "#63a3e5",
+          "#97c9fe",
+          "#e3f0ff"
         ]
       },
-      "azul-tenue": {
+      "acento-tenue": {
         "role": "primary",
         "displayName": "Blue Wash",
-        "canonical": "#e4edf7",
-        "purpose": "Notice strip, advice note, drag-over drop zone.",
+        "canonical": "rgba(77, 163, 255, .16)",
         "tonalRamp": [
-          "oklch(15% 0.009 251)",
-          "oklch(26% 0.011 251)",
-          "oklch(38% 0.013 251)",
-          "oklch(49% 0.015 251)",
-          "oklch(61% 0.016 251)",
-          "oklch(72% 0.015 251)",
-          "oklch(84% 0.013 251)",
-          "oklch(95% 0.011 251)"
+          "#000b1d",
+          "#022447",
+          "#094075",
+          "#135ea6",
+          "#247fd8",
+          "#4ba1fd",
+          "#9bc8fd",
+          "#e4f0fe"
+        ]
+      },
+      "sobre-acento": {
+        "role": "primary",
+        "displayName": "On Blue",
+        "canonical": "#061423",
+        "tonalRamp": [
+          "#010c1a",
+          "#162535",
+          "#314153",
+          "#4e5f72",
+          "#6d7f93",
+          "#8ea1b5",
+          "#b3c6dc",
+          "#e3f0ff"
+        ]
+      },
+      "claro": {
+        "role": "secondary",
+        "displayName": "Claro",
+        "canonical": "#eaf0f4",
+        "tonalRamp": [
+          "#080c0e",
+          "#202528",
+          "#3c4044",
+          "#595e62",
+          "#797e82",
+          "#9a9fa3",
+          "#bfc5c9",
+          "#e9eff3"
+        ]
+      },
+      "sobre-claro": {
+        "role": "secondary",
+        "displayName": "On Claro",
+        "canonical": "#0f171d",
+        "tonalRamp": [
+          "#050c12",
+          "#1d252c",
+          "#384148",
+          "#555f67",
+          "#757f87",
+          "#95a0a8",
+          "#bbc6ce",
+          "#e5f0f9"
         ]
       },
       "rojo": {
-        "role": "status",
-        "displayName": "Alert Red",
-        "canonical": "#b3202f",
-        "purpose": "Destructive actions, armed two-step button, worse results.",
+        "role": "data",
+        "displayName": "Zone and Alert Red",
+        "canonical": "#ff5a6e",
         "tonalRamp": [
-          "oklch(15% 0.099 22)",
-          "oklch(26% 0.120 22)",
-          "oklch(38% 0.141 22)",
-          "oklch(49% 0.161 22)",
-          "oklch(61% 0.179 22)",
-          "oklch(72% 0.159 22)",
-          "oklch(84% 0.138 22)",
-          "oklch(95% 0.117 22)"
+          "#1e0104",
+          "#4a0111",
+          "#790723",
+          "#ad1136",
+          "#da3550",
+          "#fb6574",
+          "#fbabae",
+          "#ffe8e8"
         ]
       },
-      "rojo-tenue": {
+      "rojo-texto": {
         "role": "status",
-        "displayName": "Red Wash",
-        "canonical": "#fbe9eb",
-        "purpose": "Danger button hover.",
+        "displayName": "Error Text",
+        "canonical": "#ff8a98",
         "tonalRamp": [
-          "oklch(15% 0.011 10)",
-          "oklch(26% 0.013 10)",
-          "oklch(38% 0.015 10)",
-          "oklch(49% 0.018 10)",
-          "oklch(61% 0.020 10)",
-          "oklch(72% 0.017 10)",
-          "oklch(84% 0.015 10)",
-          "oklch(95% 0.013 10)"
+          "#1d0105",
+          "#490115",
+          "#790829",
+          "#9d3246",
+          "#c25464",
+          "#e87684",
+          "#ffa9b1",
+          "#ffe8ea"
         ]
       },
-      "verde-tinta": {
-        "role": "status",
-        "displayName": "Green Ink",
-        "canonical": "#1d6b30",
-        "purpose": "Better results in comparison tables; text only.",
+      "verde": {
+        "role": "data",
+        "displayName": "Zone Green",
+        "canonical": "#5fd27a",
         "tonalRamp": [
-          "oklch(15% 0.065 148)",
-          "oklch(26% 0.079 148)",
-          "oklch(38% 0.092 148)",
-          "oklch(49% 0.106 148)",
-          "oklch(61% 0.118 148)",
-          "oklch(72% 0.104 148)",
-          "oklch(84% 0.090 148)",
-          "oklch(95% 0.077 148)"
+          "#001003",
+          "#022d0f",
+          "#094d20",
+          "#147032",
+          "#0e9642",
+          "#44b963",
+          "#6ee188",
+          "#c8ffd0"
         ]
       },
-      "noche": {
-        "role": "neutral",
-        "displayName": "Night",
-        "canonical": "#0f1922",
-        "purpose": "Photo viewer ground and training log.",
+      "ambar": {
+        "role": "data",
+        "displayName": "Zone Amber",
+        "canonical": "#ffc04d",
         "tonalRamp": [
-          "oklch(15% 0.013 246)",
-          "oklch(26% 0.015 246)",
-          "oklch(38% 0.018 246)",
-          "oklch(49% 0.021 246)",
-          "oklch(61% 0.023 246)",
-          "oklch(72% 0.020 246)",
-          "oklch(84% 0.018 246)",
-          "oklch(95% 0.015 246)"
+          "#120900",
+          "#322000",
+          "#553a02",
+          "#7a5608",
+          "#a1741a",
+          "#cb9324",
+          "#f6b843",
+          "#feecd0"
+        ]
+      },
+      "bien-texto": {
+        "role": "status",
+        "displayName": "Success Text",
+        "canonical": "#b9f0c6",
+        "tonalRamp": [
+          "#000f04",
+          "#012d12",
+          "#174b29",
+          "#386b47",
+          "#588b65",
+          "#78ad86",
+          "#9ed4ab",
+          "#c7ffd4"
+        ]
+      },
+      "aviso-fondo": {
+        "role": "status",
+        "displayName": "Warning Ground",
+        "canonical": "#3a2d0c",
+        "tonalRamp": [
+          "#110a00",
+          "#2f2201",
+          "#4b3e1e",
+          "#6a5c3b",
+          "#8a7c5a",
+          "#ac9d7a",
+          "#d2c39f",
+          "#fdedc8"
+        ]
+      },
+      "aviso-texto": {
+        "role": "status",
+        "displayName": "Warning Text",
+        "canonical": "#ffe6ad",
+        "tonalRamp": [
+          "#110a00",
+          "#2f2202",
+          "#503d07",
+          "#705a24",
+          "#917a44",
+          "#b39c65",
+          "#dac18a",
+          "#ffedc5"
         ]
       },
       "gris-dato": {
         "role": "data",
         "displayName": "Data Grey",
         "canonical": "#9aa3a0",
-        "purpose": "Below-threshold reading, no diagnosis, unusable photo.",
         "tonalRamp": [
-          "oklch(15% 0.006 174)",
-          "oklch(26% 0.007 174)",
-          "oklch(38% 0.009 174)",
-          "oklch(49% 0.010 174)",
-          "oklch(61% 0.011 174)",
-          "oklch(72% 0.010 174)",
-          "oklch(84% 0.008 174)",
-          "oklch(95% 0.007 174)"
+          "#070d0b",
+          "#1f2624",
+          "#3a423f",
+          "#58605d",
+          "#777f7d",
+          "#98a19e",
+          "#bdc7c3",
+          "#e7f1ee"
         ]
       },
       "categoria-sana": {
         "role": "data",
-        "displayName": "Healthy",
+        "displayName": "Category: Sana",
         "canonical": "#2e9e44",
-        "purpose": "Category ink, data only.",
         "tonalRamp": [
-          "oklch(15% 0.089 147)",
-          "oklch(26% 0.108 147)",
-          "oklch(38% 0.127 147)",
-          "oklch(49% 0.145 147)",
-          "oklch(61% 0.162 147)",
-          "oklch(72% 0.143 147)",
-          "oklch(84% 0.124 147)",
-          "oklch(95% 0.106 147)"
+          "#001002",
+          "#012d0a",
+          "#064e18",
+          "#0f7128",
+          "#22963c",
+          "#4db85d",
+          "#75e083",
+          "#cbfece"
         ]
       },
       "categoria-sigatoka": {
         "role": "data",
-        "displayName": "Sigatoka",
+        "displayName": "Category: Sigatoka",
         "canonical": "#d7263d",
-        "purpose": "Category ink, data only.",
         "tonalRamp": [
-          "oklch(15% 0.115 21)",
-          "oklch(26% 0.139 21)",
-          "oklch(38% 0.163 21)",
-          "oklch(49% 0.186 21)",
-          "oklch(61% 0.207 21)",
-          "oklch(72% 0.183 21)",
-          "oklch(84% 0.160 21)",
-          "oklch(95% 0.136 21)"
+          "#1e0002",
+          "#49040d",
+          "#780e1d",
+          "#b00229",
+          "#de2f43",
+          "#f9696d",
+          "#feaba8",
+          "#fee9e7"
         ]
       },
       "categoria-otra": {
         "role": "data",
-        "displayName": "Other Condition",
+        "displayName": "Category: Otra condición",
         "canonical": "#f0a202",
-        "purpose": "Category ink, data only.",
         "tonalRamp": [
-          "oklch(15% 0.089 74)",
-          "oklch(26% 0.108 74)",
-          "oklch(38% 0.127 74)",
-          "oklch(49% 0.145 74)",
-          "oklch(61% 0.161 74)",
-          "oklch(72% 0.143 74)",
-          "oklch(84% 0.124 74)",
-          "oklch(95% 0.106 74)"
+          "#130900",
+          "#331f00",
+          "#573902",
+          "#7e5408",
+          "#a67119",
+          "#d09024",
+          "#fdb443",
+          "#ffebd2"
         ]
       }
     },
     "typographyMeta": {
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "The big Sigatoka count in the summary panel."
+      },
       "display": {
         "displayName": "Display",
-        "purpose": "Page titles (h1) and verdicts; 1.5rem under 560px."
+        "purpose": "Sheet h1; 1.6rem in the summary panel, 1.8rem below 560 px."
+      },
+      "verdict": {
+        "displayName": "Verdict",
+        "purpose": "Plain-sentence result in Identificar and Revisar."
       },
       "headline": {
         "displayName": "Headline",
-        "purpose": "Section titles (h2)."
+        "purpose": "h2, empty-state and drop-zone titles; 1.2rem for section h2 in sheets."
       },
       "title": {
         "displayName": "Title",
-        "purpose": "h3 and the technical-zone summary."
-      },
-      "figure": {
-        "displayName": "Figure",
-        "purpose": "Map-margin counts, tabular."
+        "purpose": "h3; flight names at 1rem."
       },
       "body": {
         "displayName": "Body",
-        "purpose": "Running text; intros 68ch, empty states 52ch."
+        "purpose": "Prose; intros max 64ch."
       },
       "body-small": {
         "displayName": "Body small",
-        "purpose": "Tables, fields, notes, legends, messages."
+        "purpose": "Notes, legends, table cells, messages, que-hacer."
       },
       "control": {
         "displayName": "Control",
-        "purpose": "Buttons and segments."
+        "purpose": "Buttons and the flight chip; 800 on primario and claro."
       },
       "label": {
-        "displayName": "Label (rótulo)",
-        "purpose": "Uppercase caps label for control groups and table headers. Never a kicker over a heading."
+        "displayName": "Label",
+        "purpose": "Rail names, field labels, table headers, strip captions. Sentence case."
       },
-      "nav": {
-        "displayName": "Nav",
-        "purpose": "Uppercase title-bar sections."
-      },
-      "readout": {
-        "displayName": "Readout",
-        "purpose": "Live lat/lon coordinate readout, tabular."
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Code, file paths, key caps and the training log."
       }
     },
     "shadows": [
       {
-        "name": "map-popup",
-        "value": "0 6px 20px -8px rgba(19, 32, 43, .45)",
-        "purpose": "The only soft shadow: the photo popup floating over satellite imagery."
+        "name": "float",
+        "value": "0 14px 34px -14px rgba(0, 0, 0, .7)",
+        "purpose": "Every panel that floats over the map imagery; never inside a panel."
+      }
+    ],
+    "overlays": [
+      {
+        "name": "map-vignette",
+        "value": "linear-gradient(180deg, rgba(8, 14, 18, .55) 0%, rgba(8, 14, 18, 0) 16%, rgba(8, 14, 18, 0) 72%, rgba(8, 14, 18, .55) 100%)",
+        "purpose": "Keeps the top bar and photo strip legible over the map."
+      },
+      {
+        "name": "map-dim",
+        "value": "opacity .3; filter grayscale(.5); overlay rgba(8, 14, 18, .35)",
+        "purpose": "Map behind open sheets."
+      },
+      {
+        "name": "uncertain-hatch",
+        "value": "repeating-linear-gradient(45deg, #9fb0bc 0 1.5px, transparent 1.5px 4px); inset ring 1px #9fb0bc",
+        "purpose": "Swatch for results below the minimum confidence."
       }
     ],
     "motion": [
       {
-        "name": "salida",
+        "name": "ease-salida",
         "value": "cubic-bezier(.23, 1, .32, 1)",
-        "purpose": "The press curve (--salida); also the technical-zone chevron."
+        "purpose": "Press scale and chevron rotation."
       },
       {
         "name": "press",
-        "value": "transform 160ms cubic-bezier(.23, 1, .32, 1); :active scale(.97), .98 for choice options and gallery cells",
-        "purpose": "The one gesture. Pointer press only; keyboard labelling never animates."
+        "value": "transform 160ms; scale .97 (buttons), .95 (icon buttons), .98 (options, cells)",
+        "purpose": "Tactile press feedback."
       },
       {
-        "name": "state-fade",
+        "name": "map-dim",
+        "value": "opacity and filter 200ms ease",
+        "purpose": "Map dims when a sheet is open."
+      },
+      {
+        "name": "colour",
         "value": "150ms ease",
-        "purpose": "Colour, border and background cross-fades on hover and selection."
-      },
-      {
-        "name": "chevron",
-        "value": "transform 200ms cubic-bezier(.23, 1, .32, 1)",
-        "purpose": "Technical-zone disclosure chevron rotates 90 degrees."
+        "purpose": "Background, border and text colour changes."
       },
       {
         "name": "progress",
         "value": "transform 300ms linear",
-        "purpose": "Progress fill follows real progress."
+        "purpose": "Upload progress fill."
+      },
+      {
+        "name": "keyboard-labelling",
+        "value": "none",
+        "purpose": "Revisar shortcuts swap to the next photo instantly."
       },
       {
         "name": "reduced-motion",
-        "value": "transition-duration: 0ms",
-        "purpose": "All transitions off under prefers-reduced-motion: reduce."
+        "value": "transition-duration 0ms",
+        "purpose": "prefers-reduced-motion: reduce."
       }
     ],
     "breakpoints": [
       {
-        "name": "wide",
-        "value": "1100px",
-        "purpose": "max-width: reading column 20rem; field-exam score hides."
+        "name": "summary-narrow",
+        "value": "1100px"
       },
       {
-        "name": "tablet",
-        "value": "900px",
-        "purpose": "max-width: nav on its own scrolling row; map stacks above panel; work tables single column; human choices first on Review."
+        "name": "mobile",
+        "value": "900px"
       },
       {
-        "name": "phone",
-        "value": "560px",
-        "purpose": "max-width: 1rem gutters; h1 1.5rem; gallery two columns; tool rows full width; tables scroll."
-      },
-      {
-        "name": "fine-hover",
-        "value": "(hover: hover) and (pointer: fine)",
-        "purpose": "Hover styles apply only here."
+        "name": "small",
+        "value": "560px"
       }
-    ],
-    "layout": {
-      "contentMax": "1240px",
-      "titleBar": "3.5rem",
-      "mapPanel": "22rem",
-      "readingColumn": "23rem",
-      "tickRuler": "1px ticks every 8px, 5px below the title bar"
-    }
+    ]
   },
   "components": [
     {
-      "name": "Primary Button",
+      "name": "Default Button",
       "kind": "button",
-      "refersTo": "button-primary",
-      "description": "The one action that matters on a view; aeronautical blue, 160ms press.",
-      "html": "<button class=\"ds-btn ds-btn-primary\"><svg viewBox='0 0 24 24' width='16' height='16' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M12 4v12M7 11l5 5 5-5'/><path d='M4 20h16'/></svg>Descargar GeoJSON</button>",
-      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; height: 2.25rem; padding: 0 .95rem; border: 1px solid var(--regla-fuerte, #9aa6ae); border-radius: 2px; background: var(--hoja, #fff); color: var(--tinta, #13202b); font: 500 .875rem/1 'Barlow', 'Segoe UI', system-ui, sans-serif; cursor: pointer; transition: transform 160ms cubic-bezier(.23,1,.32,1), background-color 150ms ease, border-color 150ms ease, color 150ms ease; } .ds-btn:hover { border-color: var(--tinta, #13202b); } .ds-btn:active { transform: scale(.97); } .ds-btn:focus-visible { outline: 2px solid var(--azul, #1d5fa6); outline-offset: 2px; } .ds-btn-primary { background: var(--azul, #1d5fa6); border-color: var(--azul, #1d5fa6); color: #fff; } .ds-btn-primary:hover { background: var(--azul-hondo, #154a84); border-color: var(--azul-hondo, #154a84); }"
+      "refersTo": "button-default",
+      "description": "Outlined button for secondary actions on any panel.",
+      "html": "<button class=\"ds-btn\">Otra foto</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; height: 2.5rem; padding: 0 1rem; border: 1px solid var(--borde-fuerte, #36505f); border-radius: var(--r-s, 10px); background: transparent; color: var(--texto, #eaf0f4); font-family: Manrope, 'Segoe UI', system-ui, sans-serif; font-weight: 700; font-size: .875rem; line-height: 1; cursor: pointer; transition: transform 160ms cubic-bezier(.23, 1, .32, 1), background-color 150ms ease, border-color 150ms ease, color 150ms ease; } .ds-btn:active { transform: scale(.97); } .ds-btn:focus-visible { outline: 2px solid var(--acento, #4da3ff); outline-offset: 2px; } .ds-btn:hover { border-color: var(--texto-3, #9fb0bc); color: #fff; }"
     },
     {
-      "name": "Default and Disabled Buttons",
+      "name": "Primario Button",
       "kind": "button",
-      "refersTo": "button",
-      "description": "White ruled button with keyboard cap; disabled falls to margin tone.",
-      "html": "<div style=\"display:flex;gap:.6rem\"><button class=\"ds-btn\">Saltar <kbd class=\"ds-kbd\">S</kbd></button><button class=\"ds-btn\" disabled>Deshacer <kbd class=\"ds-kbd\">Z</kbd></button></div>",
-      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; height: 2.25rem; padding: 0 .95rem; border: 1px solid var(--regla-fuerte, #9aa6ae); border-radius: 2px; background: var(--hoja, #fff); color: var(--tinta, #13202b); font: 500 .875rem/1 'Barlow', 'Segoe UI', system-ui, sans-serif; cursor: pointer; transition: transform 160ms cubic-bezier(.23,1,.32,1), background-color 150ms ease, border-color 150ms ease, color 150ms ease; } .ds-btn:hover { border-color: var(--tinta, #13202b); } .ds-btn:active { transform: scale(.97); } .ds-btn:focus-visible { outline: 2px solid var(--azul, #1d5fa6); outline-offset: 2px; } .ds-btn:disabled { cursor: not-allowed; color: var(--tinta-3, #5d6a75); background: var(--margen, #e8ecec); border-color: var(--regla, #cfd6da); transform: none; } .ds-kbd { display: inline-grid; place-items: center; min-width: 1.45rem; height: 1.45rem; padding: 0 .3rem; border: 1px solid var(--regla-fuerte, #9aa6ae); border-bottom-width: 2px; border-radius: 2px; background: #fff; color: var(--tinta-2, #3f4d59); font: .78rem/1 ui-monospace, Consolas, monospace; }"
+      "refersTo": "button-primario",
+      "description": "The one blue action per surface: Identificar una hoja, form commits.",
+      "html": "<button class=\"ds-btn ds-btn-primario\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 8h3l1.5-2h7L17 8h3v11H4Z\"/><circle cx=\"12\" cy=\"13\" r=\"3.5\"/></svg>Identificar una hoja</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; height: 2.5rem; padding: 0 1rem; border: 1px solid var(--borde-fuerte, #36505f); border-radius: var(--r-s, 10px); background: transparent; color: var(--texto, #eaf0f4); font-family: Manrope, 'Segoe UI', system-ui, sans-serif; font-weight: 700; font-size: .875rem; line-height: 1; cursor: pointer; transition: transform 160ms cubic-bezier(.23, 1, .32, 1), background-color 150ms ease, border-color 150ms ease, color 150ms ease; } .ds-btn:active { transform: scale(.97); } .ds-btn:focus-visible { outline: 2px solid var(--acento, #4da3ff); outline-offset: 2px; } .ds-btn-primario { background: var(--acento, #4da3ff); border-color: var(--acento, #4da3ff); color: var(--sobre-acento, #061423); font-weight: 800; } .ds-btn-primario:hover { background: var(--acento-hondo, #7bbcff); border-color: var(--acento-hondo, #7bbcff); }"
     },
     {
-      "name": "Two-step Confirm Button",
+      "name": "Claro Button",
       "kind": "button",
-      "refersTo": "button-confirming",
-      "description": "First click arms it red with an explicit confirm label; second click runs; disarms after 4 s.",
-      "html": "<div style=\"display:flex;gap:.6rem\"><button class=\"ds-btn ds-btn-primary\">Reentrenar ahora</button><button class=\"ds-btn ds-btn-confirming\">Confirmar: empezar a entrenar</button></div>",
-      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; height: 2.25rem; padding: 0 .95rem; border: 1px solid var(--regla-fuerte, #9aa6ae); border-radius: 2px; background: var(--hoja, #fff); color: var(--tinta, #13202b); font: 500 .875rem/1 'Barlow', 'Segoe UI', system-ui, sans-serif; cursor: pointer; transition: transform 160ms cubic-bezier(.23,1,.32,1), background-color 150ms ease, border-color 150ms ease, color 150ms ease; } .ds-btn:hover { border-color: var(--tinta, #13202b); } .ds-btn:active { transform: scale(.97); } .ds-btn:focus-visible { outline: 2px solid var(--azul, #1d5fa6); outline-offset: 2px; } .ds-btn-primary { background: var(--azul, #1d5fa6); border-color: var(--azul, #1d5fa6); color: #fff; } .ds-btn-confirming, .ds-btn-confirming:hover { background: var(--rojo, #b3202f); border-color: var(--rojo, #b3202f); color: #fff; }"
+      "refersTo": "button-claro",
+      "description": "Light button for the main next step of the open surface.",
+      "html": "<button class=\"ds-btn ds-btn-claro ds-btn-grande\">Revisar 12 fotos pendientes</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; height: 2.5rem; padding: 0 1rem; border: 1px solid var(--borde-fuerte, #36505f); border-radius: var(--r-s, 10px); background: transparent; color: var(--texto, #eaf0f4); font-family: Manrope, 'Segoe UI', system-ui, sans-serif; font-weight: 700; font-size: .875rem; line-height: 1; cursor: pointer; transition: transform 160ms cubic-bezier(.23, 1, .32, 1), background-color 150ms ease, border-color 150ms ease, color 150ms ease; } .ds-btn:active { transform: scale(.97); } .ds-btn:focus-visible { outline: 2px solid var(--acento, #4da3ff); outline-offset: 2px; } .ds-btn-claro { background: var(--claro, #eaf0f4); border-color: var(--claro, #eaf0f4); color: var(--sobre-claro, #0f171d); font-weight: 800; } .ds-btn-claro:hover { background: #fff; } .ds-btn-grande { height: 3rem; padding: 0 1.3rem; font-size: 1rem; border-radius: var(--r, 14px); }"
+    },
+    {
+      "name": "Two-step Confirm",
+      "kind": "button",
+      "refersTo": "button-confirmando",
+      "description": "Armed state of a serious action; the second click runs it, disarms after 4 s.",
+      "html": "<button class=\"ds-btn ds-btn-confirmando\">Confirmar: empezar a entrenar</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; height: 2.5rem; padding: 0 1rem; border: 1px solid var(--borde-fuerte, #36505f); border-radius: var(--r-s, 10px); background: transparent; color: var(--texto, #eaf0f4); font-family: Manrope, 'Segoe UI', system-ui, sans-serif; font-weight: 700; font-size: .875rem; line-height: 1; cursor: pointer; transition: transform 160ms cubic-bezier(.23, 1, .32, 1), background-color 150ms ease, border-color 150ms ease, color 150ms ease; } .ds-btn:active { transform: scale(.97); } .ds-btn:focus-visible { outline: 2px solid var(--acento, #4da3ff); outline-offset: 2px; } .ds-btn-confirmando { background: var(--rojo, #ff5a6e); border-color: var(--rojo, #ff5a6e); color: #fff; }"
+    },
+    {
+      "name": "Icon Button",
+      "kind": "button",
+      "refersTo": "button-icono",
+      "description": "40 px close button in a sheet header.",
+      "html": "<button class=\"ds-btn-icono\" aria-label=\"Cerrar y volver al mapa\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M6 6l12 12M18 6 6 18\"/></svg></button>",
+      "css": ".ds-btn-icono { display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: var(--r-s, 10px); background: var(--panel-2, #1a2833); color: var(--texto, #eaf0f4); cursor: pointer; transition: transform 160ms cubic-bezier(.23, 1, .32, 1), background-color 150ms ease; } .ds-btn-icono:hover { background: var(--panel-3, #22323e); color: #fff; } .ds-btn-icono:active { transform: scale(.95); } .ds-btn-icono:focus-visible { outline: 2px solid var(--acento, #4da3ff); outline-offset: 2px; }"
     },
     {
       "name": "Field and Select",
       "kind": "input",
-      "refersTo": "field",
-      "description": "Sentence-case label above a 2.25rem ruled control; blue focus.",
-      "html": "<div style=\"display:flex;gap:.75rem;align-items:flex-end\"><label class=\"ds-campo\"><span>Vuelo</span><select class=\"ds-input\"><option>Todos los vuelos</option></select></label><label class=\"ds-campo\"><span>Revisor</span><input class=\"ds-input\" type=\"text\" placeholder=\"Tu nombre\"></label></div>",
-      "css": ".ds-campo { display: grid; gap: .3rem; font-family: 'Barlow', 'Segoe UI', system-ui, sans-serif; } .ds-campo > span { font-size: .78rem; font-weight: 500; color: var(--tinta-2, #3f4d59); } .ds-input { height: 2.25rem; padding: 0 .65rem; border: 1px solid var(--regla-fuerte, #9aa6ae); border-radius: 2px; background: #fff; color: var(--tinta, #13202b); font: 400 .875rem 'Barlow', 'Segoe UI', system-ui, sans-serif; } select.ds-input { appearance: none; padding-right: 2rem; background: #fff url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5' fill='none' stroke='%2313202b' stroke-width='1.4'/%3E%3C/svg%3E\") no-repeat right .6rem center / .75rem; } .ds-input::placeholder { color: var(--tinta-3, #5d6a75); } .ds-input:focus-visible { outline: 2px solid var(--azul, #1d5fa6); outline-offset: 0; border-color: var(--azul, #1d5fa6); }"
+      "refersTo": "input-field",
+      "description": "Label stacked over a panel-2 control with a blue focus outline.",
+      "html": "<label class=\"ds-campo\"><span>Quién revisa</span><input class=\"ds-input\" type=\"text\" placeholder=\"Tu nombre\"></label>",
+      "css": ".ds-campo { display: grid; gap: .35rem; font-family: Manrope, 'Segoe UI', system-ui, sans-serif; } .ds-campo > span { font-size: .78rem; font-weight: 700; color: var(--texto-3, #9fb0bc); } .ds-input { height: 2.5rem; padding: 0 .75rem; border: 1px solid var(--borde-fuerte, #36505f); border-radius: var(--r-s, 10px); background: var(--panel-2, #1a2833); color: var(--texto, #eaf0f4); font-family: Manrope, 'Segoe UI', system-ui, sans-serif; font-weight: 600; font-size: .875rem; } .ds-input::placeholder { color: var(--texto-3, #9fb0bc); } .ds-input:focus-visible { outline: 2px solid var(--acento, #4da3ff); outline-offset: 0; border-color: var(--acento, #4da3ff); }"
     },
     {
       "name": "Segmented Control",
-      "kind": "nav",
-      "refersTo": "segment-selected",
-      "description": "View toggle; the selected segment fills with chart ink, not blue.",
-      "html": "<div class=\"ds-seg\" role=\"radiogroup\" aria-label=\"Vista\"><label><input type=\"radio\" name=\"ds-vista\" checked><span>Puntos</span></label><label><input type=\"radio\" name=\"ds-vista\"><span>Zonas</span></label></div>",
-      "css": ".ds-seg { display: inline-flex; border: 1px solid var(--regla-fuerte, #9aa6ae); border-radius: 2px; background: #fff; font-family: 'Barlow', 'Segoe UI', system-ui, sans-serif; } .ds-seg label { position: relative; } .ds-seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; } .ds-seg span { display: block; padding: .45rem .9rem; font-size: .875rem; font-weight: 500; color: var(--tinta-2, #3f4d59); transition: background-color 150ms ease, color 150ms ease; } .ds-seg label + label span { border-left: 1px solid var(--regla, #cfd6da); } .ds-seg input:checked + span { background: var(--tinta, #13202b); color: #fff; } .ds-seg input:focus-visible + span { outline: 2px solid var(--azul, #1d5fa6); outline-offset: 1px; }"
-    },
-    {
-      "name": "Ficha (category swatch)",
       "kind": "chip",
-      "refersTo": "ficha-swatch",
-      "description": "Category ink always paired with its name; below threshold the swatch hatches.",
-      "html": "<div style=\"display:grid;gap:.5rem\"><span class=\"ds-ficha\"><i class=\"ds-muestra\" style=\"background:#d7263d\"></i>Sigatoka</span><span class=\"ds-ficha\"><i class=\"ds-muestra\" style=\"background:#2e9e44\"></i>Sana</span><span class=\"ds-ficha ds-dudosa\"><i class=\"ds-muestra\"></i>Sigatoka (dudosa)</span></div>",
-      "css": ".ds-ficha { display: inline-flex; align-items: center; gap: .45rem; font: 500 .875rem 'Barlow', 'Segoe UI', system-ui, sans-serif; color: var(--tinta, #13202b); white-space: nowrap; } .ds-muestra { width: .7rem; height: .7rem; flex: none; border-radius: 1px; box-shadow: inset 0 0 0 1px rgba(19,32,43,.35); } .ds-dudosa { color: var(--tinta-3, #5d6a75); } .ds-dudosa .ds-muestra { background: repeating-linear-gradient(45deg, var(--tinta-3, #5d6a75) 0 1.5px, transparent 1.5px 4px); box-shadow: inset 0 0 0 1px var(--tinta-3, #5d6a75); }"
+      "refersTo": "segmented",
+      "description": "Zonas / Fotos switch; the checked option is claro.",
+      "html": "<div class=\"ds-seg\" role=\"radiogroup\"><label><input type=\"radio\" name=\"ds-v\" checked><span>Zonas</span></label><label><input type=\"radio\" name=\"ds-v\"><span>Fotos</span></label></div>",
+      "css": ".ds-seg { display: inline-flex; padding: 4px; gap: 4px; border-radius: var(--r-s, 10px); background: var(--panel-2, #1a2833); font-family: Manrope, 'Segoe UI', system-ui, sans-serif; } .ds-seg label { position: relative; } .ds-seg input { position: absolute; opacity: 0; inset: 0; cursor: pointer; margin: 0; } .ds-seg span { display: block; padding: .45rem .95rem; border-radius: 8px; font-size: .875rem; font-weight: 700; color: var(--texto-2, #c9d5dd); transition: background-color 150ms ease, color 150ms ease; } .ds-seg input:checked + span { background: var(--claro, #eaf0f4); color: var(--sobre-claro, #0f171d); } .ds-seg input:focus-visible + span { outline: 2px solid var(--acento, #4da3ff); outline-offset: 1px; }"
     },
     {
-      "name": "Probability Scale",
+      "name": "Diagnosis Chip and Ficha",
+      "kind": "chip",
+      "refersTo": "chip-diagnostico",
+      "description": "Round chip heading a reading; inline swatch ficha, with the hatched uncertain state.",
+      "html": "<div class=\"ds-fichas\"><span class=\"ds-chip\"><i style=\"background:#d7263d\"></i>Sigatoka</span><span class=\"ds-ficha\"><i class=\"ds-muestra\" style=\"background:#2e9e44\"></i>Sana</span><span class=\"ds-ficha ds-dudosa\"><i class=\"ds-muestra\"></i>No está seguro</span></div>",
+      "css": ".ds-fichas { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; font-family: Manrope, 'Segoe UI', system-ui, sans-serif; color: var(--texto, #eaf0f4); } .ds-chip { display: inline-flex; align-items: center; gap: .5rem; padding: .35rem .8rem; border-radius: 999px; background: var(--panel, #0f171d); font-weight: 800; font-size: .875rem; } .ds-chip i { width: 10px; height: 10px; border-radius: 50%; } .ds-ficha { display: inline-flex; align-items: center; gap: .45rem; font-weight: 700; } .ds-muestra { width: .7rem; height: .7rem; border-radius: 3px; } .ds-dudosa { color: var(--texto-3, #9fb0bc); } .ds-dudosa .ds-muestra { background: repeating-linear-gradient(45deg, var(--texto-3, #9fb0bc) 0 1.5px, transparent 1.5px 4px); box-shadow: inset 0 0 0 1px var(--texto-3, #9fb0bc); }"
+    },
+    {
+      "name": "Probability Bars",
       "kind": "custom",
-      "refersTo": "probability-track",
-      "description": "Signature: every reading's track is crossed by a ruled threshold line at 65%.",
-      "html": "<div class=\"ds-escala\" style=\"--umbral:65%\"><div class=\"ds-fila ds-gana\"><span class=\"ds-ficha\"><i class=\"ds-muestra\" style=\"background:#d7263d\"></i>Sigatoka</span><span class=\"ds-val\">82.4 %</span><div class=\"ds-pista\" role=\"meter\" aria-label=\"Sigatoka\" aria-valuemin=\"0\" aria-valuemax=\"100\" aria-valuenow=\"82\"><i style=\"background:#d7263d;transform:scaleX(.824)\"></i></div></div><div class=\"ds-fila\"><span class=\"ds-ficha\"><i class=\"ds-muestra\" style=\"background:#2e9e44\"></i>Sana</span><span class=\"ds-val\">12.1 %</span><div class=\"ds-pista\" role=\"meter\" aria-label=\"Sana\" aria-valuemin=\"0\" aria-valuemax=\"100\" aria-valuenow=\"12\"><i style=\"background:#2e9e44;transform:scaleX(.121)\"></i></div></div><div class=\"ds-umbral\"><span>0 %</span><span class=\"ds-marca\">umbral 65 %</span><span>100 %</span></div></div>",
-      "css": ".ds-escala { display: grid; gap: .85rem; width: 20rem; font-family: 'Barlow', 'Segoe UI', system-ui, sans-serif; color: var(--tinta, #13202b); } .ds-fila { display: grid; grid-template-columns: 1fr auto; gap: .3rem .75rem; align-items: baseline; } .ds-fila:not(.ds-gana) { color: var(--tinta-2, #3f4d59); } .ds-ficha { display: inline-flex; align-items: center; gap: .45rem; font-weight: 500; font-size: .875rem; } .ds-muestra { width: .7rem; height: .7rem; border-radius: 1px; box-shadow: inset 0 0 0 1px rgba(19,32,43,.35); } .ds-val { font-weight: 600; font-size: .875rem; font-variant-numeric: tabular-nums lining-nums; } .ds-pista { grid-column: 1 / -1; position: relative; height: .6rem; background: var(--margen, #e8ecec); border: 1px solid var(--regla, #cfd6da); border-radius: 1px; background-image: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), rgba(19,32,43,.14) calc(10% - 1px) 10%); } .ds-pista > i { position: absolute; inset: 0; display: block; transform-origin: left; } .ds-pista::after { content: ''; position: absolute; left: var(--umbral); top: -5px; bottom: -5px; width: 2px; margin-left: -1px; background: var(--tinta, #13202b); } .ds-umbral { position: relative; height: 1.1rem; margin-top: -.35rem; font-size: .78rem; color: var(--tinta-3, #5d6a75); font-variant-numeric: tabular-nums; } .ds-umbral span { position: absolute; top: 0; } .ds-umbral span:first-child { left: 0; } .ds-umbral span:last-child { right: 0; } .ds-umbral .ds-marca { left: var(--umbral); transform: translateX(-50%); color: var(--tinta, #13202b); font-weight: 600; white-space: nowrap; }"
+      "refersTo": "",
+      "description": "Class probabilities with the white line at the 65 % minimum.",
+      "html": "<div class=\"ds-escala\"><div class=\"ds-fila\"><span>Sigatoka</span><b>82 %</b><div class=\"ds-pista\"><i style=\"background:#d7263d;transform:scaleX(.82)\"></i></div></div><div class=\"ds-fila ds-baja\"><span>Sana</span><b>14 %</b><div class=\"ds-pista\"><i style=\"background:#2e9e44;transform:scaleX(.14)\"></i></div></div><div class=\"ds-umbral\">La línea blanca marca la seguridad mínima: 65 %.</div></div>",
+      "css": ".ds-escala { display: grid; gap: .8rem; font-family: Manrope, 'Segoe UI', system-ui, sans-serif; color: var(--texto, #eaf0f4); } .ds-fila { display: grid; grid-template-columns: 1fr auto; gap: .35rem .75rem; align-items: baseline; font-size: .875rem; } .ds-fila b { font-weight: 800; font-variant-numeric: tabular-nums; } .ds-baja { color: var(--texto-2, #c9d5dd); } .ds-pista { grid-column: 1 / -1; position: relative; height: 10px; border-radius: 5px; background: var(--panel, #0f171d); } .ds-pista > i { position: absolute; inset: 0; display: block; border-radius: 5px; transform-origin: left; } .ds-pista::after { content: ''; position: absolute; left: 65%; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--texto, #eaf0f4); border-radius: 1px; } .ds-umbral { font-size: .78rem; color: var(--texto-3, #9fb0bc); }"
     },
     {
-      "name": "Marco (corner-tick frame)",
+      "name": "Rail",
+      "kind": "nav",
+      "refersTo": "rail",
+      "description": "Left icon rail over the map; becomes the bottom tab bar below 900 px.",
+      "html": "<nav class=\"ds-riel\"><a href=\"#\" aria-current=\"page\"><svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2Z\"/><path d=\"M9 4v14M15 6v14\"/></svg>Mapa</a><a href=\"#\"><svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 7h6l2 2h10v10H3Z\"/></svg>Vuelos</a><a href=\"#\"><svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12.5 10 17 19 7\"/></svg>Revisar<span class=\"ds-insignia\">12</span></a><a href=\"#\"><svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M4 19V9M10 19V5M16 19v-7M22 19H2\"/></svg>Modelo v3</a></nav>",
+      "css": ".ds-riel { display: flex; flex-direction: column; gap: 4px; width: 84px; padding: 8px; background: var(--panel, #0f171d); border-radius: var(--r-l, 18px); box-shadow: 0 14px 34px -14px rgba(0, 0, 0, .7); font-family: Manrope, 'Segoe UI', system-ui, sans-serif; } .ds-riel a { position: relative; display: grid; justify-items: center; gap: 4px; padding: 10px 0 9px; border-radius: var(--r-s, 10px); color: var(--texto-3, #9fb0bc); text-decoration: none; font-size: .78rem; font-weight: 700; transition: background-color 150ms ease, color 150ms ease; } .ds-riel a:hover { color: var(--texto, #eaf0f4); background: var(--panel-2, #1a2833); } .ds-riel a[aria-current='page'] { background: #1f3346; color: var(--texto, #eaf0f4); } .ds-riel a:focus-visible { outline: 2px solid var(--acento, #4da3ff); outline-offset: 2px; } .ds-insignia { position: absolute; top: 4px; right: 6px; min-width: 20px; padding: 1px 5px; border-radius: 10px; background: var(--rojo, #ff5a6e); color: #fff; font-size: 11px; line-height: 16px; text-align: center; }"
+    },
+    {
+      "name": "Que-hacer Box",
       "kind": "card",
-      "refersTo": "marco",
-      "description": "Ink registration ticks 7px outside the photo viewer or drop zone; no border.",
-      "html": "<div class=\"ds-marco\"><div class=\"ds-visor\">Arrastra aquí la foto de una hoja</div></div>",
-      "css": ".ds-marco { position: relative; margin: 12px; width: 18rem; } .ds-marco::before { content: ''; position: absolute; inset: -7px; pointer-events: none; --m: 16px; --c: var(--tinta, #13202b); background: linear-gradient(var(--c), var(--c)) top left / var(--m) 2px, linear-gradient(var(--c), var(--c)) top left / 2px var(--m), linear-gradient(var(--c), var(--c)) top right / var(--m) 2px, linear-gradient(var(--c), var(--c)) top right / 2px var(--m), linear-gradient(var(--c), var(--c)) bottom left / var(--m) 2px, linear-gradient(var(--c), var(--c)) bottom left / 2px var(--m), linear-gradient(var(--c), var(--c)) bottom right / var(--m) 2px, linear-gradient(var(--c), var(--c)) bottom right / 2px var(--m); background-repeat: no-repeat; } .ds-visor { display: grid; place-items: center; height: 10rem; background: var(--noche, #0f1922); color: #fff; font: 600 1rem 'Barlow Semi Condensed', 'Barlow', system-ui, sans-serif; }"
+      "refersTo": "que-hacer",
+      "description": "One practical instruction after a result.",
+      "html": "<div class=\"ds-que\"><b>Qué hacer:</b> Avisa al agrónomo y marca la planta. Quitar las hojas muy dañadas ayuda a frenar el contagio.</div>",
+      "css": ".ds-que { padding: .9rem 1rem; border-radius: var(--r, 14px); background: var(--panel, #0f171d); color: var(--texto-2, #c9d5dd); font-family: Manrope, 'Segoe UI', system-ui, sans-serif; font-size: .875rem; line-height: 1.55; } .ds-que b { color: #fff; }"
     },
     {
-      "name": "Coordinate Readout",
-      "kind": "custom",
-      "refersTo": "coordinate-readout",
-      "description": "Live lat/lon in the map's lower margin, ink-ruled, tabular figures.",
-      "html": "<div class=\"ds-lectura-pos\">17.99012° N&nbsp;&nbsp;&nbsp;92.95034° O</div>",
-      "css": ".ds-lectura-pos { display: inline-block; padding: .35rem .6rem; background: rgba(255,255,255,.92); border: 1px solid var(--tinta, #13202b); font: 500 .78rem/1.2 'Barlow', 'Segoe UI', system-ui, sans-serif; font-variant-numeric: tabular-nums; letter-spacing: .02em; color: var(--tinta, #13202b); white-space: pre; }"
-    },
-    {
-      "name": "Messages",
-      "kind": "custom",
-      "refersTo": "message",
-      "description": "Inline result under its action; error and success lead with a stroke icon in ink.",
-      "html": "<div style=\"display:grid;gap:.5rem\"><p class=\"ds-msg ds-msg-icono\"><svg viewBox='0 0 24 24' width='16' height='16' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M5 12.5 10 17 19 7'/></svg>Categoría agregada. Ya aparece como opción en Revisar.</p><p class=\"ds-msg ds-msg-icono\"><svg viewBox='0 0 24 24' width='16' height='16' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M12 4 21 19H3Z'/><path d='M12 10v4M12 16.5v.5'/></svg>No se pudo guardar: sin conexión con la estación.</p><p class=\"ds-msg\">Guardando…</p></div>",
-      "css": ".ds-msg { display: flex; gap: .5rem; align-items: flex-start; margin: 0; font: 400 .875rem/1.5 'Barlow', 'Segoe UI', system-ui, sans-serif; color: var(--tinta-2, #3f4d59); } .ds-msg-icono { color: var(--tinta, #13202b); } .ds-msg svg { flex: none; margin-top: .2rem; }"
+      "name": "Flight Row",
+      "kind": "card",
+      "refersTo": "vuelo-row",
+      "description": "One imported flight with counts, review progress and actions.",
+      "html": "<article class=\"ds-vuelo\"><div><h3>2026-10-02_finca-lopez</h3><span class=\"ds-nota\">Subido 2026-10-02 17:40</span></div><div class=\"ds-datos\"><span><b>214</b> fotos</span><span><b>198</b> con ubicación</span></div><div class=\"ds-avance\"><span class=\"ds-nota\">150 de 214 revisadas</span><div class=\"ds-prog\"><i style=\"transform:scaleX(.7)\"></i></div></div><div><button class=\"ds-mini\">Revisar 64</button></div></article>",
+      "css": ".ds-vuelo { display: grid; grid-template-columns: minmax(0,1.4fr) auto minmax(9rem,1fr) auto; gap: 1.25rem; align-items: center; padding: 1rem 1.25rem; border-radius: var(--r, 14px); background: var(--panel-2, #1a2833); color: var(--texto, #eaf0f4); font-family: Manrope, 'Segoe UI', system-ui, sans-serif; } .ds-vuelo h3 { margin: 0; font-size: 1rem; font-weight: 700; } .ds-nota { font-size: .875rem; color: var(--texto-3, #9fb0bc); font-variant-numeric: tabular-nums; } .ds-datos { display: grid; font-size: .875rem; color: var(--texto-2, #c9d5dd); font-variant-numeric: tabular-nums; } .ds-datos b { color: var(--texto, #eaf0f4); } .ds-avance { display: grid; gap: .4rem; } .ds-prog { position: relative; height: 8px; border-radius: 4px; background: var(--panel, #0f171d); overflow: hidden; } .ds-prog i { position: absolute; inset: 0; background: var(--acento, #4da3ff); transform-origin: left; border-radius: 4px; } .ds-mini { height: 2.5rem; padding: 0 1rem; border: 0; border-radius: var(--r-s, 10px); background: var(--claro, #eaf0f4); color: var(--sobre-claro, #0f171d); font-family: Manrope, 'Segoe UI', system-ui, sans-serif; font-weight: 800; font-size: .875rem; cursor: pointer; }"
     }
   ],
   "narrative": {
-    "northStar": "The Flight Chart",
-    "overview": "The station is the aerial-application crew's flight chart. A fumigation crew reads a chart to know where to fly and spray; the operator reads this one to know where Sigatoka is and how sure the system is about each point. Everything is drawn the way a chart is drawn: cool chart-white paper, navy chart ink, hairline 1px rules, square corners, tick marks in the margins, condensed caps labels and tabular figures. The map is full-bleed, the instruments sit in a ruled margin, and every probability carries its threshold line.\n\nThe system is dense and quiet. There is one action colour, an aeronautical blue, and it means \"do this\" or \"this is selected\". The three category inks (healthy, Sigatoka, other condition) are the meaning of the map and appear only on data: map points, zones, swatches and probability bars. Interface status speaks in ink, the dark alert red, the green ink and the blue, never in a category ink. Depth comes from rules and paper tone, not shadows. The scene is daylight: a Windows laptop on a work table or under a roof beside the crop, so the system is light-only and high-contrast.\n\nIt replaces the earlier green, emoji-heavy agritech dashboard entirely. It refuses both that dashboard of rounded cards and leaf icons and the neon drone HUD.",
+    "northStar": "Mapa primero (the map comes first)",
+    "overview": "The station is the drone's ground-control screen. The satellite map of the plantation is the full-screen ground of every page, and every task floats over it on solid near-black navy panels: a dark top bar of separate floating pills, an icon rail on the left, a summary panel on the right and a photo strip along the bottom. Identificar, Revisar, Vuelos and Modelo are not pages that replace the map; they are floating sheets laid over a dimmed map and closed back to it. The system refuses the page-with-tabs dashboard.\n\nThe world is dark because the imagery is the colour. Panels are opaque, flat inside and lifted from the map by one soft shadow. A single sky-blue carries the one global action; a light \"claro\" button marks the next step on whatever surface is open. The diagnosis inks (green, red, amber, and the categories' own hexes) are reserved for data: zones, points, swatches, bars. Type is Manrope throughout, heavy (800) for headings and figures, with tabular numbers wherever a count or percentage appears. Copy is plain-language Spanish written for an agronomist, not a data scientist: \"El modelo no está seguro\", \"Revisar 12 fotos pendientes\".\n\nDensity is moderate: a laptop on a work table, sometimes a phone on the same WiFi, often bright light. Controls are 40 px tall at minimum, focus rings are a 2 px blue outline, and colour is never the only signal (every swatch carries a name).",
     "keyCharacteristics": [
-      "Cool chart-white paper with white sheets, navy ink, 1px hairline rules.",
-      "One aeronautical blue for actions and selection; category inks reserved for data.",
-      "Square corners (2px), corner-tick frames, a ruler of 8px ticks under the title bar.",
-      "Barlow for reading, Barlow Semi Condensed for headings, caps labels and figures; tabular numerals everywhere numbers line up.",
-      "Every probability scale shows the ruled threshold mark; below it the reading is \"no diagnosticable\".",
-      "Motion is a 160ms press and nothing more; keyboard labelling never animates."
+      "The map never leaves: full-bleed at z-index 0, interactive on Mapa, dimmed to 30 % and half-grey behind every sheet.",
+      "Opaque navy panels (#0f171d over the map, #1a2833 inside panels) with 14 to 22 px radii.",
+      "One shadow token, used only by panels that float over imagery.",
+      "One blue action, one light \"claro\" step button; everything else is outlined.",
+      "Diagnosis inks only for data; uncertain results are hatched grey, never a guessed colour.",
+      "Manrope 500 body, 700 controls, 800 headings and figures; tabular numerals.",
+      "Probability bars always show the white line at the 65 % minimum."
     ],
     "rules": [
       {
-        "name": "The One Blue Rule",
-        "body": "Aeronautical blue is the only colour that means \"act\" or \"selected\". No second accent, no gradient, no tinted variant beyond its deep hover and its wash.",
-        "section": "colors"
-      },
-      {
         "name": "The Data Ink Rule",
-        "body": "Category inks belong to data only. A button, badge, alert, status chip or heading never borrows healthy green, Sigatoka red or other-condition amber; status is spoken in ink, alert red, green ink and blue.",
+        "body": "Green, amber and the category inks mean a diagnosis and nothing else. Do not use them for buttons, success states, progress or navigation. Red is the single shared hue: it marks Sigatoka-heavy zones in data and \"needs attention now\" in the chrome (badge, armed confirm, live camera), and it gets no third meaning.",
         "section": "colors"
       },
       {
-        "name": "The Never Alone Rule",
-        "body": "A category colour is always paired with its name in text. A swatch without a label does not ship.",
+        "name": "The One Blue Rule",
+        "body": "Sky blue is the action and the focus ring. One blue button per surface at most; the next step on a surface is the claro button, not a second blue one.",
         "section": "colors"
       },
       {
-        "name": "The Tabular Figures Rule",
-        "body": "Every number that can sit above another number is set with tabular, lining figures: table cells, counts, percentages, probability values, coordinates, timers, the threshold label.",
+        "name": "The Colour Never Alone Rule",
+        "body": "Every swatch, dot and bar is paired with its category name or a sentence; the map legend names every colour.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Count Rule",
+        "body": "Every number that can change (counts, percentages, coordinates, times) uses tabular numerals, so values do not jitter as they update.",
         "section": "typography"
       },
       {
-        "name": "The Caps Are Labels Rule",
-        "body": "Uppercase condensed type labels a control group, a table column or a nav item. It never sits above a heading as a kicker.",
+        "name": "The Sentence Case Rule",
+        "body": "Labels are short Spanish sentence-case phrases. No uppercase tracking, no category labels above headings.",
         "section": "typography"
       },
       {
-        "name": "The Ruled, Not Raised Rule",
-        "body": "Surfaces never lift. If something must stand apart, give it a heavier rule or a different paper tone. The map popup is the only exception.",
+        "name": "The Map Never Leaves Rule",
+        "body": "No surface is opaque edge to edge. Sheets stop 16 px short of the viewport (10 px on phones) and the rail's column, so the map is always visible around them.",
+        "section": "layout"
+      },
+      {
+        "name": "The Imagery-Only Shadow Rule",
+        "body": "Shadows exist because these panels sit over a photograph. A card, row, cell or table inside a panel is flat.",
         "section": "elevation"
       }
     ],
     "dos": [
-      "**Do** use aeronautical blue (`azul`) for the one action that matters on a view and for selection; keep every other control white with a strong-rule border.",
-      "**Do** separate regions with 1px rules (`regla` between rows, full `tinta` at major edges) and paper tone, not shadows or gaps alone.",
-      "**Do** show the threshold line on every probability scale, and say \"no diagnosticable\" below it; let the doubtful ficha hatch rather than show a category ink.",
-      "**Do** pair every category colour with its name in text.",
-      "**Do** set every comparable number in tabular, lining figures.",
-      "**Do** keep corners at 2px (1px for swatches and tracks).",
-      "**Do** put destructive or heavy actions behind the two-step confirm button: red when armed, self-disarming after 4 seconds.",
-      "**Do** keep motion to the 160ms `cubic-bezier(.23, 1, .32, 1)` press, and leave keyboard labelling instant.",
-      "**Do** draw icons as 24x24 strokes at 1.5px with round caps, in the text colour."
+      "Do keep the satellite map visible on every page; open tasks as sheets over the dimmed map (30 % opacity, 50 % greyscale) and close them back to it.",
+      "Do put every floating panel on `panel` (#0f171d) with the single float shadow, and layer inside it with `panel-2` and `panel-3`.",
+      "Do use one blue primario button per surface and the claro button for the surface's main next step.",
+      "Do draw diagnoses as a swatch plus a name, hatch anything below the 65 % minimum and keep the white minimum line on every probability bar.",
+      "Do use Manrope 800 for headings and figures and tabular numerals for every count and percentage.",
+      "Do write labels and messages in plain-language Spanish that says what to do next (\"Toma otra foto más cerca…\").",
+      "Do arm serious actions with the two-step confirm instead of a modal.",
+      "Do keep the 160 ms press and the 200 ms map dim, and keep keyboard labelling instant."
     ],
     "donts": [
-      "**Don't** use emojis anywhere: not in labels, messages, empty states, buttons or data.",
-      "**Don't** put an eyebrow or kicker label above a heading. Caps labels name a control group or a column; headings stand on their own.",
-      "**Don't** use category inks (healthy green #2e9e44, Sigatoka red #d7263d, other amber #f0a202) for UI status, buttons, badges or alerts; status uses `rojo`, `verde-tinta`, `azul` and ink.",
-      "**Don't** add drop shadows or elevation; the map popup's shadow is the only one. Box-shadow appears only as zero-blur rings and inset rules.",
-      "**Don't** bring back the green agritech dashboard: no rounded cards, no leaf-icon decoration, no green brand fills.",
-      "**Don't** drift toward a neon drone HUD: no dark theme, no glows, no decorative gradients. Night ground is for the photo viewer and the log only.",
-      "**Don't** introduce a second accent colour or tint the blue for decoration.",
-      "**Don't** animate on keyboard labelling, and don't animate the probability bars."
+      "Don't use emojis anywhere in the interface.",
+      "Don't add eyebrow or kicker labels above headings; the line above \"Así está el lote\" is data (flight and photo count), not a label.",
+      "Don't use diagnosis colours (green, amber, the category inks) as UI status for success, progress, navigation or buttons; red's only chrome role is \"needs attention now\".",
+      "Don't hide or replace the map with a full-page opaque surface, and don't open a page that has no map behind it.",
+      "Don't put shadows on cards, rows, cells or tables inside a panel.",
+      "Don't show a guessed class colour for an uncertain result.",
+      "Don't add a second accent colour or light-mode panels; the claro button is the only light surface.",
+      "Don't use uppercase, letter-spaced labels or technical jargon in user-facing copy; technical terms stay in the \"Zona del equipo técnico\"."
     ]
   }
 }
