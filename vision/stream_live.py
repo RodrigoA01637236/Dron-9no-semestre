@@ -38,7 +38,7 @@ PAGINA = """<!doctype html><html><head><meta charset="utf-8">
 <title>Dron Sigatoka — en vivo</title>
 <style>body{margin:0;background:#111;color:#eee;font-family:sans-serif;text-align:center}
 h1{font-size:1.1rem;padding:.6rem;margin:0}img{width:100%;max-width:960px}</style></head>
-<body><h1>🚁 Detección de Sigatoka — video en vivo desde el sistema de visión</h1>
+<body><h1>Detección de Sigatoka — video en vivo desde el sistema de visión</h1>
 <img src="/video"></body></html>"""
 
 

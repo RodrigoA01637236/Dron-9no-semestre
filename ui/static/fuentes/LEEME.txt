@@ -1,0 +1,3 @@
+Barlow y Barlow Semi Condensed, de Jeremy Tribby (https://github.com/jpt/barlow).
+Licencia: SIL Open Font License 1.1 (https://openfontlicense.org).
+Copias locales (subconjunto latin) para que la estación funcione sin internet.

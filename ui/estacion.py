@@ -8,6 +8,8 @@ Corre en la laptop del equipo y se usa desde el navegador. Flujo:
      fotos donde el modelo tiene más dudas.
   4. Modelo: botón para reentrenar con esas correcciones y activar el modelo
      nuevo solo si mejora en el examen de campo.
+  5. Identificar: subes o tomas la foto de una hoja (o usas la cámara en vivo)
+     y el modelo dice si está sana, tiene Sigatoka u otra condición.
 
 Uso (con el venv activo, desde la raíz del repo):
     python ui\estacion.py            # se abre sola en http://localhost:5050
@@ -18,6 +20,7 @@ import argparse
 import json
 import sys
 import threading
+import time
 import webbrowser
 from pathlib import Path
 
@@ -62,7 +65,7 @@ def inicio():
     return render_template("mapa.html", pagina="mapa")
 
 
-@app.get("/<any(mapa, revisar, galeria, importar, modelo):pagina>")
+@app.get("/<any(mapa, identificar, revisar, galeria, importar, modelo):pagina>")
 def pagina(pagina):
     return render_template(f"{pagina}.html", pagina=pagina)
 
@@ -202,6 +205,29 @@ def api_foto(fid):
         pred = clf.predecir(carpeta_vuelo(f["vuelo"]) / f["archivo"])
         d["probs"] = pred["probs"] if pred else None
     return jsonify(foto=d)
+
+
+@app.post("/api/identificar")
+def api_identificar():
+    """Diagnostica una sola imagen subida (no se guarda en la base de datos)."""
+    import cv2
+    import numpy as np
+
+    arch = request.files.get("imagen")
+    if not arch:
+        return jsonify(ok=False, error="No llegó ninguna imagen."), 400
+    clf, version = clasificador()
+    if not clf:
+        return jsonify(ok=False, error="No hay modelo cargado: copia sigatoka_cls_v1.onnx a "
+                       f"{datos.MODELO_INICIAL.relative_to(RAIZ)} y reinicia la estación."), 503
+    img = cv2.imdecode(np.frombuffer(arch.read(), np.uint8), cv2.IMREAD_COLOR)
+    if img is None:
+        return jsonify(ok=False, error="No se pudo leer la imagen. Usa una foto JPG o PNG."), 400
+    t0 = time.perf_counter()
+    pred = clf.predecir_bgr(img)
+    ms = (time.perf_counter() - t0) * 1000
+    return jsonify(ok=True, **pred, umbral=clf.umbral, diagnosticable=pred["confianza"] >= clf.umbral,
+                   modelo_version=version, ms=ms, ancho=int(img.shape[1]), alto=int(img.shape[0]))
 
 
 @app.post("/api/etiquetar")

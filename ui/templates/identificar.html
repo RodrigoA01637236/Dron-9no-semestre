@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+{% block titulo %}Identificar una hoja · Estación Sigatoka{% endblock %}
+{% block contenido %}
+<div class="encabezado">
+  <div>
+    <h1>Identificar una hoja</h1>
+    <p class="entrada">Sube o toma una foto de una hoja de plátano y el modelo dice si está sana, tiene Sigatoka
+      u otra condición. Si su confianza no pasa el umbral, la estación lo dice en vez de adivinar.</p>
+  </div>
+</div>
+
+<div class="mesa">
+  <div>
+    <div class="marco"><div class="visor" id="visor">
+      <div class="soltar" id="soltar">
+        <div>
+          <svg class="soltar-icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19c0-8 5-14 14-14 0 9-6 14-14 14Z"/><path d="M5 19 13 11"/></svg>
+          <h2>Arrastra aquí la foto de una hoja</h2>
+          <p>JPG o PNG. Funciona mejor con la hoja llenando la foto, de cerca y con luz de día.</p>
+        </div>
+        <div class="fila" style="justify-content:center">
+          <label class="boton primario grande"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 15v4h16v-4"/></svg>
+            Elegir foto<input type="file" id="archivo" accept="image/*" hidden></label>
+          <button class="boton grande" id="btn-camara" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3v11H4Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+            Usar cámara</button>
+          <input type="file" id="captura-movil" accept="image/*" capture="environment" hidden>
+        </div>
+      </div>
+      <img id="foto" class="oculto" alt="Foto a identificar">
+      <video id="video" class="oculto" playsinline muted></video>
+      <span class="en-vivo oculto" id="en-vivo">En vivo</span>
+      <div class="camara-barra oculto" id="camara-barra">
+        <button class="boton primario" id="btn-capturar" type="button">Capturar y fijar</button>
+        <button class="boton" id="btn-continuo" type="button" aria-pressed="true">Pausar lectura continua</button>
+        <button class="boton" id="btn-cerrar-camara" type="button">Cerrar cámara</button>
+      </div>
+    </div></div>
+    <div class="visor-pie"><span id="pie-foto">Ninguna foto cargada</span><span id="pie-tiempo"></span></div>
+  </div>
+
+  <aside class="hoja lectura" aria-live="polite">
+    <section>
+      <div id="lectura">
+        <h2 style="margin-bottom:.4rem">Sin foto todavía</h2>
+        <p class="esperando" style="margin:0">Carga una foto para ver el diagnóstico y la probabilidad de cada
+          condición. La línea vertical de cada barra marca el umbral de confianza.</p>
+      </div>
+    </section>
+    <section id="sec-probs" class="oculto">
+      <span class="rotulo" style="display:block; margin-bottom:.8rem">Probabilidad por condición</span>
+      <div id="probs"></div>
+    </section>
+    <section id="sec-datos" class="oculto">
+      <dl class="datos-lista" id="datos"></dl>
+    </section>
+    <section id="sec-acciones" class="oculto">
+      <div class="fila">
+        <button class="boton" id="btn-guardar" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11l3 3v13H5Z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/></svg>
+          Guardar para revisión</button>
+        <button class="boton" id="btn-otra" type="button">Otra foto</button>
+      </div>
+      <p class="nota" style="margin:.6rem 0 0">Guardar la manda al vuelo de identificaciones de hoy. Ahí una persona confirma
+        el diagnóstico en Revisar y la foto sirve para reentrenar.</p>
+      <p class="mensaje" id="msg-guardar"></p>
+    </section>
+  </aside>
+</div>
+
+<section class="seccion oculto" id="sec-historial">
+  <h2>Identificadas en esta sesión</h2>
+  <p class="nota">Haz clic en una para volver a ver su lectura. Se borran al cerrar la página, a menos que las guardes.</p>
+  <div class="historial" id="historial"></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+const $ = id => document.getElementById(id);
+let actual = null;          // { blob, url, nombre, r, guardada }
+const historial = [];
+let flujo = null, continuo = true, ocupado = false, temporizador = null;
+
+function mostrarFoto(url) {
+  $("soltar").classList.add("oculto");
+  $("video").classList.add("oculto");
+  $("foto").src = url;
+  $("foto").classList.remove("oculto");
+}
+
+function pintarLectura(r) {
+  const c = categoria(r.clase);
+  const fuerte = r.diagnosticable;
+  $("lectura").innerHTML = fuerte
+    ? `<div class="veredicto"><i class="muestra" style="background:${c.color}"></i><h2>${esc(c.nombre)}</h2></div>
+       <p class="confianza">Lectura del modelo: <b>${pct(r.confianza)}</b> de confianza, ${textoConfianza(r.confianza)}.</p>`
+    : `<div class="veredicto dudoso"><i class="muestra vacia"></i><h2>No diagnosticable</h2></div>
+       <p class="confianza">Lo más parecido es <b>${esc(c.nombre)}</b>, con ${pct(r.confianza)}: no llega al umbral de ${pct(r.umbral)}.</p>
+       <p class="consejo">Toma otra foto más cerca, con la hoja llenando el cuadro y sin sombra fuerte.
+         Si la duda sigue, guárdala para que un agrónomo la revise.</p>`;
+  $("probs").innerHTML = escala(r.probs, r.umbral);
+  $("datos").innerHTML = `<dt>Modelo</dt><dd>v${r.modelo_version}</dd>
+    <dt>Imagen</dt><dd>${r.ancho} × ${r.alto} px</dd>
+    <dt>Tiempo</dt><dd>${r.ms.toFixed(0)} ms</dd>`;
+  ["sec-probs", "sec-datos"].forEach(s => $(s).classList.remove("oculto"));
+}
+
+function pintarError(msg) {
+  $("lectura").innerHTML = `<h2 style="margin-bottom:.4rem">Sin lectura</h2><p class="mensaje error">${esc(msg)}</p>`;
+  ["sec-probs", "sec-datos", "sec-acciones"].forEach(s => $(s).classList.add("oculto"));
+}
+
+async function identificar(blob, nombre) {
+  const datos = new FormData();
+  datos.append("imagen", blob, nombre);
+  return api("/api/identificar", { method: "POST", body: datos });
+}
+
+async function analizar(blob, nombre) {
+  detenerCamara();
+  const url = URL.createObjectURL(blob);
+  mostrarFoto(url);
+  $("pie-foto").textContent = nombre;
+  $("pie-tiempo").textContent = "";
+  $("msg-guardar").textContent = "";
+  $("lectura").classList.add("cargando-lectura");
+  try {
+    const r = await identificar(blob, nombre);
+    actual = { blob, url, nombre, r, guardada: false };
+    historial.unshift(actual);
+    pintarLectura(r);
+    $("sec-acciones").classList.remove("oculto");
+    $("btn-guardar").disabled = false;
+    pintarHistorial();
+  } catch (e) {
+    pintarError(e.message);
+  } finally {
+    $("lectura").classList.remove("cargando-lectura");
+  }
+}
+
+function pintarHistorial() {
+  $("sec-historial").classList.toggle("oculto", !historial.length);
+  $("historial").innerHTML = historial.slice(0, 24).map((h, i) => {
+    const c = categoria(h.r.clase);
+    const d = h.r.diagnosticable ? c : { ...c, nombre: "No diagnosticable", dudoso: true };
+    return `<button type="button" data-i="${i}" aria-pressed="${h === actual}"><img src="${h.url}" alt="">
+      <span>${ficha(d)}<br><span class="nota">${pct(h.r.confianza)}${h.guardada ? " · guardada" : ""}</span></span></button>`;
+  }).join("");
+  $("historial").querySelectorAll("button").forEach(b => b.onclick = () => {
+    detenerCamara();
+    actual = historial[+b.dataset.i];
+    mostrarFoto(actual.url);
+    $("pie-foto").textContent = actual.nombre;
+    pintarLectura(actual.r);
+    $("sec-acciones").classList.remove("oculto");
+    $("btn-guardar").disabled = actual.guardada;
+    $("msg-guardar").textContent = actual.guardada ? "Esta foto ya está guardada." : "";
+    pintarHistorial();
+  });
+}
+
+// ------------------------------------------------------------- archivos
+$("archivo").onchange = e => { const f = e.target.files[0]; if (f) analizar(f, f.name); e.target.value = ""; };
+$("captura-movil").onchange = e => { const f = e.target.files[0]; if (f) analizar(f, f.name || "foto.jpg"); e.target.value = ""; };
+const visor = $("visor");
+visor.addEventListener("dragover", e => { e.preventDefault(); $("soltar").classList.add("encima"); });
+visor.addEventListener("dragleave", () => $("soltar").classList.remove("encima"));
+visor.addEventListener("drop", e => {
+  e.preventDefault();
+  $("soltar").classList.remove("encima");
+  const f = [...e.dataTransfer.files].find(f => f.type.startsWith("image/"));
+  if (f) analizar(f, f.name); else pintarError("Eso no parece una imagen. Usa una foto JPG o PNG.");
+});
+document.addEventListener("paste", e => {
+  const f = [...(e.clipboardData?.files || [])].find(f => f.type.startsWith("image/"));
+  if (f) analizar(f, "pegada.png");
+});
+
+// ------------------------------------------------------------- cámara
+async function abrirCamara() {
+  // Sin contexto seguro (p. ej. abierta desde otro equipo por WiFi) el navegador
+  // no deja usar la cámara en vivo: se usa la cámara del sistema para una foto.
+  if (!navigator.mediaDevices?.getUserMedia) return $("captura-movil").click();
+  try {
+    flujo = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 } }, audio: false });
+  } catch (e) {
+    return pintarError("No se pudo abrir la cámara. Revisa que el navegador tenga permiso, o usa Elegir foto.");
+  }
+  const v = $("video");
+  v.srcObject = flujo;
+  await v.play();
+  $("soltar").classList.add("oculto");
+  $("foto").classList.add("oculto");
+  v.classList.remove("oculto");
+  $("camara-barra").classList.remove("oculto");
+  $("pie-foto").textContent = "Cámara en vivo";
+  continuo = true;
+  actualizarContinuo();
+  ciclo();
+}
+
+function cuadro(maximo = 960) {
+  const v = $("video"), k = Math.min(1, maximo / v.videoWidth);
+  const lienzo = document.createElement("canvas");
+  lienzo.width = Math.round(v.videoWidth * k); lienzo.height = Math.round(v.videoHeight * k);
+  lienzo.getContext("2d").drawImage(v, 0, 0, lienzo.width, lienzo.height);
+  return new Promise(res => lienzo.toBlob(res, "image/jpeg", .9));
+}
+
+async function ciclo() {
+  clearTimeout(temporizador);
+  if (!flujo) return;
+  if (continuo && !ocupado && $("video").videoWidth) {
+    ocupado = true;
+    try {
+      const r = await identificar(await cuadro(640), "cuadro.jpg");
+      if (flujo) { pintarLectura(r); $("pie-tiempo").textContent = `lectura cada 0.8 s · ${r.ms.toFixed(0)} ms`; }
+    } catch (e) { pintarError(e.message); }
+    ocupado = false;
+  }
+  temporizador = setTimeout(ciclo, 800);
+}
+
+function actualizarContinuo() {
+  $("btn-continuo").textContent = continuo ? "Pausar lectura continua" : "Reanudar lectura continua";
+  $("btn-continuo").setAttribute("aria-pressed", continuo);
+  $("en-vivo").classList.toggle("oculto", !continuo);
+}
+
+function detenerCamara() {
+  clearTimeout(temporizador);
+  if (flujo) flujo.getTracks().forEach(t => t.stop());
+  flujo = null;
+  $("video").classList.add("oculto");
+  $("camara-barra").classList.add("oculto");
+  $("en-vivo").classList.add("oculto");
+}
+
+function reiniciar() {
+  detenerCamara();
+  actual = null;
+  $("foto").classList.add("oculto");
+  $("soltar").classList.remove("oculto");
+  $("pie-foto").textContent = "Ninguna foto cargada";
+  $("pie-tiempo").textContent = "";
+  $("lectura").innerHTML = `<h2 style="margin-bottom:.4rem">Sin foto todavía</h2><p class="esperando" style="margin:0">Carga una foto para ver el diagnóstico.</p>`;
+  ["sec-probs", "sec-datos", "sec-acciones"].forEach(s => $(s).classList.add("oculto"));
+  pintarHistorial();
+}
+
+$("btn-camara").onclick = abrirCamara;
+$("btn-cerrar-camara").onclick = reiniciar;
+$("btn-continuo").onclick = () => { continuo = !continuo; actualizarContinuo(); };
+$("btn-capturar").onclick = async () => {
+  const blob = await cuadro(1600);
+  const hora = new Date().toTimeString().slice(0, 8).replaceAll(":", "");
+  analizar(blob, `captura_${hora}.jpg`);
+};
+$("btn-otra").onclick = reiniciar;
+
+// ------------------------------------------------------------- guardar
+$("btn-guardar").onclick = async () => {
+  if (!actual || actual.guardada) return;
+  const boton = $("btn-guardar"), msg = $("msg-guardar");
+  boton.disabled = true;
+  msg.className = "mensaje"; msg.textContent = "Guardando…";
+  const hoy = new Date().toISOString().slice(0, 10);
+  const hora = new Date().toTimeString().slice(0, 8).replaceAll(":", "");
+  const ext = /\.(jpe?g|png|bmp|webp)$/i.test(actual.nombre) ? "" : ".jpg";
+  try {
+    const datos = new FormData();
+    datos.append("vuelo", `identificaciones_${hoy}`);
+    datos.append("archivos", actual.blob, `${hora}_${actual.nombre}${ext}`);
+    const r = await api("/api/subir", { method: "POST", body: datos });
+    await post("/api/procesar", { vuelo: r.vuelo });
+    actual.guardada = true;
+    msg.className = "mensaje bien";
+    msg.innerHTML = `Guardada en <b>${esc(r.vuelo)}</b>. <a href="/revisar?vuelo=${encodeURIComponent(r.vuelo)}">Revisarla ahora</a>`;
+    pintarHistorial();
+    cargarResumen();
+  } catch (e) {
+    boton.disabled = false;
+    msg.className = "mensaje error"; msg.textContent = "No se pudo guardar: " + e.message;
+  }
+};
+
+window.addEventListener("pagehide", detenerCamara);
+cargarResumen();
+</script>
+{% endblock %}

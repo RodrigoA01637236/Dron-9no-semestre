@@ -1,6 +1,6 @@
 # Chuleta de comandos — sistema de visión (PowerShell)
 
-## 🔑 Ritual de inicio (SIEMPRE, cada vez que abras una terminal)
+## Ritual de inicio (SIEMPRE, cada vez que abras una terminal)
 
 ```powershell
 & $env:USERPROFILE\venvs\dron-vision\Scripts\Activate.ps1
@@ -13,7 +13,7 @@ Sabes que estás listo cuando la línea se ve así:
 
 ---
 
-## 🛰️ Estación de tierra (mapa, revisión y reentrenamiento)
+## Estación de tierra (mapa, identificar, revisión y reentrenamiento)
 
 Doble clic en `ui\Iniciar-Estacion.bat`, o:
 
@@ -26,7 +26,7 @@ Guía: `ui\ESTACION.md`. Datos en `data\estacion\` (respaldar en Drive).
 
 ---
 
-## 🎬 Demos (para presentar)
+## Demos (para presentar)
 
 ```powershell
 # Demo con fotos: arrastra imágenes y las diagnostica (se abre en el navegador)
@@ -47,7 +47,7 @@ webcam a la pantalla del celular.
 
 ---
 
-## 🧠 Entrenamiento y evaluación
+## Entrenamiento y evaluación
 
 ```powershell
 # Reorganizar el dataset desde las carpetas descargadas (solo si cambian los datos)
@@ -70,7 +70,7 @@ Resultados y gráficas del último entrenamiento: `explorer runs\classify\train`
 
 ---
 
-## 📤 Subir tus cambios a GitHub
+## Subir tus cambios a GitHub
 
 ```powershell
 git add <archivos>
@@ -83,7 +83,7 @@ Si el pull abre VS Code pidiendo un mensaje de merge → guarda y cierra la pest
 
 ---
 
-## 🚑 Problemas frecuentes
+## Problemas frecuentes
 
 | Síntoma | Causa | Arreglo |
 |---|---|---|

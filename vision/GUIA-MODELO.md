@@ -40,7 +40,7 @@ modelo al dron" es copiar un archivo y correr un comando.
 
 ### Instalación en Windows (PowerShell) — probada paso a paso
 
-⚠️ Usar **Python 3.13**, no 3.14: varios paquetes (Label Studio en particular) aún no
+**Ojo:** usar **Python 3.13**, no 3.14: varios paquetes (Label Studio en particular) aún no
 tienen versión precompilada para 3.14 e intentan compilar desde código, lo que falla
 sin un compilador de C instalado.
 
@@ -241,7 +241,7 @@ sigatoka_cls_v1.json        # su metadata (SÍ va a git, en vision/models/)
 }
 ```
 
-⚠️ **`classes` debe ir en el orden exacto de salida del modelo.** Ultralytics ordena las
+**Ojo: `classes` debe ir en el orden exacto de salida del modelo.** Ultralytics ordena las
 clases alfabéticamente por nombre de carpeta — usa el `model.names` que imprime
 `train_cls.py` al final. Un orden equivocado = diagnósticos cruzados sin ningún error visible.
 

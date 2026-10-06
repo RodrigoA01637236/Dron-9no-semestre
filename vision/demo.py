@@ -22,7 +22,7 @@ MODELO = Path("vision/models/sigatoka_cls_v1.onnx")
 META = json.loads(MODELO.with_suffix(".json").read_text(encoding="utf-8"))
 CLASES, UMBRAL, LADO = META["classes"], META["umbral_confianza"], META["input"][-1]
 
-BONITO = {"sana": "🟢 Sana", "sigatoka": "🔴 Sigatoka", "otra_condicion": "🟡 Otra condición"}
+BONITO = {"sana": "Sana", "sigatoka": "Sigatoka", "otra_condicion": "Otra condición"}
 
 sess = ort.InferenceSession(str(MODELO))
 ENTRADA = sess.get_inputs()[0].name
@@ -44,7 +44,7 @@ def diagnosticar(img_rgb: np.ndarray):
     top = int(probs.argmax())
     conf = float(probs[top])
     if conf < UMBRAL:
-        veredicto = (f"⚪ **No diagnosticable** — la confianza ({conf:.0%}) quedó debajo del "
+        veredicto = (f"**No diagnosticable** — la confianza ({conf:.0%}) quedó debajo del "
                      f"umbral ({UMBRAL:.0%}). En el dron, esta foto se marcaría en gris "
                      f"para revisión del agrónomo.")
     else:

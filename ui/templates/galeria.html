@@ -1,51 +1,62 @@
 {% extends "base.html" %}
+{% block titulo %}Fotos · Estación Sigatoka{% endblock %}
 {% block contenido %}
-<h1>Fotos recolectadas</h1>
-<p class="sub">Haz clic en una foto para verla en grande y corregir su diagnóstico.</p>
-<div class="fila" style="margin-bottom:1rem">
-  <select id="vuelo"></select>
-  <select id="clase"></select>
-  <select id="filtro">
-    <option value="">Todas</option>
-    <option value="pendientes">Sin revisar</option>
-    <option value="revisadas">Revisadas</option>
-    <option value="sin_gps">Sin GPS</option>
-  </select>
-  <span class="mini-nota" id="total"></span>
+<div class="encabezado">
+  <div>
+    <h1>Fotos recolectadas</h1>
+    <p class="entrada">Abre una foto para verla en grande y confirmar o corregir su diagnóstico.</p>
+  </div>
+</div>
+<div class="herramientas">
+  <label class="campo"><span>Vuelo</span><select id="vuelo"></select></label>
+  <label class="campo"><span>Diagnóstico</span><select id="clase"></select></label>
+  <label class="campo"><span>Estado</span>
+    <select id="filtro">
+      <option value="">Todas</option>
+      <option value="pendientes">Sin revisar</option>
+      <option value="revisadas">Revisadas</option>
+      <option value="sin_gps">Sin GPS</option>
+    </select></label>
+  <span class="nota num empuja" id="total" style="align-self:center"></span>
 </div>
 <div class="rejilla" id="rejilla"></div>
-<div class="fila" style="justify-content:center; margin-top:1rem">
-  <button id="ant">← Anterior</button><span id="pag"></span><button id="sig">Siguiente →</button>
-</div>
+<nav class="paginacion" aria-label="Páginas">
+  <button class="boton" id="ant" type="button">Anterior</button><span class="num" id="pag"></span><button class="boton" id="sig" type="button">Siguiente</button>
+</nav>
 {% endblock %}
 {% block scripts %}
 <script>
 let pagina = 1;
+const vuelo = document.getElementById("vuelo"), clase = document.getElementById("clase"),
+      filtro = document.getElementById("filtro");
+
 async function cargar() {
-  const q = new URLSearchParams({
-    vuelo: vuelo.value, clase: clase.value, filtro: filtro.value, pagina,
-  });
+  const q = new URLSearchParams({ vuelo: vuelo.value, clase: clase.value, filtro: filtro.value, pagina });
   const r = await api("/api/fotos?" + q);
-  document.getElementById("total").textContent = `${r.total} fotos`;
+  document.getElementById("total").textContent = `${r.total} ${r.total === 1 ? "foto" : "fotos"}`;
   const paginas = Math.max(1, Math.ceil(r.total / 60));
   document.getElementById("pag").textContent = `Página ${pagina} de ${paginas}`;
   document.getElementById("ant").disabled = pagina <= 1;
   document.getElementById("sig").disabled = pagina >= paginas;
+  document.querySelector(".paginacion").classList.toggle("oculto", paginas <= 1);
   document.getElementById("rejilla").innerHTML = r.fotos.map(f => {
     const d = diagnostico(f);
-    const marca = d.fuente === "humano" ? "✔ revisada" : d.fuente === "modelo" ? `${Math.round(f.conf * 100)} %` : "";
+    const marca = d.fuente === "humano" ? "Revisada" : d.fuente === "modelo" ? `Modelo ${pct(f.conf)}` : "";
     return `<a class="celda" href="/revisar?foto=${f.id}">
-      <img src="/mini/${f.id}" loading="lazy" alt="">
-      <div class="pie">${pildora(d)}<span class="mini-nota">${marca}${f.lat == null ? " · sin GPS" : ""}</span></div></a>`;
-  }).join("") || `<p>No hay fotos con ese filtro. <a href="/importar">Importa un vuelo</a>.</p>`;
+      <img src="/mini/${f.id}" loading="lazy" alt="${esc(f.archivo)}">
+      <div class="celda-pie">${ficha(d)}<span class="etiqueta-fuente"><span>${marca}</span><span>${f.lat == null ? "sin GPS" : ""}</span></span></div></a>`;
+  }).join("") || `<div class="hoja vacio" style="grid-column:1/-1"><h2>No hay fotos con ese filtro</h2>
+      <p>Cambia el vuelo o el estado, o importa las fotos de un vuelo nuevo.</p>
+      <div class="fila"><a class="boton primario" href="/importar">Importar un vuelo</a></div></div>`;
 }
-const vuelo = document.getElementById("vuelo"), clase = document.getElementById("clase"),
-      filtro = document.getElementById("filtro");
+
 (async () => {
   await cargarResumen();
   llenarVuelos(vuelo);
-  clase.innerHTML = `<option value="">Todos los diagnósticos</option>` +
-    RESUMEN.categorias.map(c => `<option value="${c.clave}">${c.nombre}</option>`).join("") +
+  const pv = new URLSearchParams(location.search).get("vuelo");
+  if (pv) vuelo.value = pv;
+  clase.innerHTML = `<option value="">Todos</option>` +
+    RESUMEN.categorias.map(c => `<option value="${esc(c.clave)}">${esc(c.nombre)}</option>`).join("") +
     `<option value="${DESCARTAR}">Foto no sirve</option>`;
   [vuelo, clase, filtro].forEach(s => s.onchange = () => { pagina = 1; cargar(); });
   document.getElementById("ant").onclick = () => { pagina--; cargar(); };

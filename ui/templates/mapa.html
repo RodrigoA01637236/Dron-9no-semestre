@@ -1,43 +1,63 @@
 {% extends "base.html" %}
+{% block titulo %}Mapa del cultivo · Estación Sigatoka{% endblock %}
 {% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='leaflet/leaflet.css') }}">{% endblock %}
 {% block clase_main %}ancho{% endblock %}
 {% block contenido %}
-<div class="mapa-wrap">
-  <aside class="panel">
-    <h1>Mapa del cultivo</h1>
-    <p class="sub">Cada punto es una foto en el lugar donde se tomó.</p>
-
-    <label>Vuelo<br><select id="vuelo" style="width:100%"></select></label>
-
-    <div class="cifras">
-      <div><div class="cifra" id="n-fotos">0</div>fotos en el mapa</div>
-      <div><div class="cifra" id="n-objetivo" style="color:#d7263d">0</div><span id="txt-objetivo">con Sigatoka</span></div>
-      <div><div class="cifra" id="n-revisadas">0</div>revisadas por humano</div>
-      <div><div class="cifra" id="n-singps">0</div>sin GPS (no salen)</div>
+<div class="mapa-marco">
+  <div class="mapa-lienzo">
+    <div id="mapa" aria-label="Mapa del cultivo"></div>
+    <div class="lectura-pos" id="lectura-pos" aria-hidden="true"></div>
+    <div class="mapa-vacio oculto" id="mapa-vacio">
+      <div>
+        <h2>Todavía no hay fotos con GPS</h2>
+        <p>Importa un vuelo con su archivo de GPS del Pixhawk, o fotos de celular con la ubicación activada.
+          Cada foto aparecerá aquí en el lugar donde se tomó.</p>
+        <a class="boton primario" href="/importar">Importar un vuelo</a>
+      </div>
     </div>
+  </div>
 
-    <h2>Vista</h2>
-    <div class="fila">
-      <label><input type="radio" name="vista" value="puntos" checked> Puntos</label>
-      <label><input type="radio" name="vista" value="zonas"> Zonas</label>
-    </div>
-    <div id="opciones-zona" class="oculto" style="margin-top:.5rem">
-      <label>Enfermedad a mapear <select id="objetivo"></select></label><br>
-      <label>Tamaño de zona
-        <select id="tam-zona"><option value="10">10 m</option><option value="20" selected>20 m</option>
-          <option value="50">50 m</option><option value="100">100 m</option></select></label>
-      <p class="mini-nota">Color por % de fotos con la enfermedad: verde 0 %, ámbar hasta 25 %, rojo más de 25 %.</p>
-    </div>
-
-    <h2>Leyenda</h2>
-    <div class="leyenda" id="leyenda"></div>
-    <p class="mini-nota">Borde grueso = revisada por un humano. Gris = el modelo duda (revisar).</p>
-
-    <p class="mini-nota">📍 Ubicación aproximada (GPS sin RTK, ±3 m): cada punto marca dónde estaba el dron,
-      no una planta exacta.</p>
-    <a id="geojson" class="boton" href="/api/geojson">⬇️ Descargar GeoJSON (Google Earth / QGIS)</a>
+  <aside class="panel-mapa">
+    <section>
+      <h1>Mapa del cultivo</h1>
+      <p class="nota" style="margin:0">Cada punto es una foto en el lugar donde se tomó.</p>
+    </section>
+    <section>
+      <label class="campo"><span>Vuelo</span><select id="vuelo"></select></label>
+    </section>
+    <section>
+      <div class="cifras">
+        <div><span class="cifra" id="n-fotos">0</span><small>fotos en el mapa</small></div>
+        <div><span class="cifra objetivo" id="n-objetivo">0</span><small id="txt-objetivo">con Sigatoka</small></div>
+        <div><span class="cifra" id="n-revisadas">0</span><small>revisadas por una persona</small></div>
+        <div><span class="cifra" id="n-singps">0</span><small>sin GPS, fuera del mapa</small></div>
+      </div>
+    </section>
+    <section>
+      <span class="rotulo">Vista</span>
+      <div class="segmentos" role="radiogroup" aria-label="Vista del mapa">
+        <label><input type="radio" name="vista" value="puntos" checked><span>Puntos</span></label>
+        <label><input type="radio" name="vista" value="zonas"><span>Zonas</span></label>
+      </div>
+      <div class="fila" style="margin-top:.9rem; align-items:flex-end">
+        <label class="campo" style="flex:1 1 9rem"><span>Condición a resaltar</span><select id="objetivo"></select></label>
+        <label class="campo oculto" id="caja-zona"><span>Tamaño de zona</span>
+          <select id="tam-zona"><option value="10">10 m</option><option value="20" selected>20 m</option>
+            <option value="50">50 m</option><option value="100">100 m</option></select></label>
+      </div>
+    </section>
+    <section>
+      <span class="rotulo">Leyenda</span>
+      <div class="leyenda" id="leyenda"></div>
+      <p class="nota" style="margin:.8rem 0 0">GPS sin RTK, error de ±3 m: cada punto marca dónde estaba el dron,
+        no una planta exacta. Por eso la vista de zonas es la que sirve para decidir dónde aplicar.</p>
+    </section>
+    <section>
+      <a id="geojson" class="boton" href="/api/geojson" style="width:100%">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>
+        Descargar GeoJSON (QGIS, Google Earth)</a>
+    </section>
   </aside>
-  <div id="mapa"></div>
 </div>
 {% endblock %}
 {% block scripts %}
@@ -53,43 +73,54 @@ const fondos = {
   "Sin fondo (sin internet)": L.layerGroup(),
 };
 fondos["Satélite (requiere internet)"].addTo(mapa);
-L.control.layers(fondos).addTo(mapa);
-L.control.scale({ imperial: false }).addTo(mapa);
+L.control.layers(fondos, null, { position: "topright" }).addTo(mapa);
+L.control.scale({ imperial: false, position: "bottomright" }).addTo(mapa);
+
+// Lectura de posición en el margen, como en una carta.
+const lectura = document.getElementById("lectura-pos");
+const coord = (v, pos, neg) => `${Math.abs(v).toFixed(5)}° ${v >= 0 ? pos : neg}`;
+const leer = ll => { lectura.textContent = `${coord(ll.lat, "N", "S")}   ${coord(ll.lng, "E", "O")}`; };
+mapa.on("mousemove", e => leer(e.latlng));
+mapa.on("move", () => { if (!matchMedia("(hover: hover)").matches) leer(mapa.getCenter()); });
 
 const capa = L.layerGroup().addTo(mapa);
 let FOTOS = [];
+const objetivoSel = document.getElementById("objetivo");
 
-function popup(f) {
+function fichaMapa(f) {
   const d = diagnostico(f);
   const fuente = d.fuente === "humano"
     ? `Revisada${f.revisor ? " por " + esc(f.revisor) : ""}`
-    : d.fuente === "modelo" ? `Modelo: ${Math.round(f.conf * 100)} % (${textoConfianza(f.conf)})` : "";
-  return `<div class="popup"><img src="/mini/${f.id}" loading="lazy">
-    ${pildora(d)}<br><small>${fuente}<br>${esc(f.fecha || "")}${f.alt != null ? ` · ${f.alt.toFixed(1)} m` : ""}</small><br>
-    <a href="/revisar?foto=${f.id}">Revisar / corregir</a></div>`;
+    : d.fuente === "modelo" ? `Modelo: ${pct(f.conf)}, ${textoConfianza(f.conf)}` : "Sin diagnóstico";
+  return `<div class="ficha-mapa"><img src="/mini/${f.id}" loading="lazy" alt="">
+    ${ficha(d)}<div class="meta">${fuente}<br>${esc(f.fecha || "")}${f.alt != null ? ` · ${f.alt.toFixed(1)} m de altura` : ""}</div>
+    <a href="/revisar?foto=${f.id}">Revisar esta foto</a></div>`;
 }
 
 function dibujarPuntos() {
+  const objetivo = objetivoSel.value;
   FOTOS.forEach(f => {
     const d = diagnostico(f);
+    const resalta = d.clave === objetivo && !d.dudoso;
     L.circleMarker([f.lat, f.lon], {
-      radius: 7, color: d.fuente === "humano" ? "#111" : "#fff", weight: d.fuente === "humano" ? 3 : 1.5,
-      fillColor: d.color, fillOpacity: .9,
-    }).bindPopup(popup(f)).addTo(capa);
+      radius: resalta ? 8 : 6.5,
+      color: d.fuente === "humano" ? "#13202b" : "#ffffff", weight: d.fuente === "humano" ? 2.5 : 1.5,
+      fillColor: d.color, fillOpacity: resalta ? .95 : .6,
+    }).bindPopup(fichaMapa(f)).addTo(capa);
   });
 }
 
 function dibujarZonas() {
   const metros = +document.getElementById("tam-zona").value;
-  const objetivo = document.getElementById("objetivo").value;
+  const objetivo = objetivoSel.value;
   const lat0 = FOTOS.reduce((s, f) => s + f.lat, 0) / FOTOS.length;
   const dLat = metros / 111320, dLon = metros / (111320 * Math.cos(lat0 * Math.PI / 180));
   const celdas = new Map();
   FOTOS.forEach(f => {
     const d = diagnostico(f);
     if (!d.clave || d.dudoso || d.clave === DESCARTAR) return;  // solo diagnósticos confiables
-    const k = `${Math.floor(f.lat / dLat)}|${Math.floor(f.lon / dLon)}`;
-    const c = celdas.get(k) || { i: Math.floor(f.lat / dLat), j: Math.floor(f.lon / dLon), n: 0, pos: 0 };
+    const i = Math.floor(f.lat / dLat), j = Math.floor(f.lon / dLon), k = `${i}|${j}`;
+    const c = celdas.get(k) || { i, j, n: 0, pos: 0 };
     c.n++; c.pos += d.clave === objetivo;
     celdas.set(k, c);
   });
@@ -99,15 +130,28 @@ function dibujarZonas() {
     const color = p === 0 ? "#2e9e44" : p <= .25 ? "#f0a202" : "#d7263d";
     L.rectangle([[c.i * dLat, c.j * dLon], [(c.i + 1) * dLat, (c.j + 1) * dLon]], {
       color, weight: 1, fillColor: color, fillOpacity: .25 + .45 * Math.min(1, c.n / 10),
-    }).bindTooltip(`${c.n} fotos · ${c.pos} con ${nombre} (${Math.round(p * 100)} %)`).addTo(capa);
+    }).bindTooltip(`${c.n} fotos · ${c.pos} con ${esc(nombre)} (${Math.round(p * 100)} %)`).addTo(capa);
   });
+}
+
+function leyenda() {
+  const vista = document.querySelector("input[name=vista]:checked").value;
+  const nombre = esc(categoria(objetivoSel.value).nombre);
+  document.getElementById("leyenda").innerHTML = vista === "zonas"
+    ? [["#2e9e44", `Sin ${nombre}`], ["#f0a202", `Hasta 25 % de fotos con ${nombre}`], ["#d7263d", `Más de 25 % con ${nombre}`]]
+        .map(([c, t]) => `<div class="linea"><i class="simbolo zona" style="background:${c}55; border-color:${c}"></i>${t}</div>`).join("") +
+      `<div class="nota">Más opaca = más fotos en la zona. Solo cuentan diagnósticos confiables o revisados.</div>`
+    : RESUMEN.categorias.map(c => `<div class="linea"><i class="simbolo" style="background:${c.color}"></i>${esc(c.nombre)}</div>`).join("") +
+      `<div class="linea"><i class="simbolo" style="background:${GRIS}"></i>El modelo duda o no hay diagnóstico</div>` +
+      `<div class="linea"><i class="simbolo revisada" style="background:#fff"></i>Borde oscuro: revisada por una persona</div>`;
 }
 
 function dibujar() {
   capa.clearLayers();
-  if (!FOTOS.length) return;
   const vista = document.querySelector("input[name=vista]:checked").value;
-  document.getElementById("opciones-zona").classList.toggle("oculto", vista !== "zonas");
+  document.getElementById("caja-zona").classList.toggle("oculto", vista !== "zonas");
+  leyenda();
+  if (!FOTOS.length) return;
   vista === "zonas" ? dibujarZonas() : dibujarPuntos();
 }
 
@@ -115,30 +159,30 @@ async function cargar() {
   const vuelo = document.getElementById("vuelo").value;
   const r = await api("/api/mapa" + (vuelo ? `?vuelo=${encodeURIComponent(vuelo)}` : ""));
   FOTOS = r.fotos;
-  const objetivo = document.getElementById("objetivo").value;
+  const objetivo = objetivoSel.value;
   document.getElementById("n-fotos").textContent = FOTOS.length;
-  document.getElementById("n-objetivo").textContent = FOTOS.filter(f => diagnostico(f).clave === objetivo && !diagnostico(f).dudoso).length;
+  document.getElementById("n-objetivo").textContent =
+    FOTOS.filter(f => { const d = diagnostico(f); return d.clave === objetivo && !d.dudoso; }).length;
   document.getElementById("txt-objetivo").textContent = "con " + categoria(objetivo).nombre;
   document.getElementById("n-revisadas").textContent = FOTOS.filter(f => f.etiqueta).length;
   document.getElementById("n-singps").textContent = r.sin_gps;
   document.getElementById("geojson").href = "/api/geojson" + (vuelo ? `?vuelo=${encodeURIComponent(vuelo)}` : "");
+  document.getElementById("mapa-vacio").classList.toggle("oculto", FOTOS.length > 0);
   dibujar();
-  if (FOTOS.length) mapa.fitBounds(L.latLngBounds(FOTOS.map(f => [f.lat, f.lon])), { padding: [40, 40], maxZoom: 19 });
+  if (FOTOS.length) mapa.fitBounds(L.latLngBounds(FOTOS.map(f => [f.lat, f.lon])), { padding: [48, 48], maxZoom: 19 });
+  mapa.once("moveend", () => leer(mapa.getCenter()));
+  leer(mapa.getCenter());
 }
 
 (async () => {
   await cargarResumen();
   llenarVuelos(document.getElementById("vuelo"));
-  const obj = document.getElementById("objetivo");
-  obj.innerHTML = RESUMEN.categorias.map(c => `<option value="${c.clave}">${c.nombre}</option>`).join("");
-  obj.value = RESUMEN.categorias.some(c => c.clave === "sigatoka") ? "sigatoka" : RESUMEN.categorias[0]?.clave;
-  document.getElementById("leyenda").innerHTML = RESUMEN.categorias
-    .map(c => `<div><span class="punto" style="background:${c.color}"></span>${c.nombre}</div>`).join("") +
-    `<div><span class="punto" style="background:${GRIS}"></span>Dudoso / sin diagnóstico</div>`;
+  objetivoSel.innerHTML = RESUMEN.categorias.map(c => `<option value="${esc(c.clave)}">${esc(c.nombre)}</option>`).join("");
+  objetivoSel.value = RESUMEN.categorias.some(c => c.clave === "sigatoka") ? "sigatoka" : RESUMEN.categorias[0]?.clave;
   document.getElementById("vuelo").onchange = cargar;
   document.querySelectorAll("input[name=vista]").forEach(r => r.onchange = dibujar);
   document.getElementById("tam-zona").onchange = dibujar;
-  obj.onchange = cargar;
+  objetivoSel.onchange = cargar;
   await cargar();
 })();
 </script>

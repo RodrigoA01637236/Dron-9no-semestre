@@ -1,14 +1,15 @@
 # Estación de tierra — guía de uso
 
 Aplicación web local que corre en la laptop del equipo y se usa desde el navegador.
-Sirve para cuatro cosas:
+Sirve para cinco cosas:
 
 | Página | Para qué |
 |---|---|
-| 📥 **Importar vuelo** | Subir la carpeta de fotos de un vuelo. El modelo las diagnostica al instante. |
-| 🗺️ **Mapa** | Ver dónde se tomó cada foto y su diagnóstico; vista **por zonas** con el % de plantas enfermas. Descarga GeoJSON para Google Earth/QGIS. |
-| ✅ **Revisar** | Un humano (idealmente el agrónomo) confirma o corrige cada diagnóstico. Empieza por las fotos donde el modelo tiene más dudas. |
-| 🧠 **Modelo** | Reentrenar con las correcciones, comparar contra el modelo actual y activar el nuevo solo si mejora. |
+| **Mapa** | Ver dónde se tomó cada foto y su diagnóstico; vista **por zonas** con el % de plantas enfermas. Descarga GeoJSON para Google Earth/QGIS. |
+| **Identificar** | Subir o tomar la foto de una hoja (o usar la cámara en vivo) y ver al instante si está sana, tiene Sigatoka u otra condición, con la probabilidad de cada una. |
+| **Revisar** | Un humano (idealmente el agrónomo) confirma o corrige cada diagnóstico. Empieza por las fotos donde el modelo tiene más dudas. |
+| **Fotos** e **Importar** | Subir la carpeta de fotos de un vuelo (el modelo las diagnostica al instante) y explorarlas con filtros. |
+| **Modelo** | Reentrenar con las correcciones, comparar contra el modelo actual y activar el nuevo solo si mejora. |
 
 ## Cómo abrirla
 
@@ -25,6 +26,20 @@ python ui\estacion.py --red     # para que otro equipo del mismo WiFi la abra (e
 Requisitos: el entorno `dron-vision` de la guía del modelo, más `pip install flask`
 (el `.bat` lo instala solo la primera vez), y el modelo `sigatoka_cls_v1.onnx`
 (de tu Drive) copiado en `vision\models\`.
+
+## Identificar una hoja
+
+En **Identificar** arrastra una foto, elige un archivo o pulsa *Usar cámara*:
+
+- Con una foto, la estación muestra el diagnóstico, su confianza y una barra por condición.
+  La línea vertical de cada barra es el **umbral (65 %)**: si ninguna condición lo pasa, el
+  resultado es **No diagnosticable** y la estación pide otra foto en vez de adivinar.
+- Con la cámara (webcam de la laptop) el diagnóstico se actualiza cada 0.8 s. *Capturar y
+  fijar* congela el cuadro para guardarlo.
+- *Guardar para revisión* manda la foto al vuelo `identificaciones_<fecha>`: aparece en
+  Revisar y Fotos, y una vez confirmada sirve para reentrenar.
+- Desde otro equipo (`--red`) el navegador no permite la cámara en vivo por no ser una
+  conexión segura; en el celular, *Usar cámara* abre la cámara del teléfono para tomar una foto.
 
 ## El flujo de trabajo
 
