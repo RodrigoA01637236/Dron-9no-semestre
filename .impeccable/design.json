@@ -1,0 +1,570 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-06T22:00:00Z",
+  "title": "Design System: Estación Sigatoka",
+  "extensions": {
+    "colorMeta": {
+      "papel": {
+        "role": "neutral",
+        "displayName": "Chart Paper",
+        "canonical": "#f3f5f2",
+        "purpose": "Page ground, table header rows, drop zone at rest.",
+        "tonalRamp": [
+          "oklch(15% 0.002 135)",
+          "oklch(26% 0.003 135)",
+          "oklch(38% 0.003 135)",
+          "oklch(49% 0.004 135)",
+          "oklch(61% 0.004 135)",
+          "oklch(72% 0.004 135)",
+          "oklch(84% 0.003 135)",
+          "oklch(95% 0.003 135)"
+        ]
+      },
+      "hoja": {
+        "role": "neutral",
+        "displayName": "Sheet",
+        "canonical": "#ffffff",
+        "purpose": "Panels, title bar, map margin panel, controls.",
+        "tonalRamp": [
+          "oklch(15% 0.000 90)",
+          "oklch(26% 0.000 90)",
+          "oklch(38% 0.000 90)",
+          "oklch(49% 0.000 90)",
+          "oklch(61% 0.000 90)",
+          "oklch(72% 0.000 90)",
+          "oklch(84% 0.000 90)",
+          "oklch(95% 0.000 90)"
+        ]
+      },
+      "margen": {
+        "role": "neutral",
+        "displayName": "Margin",
+        "canonical": "#e8ecec",
+        "purpose": "Recessed tone: empty tracks, disabled buttons, placeholders.",
+        "tonalRamp": [
+          "oklch(15% 0.002 197)",
+          "oklch(26% 0.003 197)",
+          "oklch(38% 0.003 197)",
+          "oklch(49% 0.004 197)",
+          "oklch(61% 0.004 197)",
+          "oklch(72% 0.004 197)",
+          "oklch(84% 0.003 197)",
+          "oklch(95% 0.003 197)"
+        ]
+      },
+      "tinta": {
+        "role": "neutral",
+        "displayName": "Chart Ink",
+        "canonical": "#13202b",
+        "purpose": "Text, headings, major edge rules, corner ticks, threshold line, selected segment.",
+        "tonalRamp": [
+          "oklch(15% 0.015 245)",
+          "oklch(26% 0.019 245)",
+          "oklch(38% 0.022 245)",
+          "oklch(49% 0.025 245)",
+          "oklch(61% 0.028 245)",
+          "oklch(72% 0.025 245)",
+          "oklch(84% 0.021 245)",
+          "oklch(95% 0.018 245)"
+        ]
+      },
+      "tinta-2": {
+        "role": "neutral",
+        "displayName": "Ink 2",
+        "canonical": "#3f4d59",
+        "purpose": "Secondary text, labels, unselected segments and nav.",
+        "tonalRamp": [
+          "oklch(15% 0.015 244)",
+          "oklch(26% 0.018 244)",
+          "oklch(38% 0.021 244)",
+          "oklch(49% 0.024 244)",
+          "oklch(61% 0.027 244)",
+          "oklch(72% 0.024 244)",
+          "oklch(84% 0.021 244)",
+          "oklch(95% 0.017 244)"
+        ]
+      },
+      "tinta-3": {
+        "role": "neutral",
+        "displayName": "Ink 3",
+        "canonical": "#5d6a75",
+        "purpose": "Notes, placeholders, doubtful hatch, disabled text.",
+        "tonalRamp": [
+          "oklch(15% 0.013 244)",
+          "oklch(26% 0.016 244)",
+          "oklch(38% 0.018 244)",
+          "oklch(49% 0.021 244)",
+          "oklch(61% 0.023 244)",
+          "oklch(72% 0.021 244)",
+          "oklch(84% 0.018 244)",
+          "oklch(95% 0.015 244)"
+        ]
+      },
+      "regla": {
+        "role": "neutral",
+        "displayName": "Rule",
+        "canonical": "#cfd6da",
+        "purpose": "Default 1px hairline.",
+        "tonalRamp": [
+          "oklch(15% 0.005 232)",
+          "oklch(26% 0.006 232)",
+          "oklch(38% 0.007 232)",
+          "oklch(49% 0.008 232)",
+          "oklch(61% 0.009 232)",
+          "oklch(72% 0.008 232)",
+          "oklch(84% 0.007 232)",
+          "oklch(95% 0.006 232)"
+        ]
+      },
+      "regla-fuerte": {
+        "role": "neutral",
+        "displayName": "Strong Rule",
+        "canonical": "#9aa6ae",
+        "purpose": "Control borders, 8px tick ruler.",
+        "tonalRamp": [
+          "oklch(15% 0.010 237)",
+          "oklch(26% 0.012 237)",
+          "oklch(38% 0.014 237)",
+          "oklch(49% 0.016 237)",
+          "oklch(61% 0.018 237)",
+          "oklch(72% 0.016 237)",
+          "oklch(84% 0.014 237)",
+          "oklch(95% 0.012 237)"
+        ]
+      },
+      "azul": {
+        "role": "primary",
+        "displayName": "Aeronautical Blue",
+        "canonical": "#1d5fa6",
+        "purpose": "The only action and selection colour.",
+        "tonalRamp": [
+          "oklch(15% 0.072 254)",
+          "oklch(26% 0.087 254)",
+          "oklch(38% 0.102 254)",
+          "oklch(49% 0.117 254)",
+          "oklch(61% 0.130 254)",
+          "oklch(72% 0.115 254)",
+          "oklch(84% 0.100 254)",
+          "oklch(95% 0.085 254)"
+        ]
+      },
+      "azul-hondo": {
+        "role": "primary",
+        "displayName": "Deep Blue",
+        "canonical": "#154a84",
+        "purpose": "Hover for primary buttons and links.",
+        "tonalRamp": [
+          "oklch(15% 0.061 254)",
+          "oklch(26% 0.074 254)",
+          "oklch(38% 0.087 254)",
+          "oklch(49% 0.099 254)",
+          "oklch(61% 0.111 254)",
+          "oklch(72% 0.098 254)",
+          "oklch(84% 0.085 254)",
+          "oklch(95% 0.072 254)"
+        ]
+      },
+      "azul-tenue": {
+        "role": "primary",
+        "displayName": "Blue Wash",
+        "canonical": "#e4edf7",
+        "purpose": "Notice strip, advice note, drag-over drop zone.",
+        "tonalRamp": [
+          "oklch(15% 0.009 251)",
+          "oklch(26% 0.011 251)",
+          "oklch(38% 0.013 251)",
+          "oklch(49% 0.015 251)",
+          "oklch(61% 0.016 251)",
+          "oklch(72% 0.015 251)",
+          "oklch(84% 0.013 251)",
+          "oklch(95% 0.011 251)"
+        ]
+      },
+      "rojo": {
+        "role": "status",
+        "displayName": "Alert Red",
+        "canonical": "#b3202f",
+        "purpose": "Destructive actions, armed two-step button, worse results.",
+        "tonalRamp": [
+          "oklch(15% 0.099 22)",
+          "oklch(26% 0.120 22)",
+          "oklch(38% 0.141 22)",
+          "oklch(49% 0.161 22)",
+          "oklch(61% 0.179 22)",
+          "oklch(72% 0.159 22)",
+          "oklch(84% 0.138 22)",
+          "oklch(95% 0.117 22)"
+        ]
+      },
+      "rojo-tenue": {
+        "role": "status",
+        "displayName": "Red Wash",
+        "canonical": "#fbe9eb",
+        "purpose": "Danger button hover.",
+        "tonalRamp": [
+          "oklch(15% 0.011 10)",
+          "oklch(26% 0.013 10)",
+          "oklch(38% 0.015 10)",
+          "oklch(49% 0.018 10)",
+          "oklch(61% 0.020 10)",
+          "oklch(72% 0.017 10)",
+          "oklch(84% 0.015 10)",
+          "oklch(95% 0.013 10)"
+        ]
+      },
+      "verde-tinta": {
+        "role": "status",
+        "displayName": "Green Ink",
+        "canonical": "#1d6b30",
+        "purpose": "Better results in comparison tables; text only.",
+        "tonalRamp": [
+          "oklch(15% 0.065 148)",
+          "oklch(26% 0.079 148)",
+          "oklch(38% 0.092 148)",
+          "oklch(49% 0.106 148)",
+          "oklch(61% 0.118 148)",
+          "oklch(72% 0.104 148)",
+          "oklch(84% 0.090 148)",
+          "oklch(95% 0.077 148)"
+        ]
+      },
+      "noche": {
+        "role": "neutral",
+        "displayName": "Night",
+        "canonical": "#0f1922",
+        "purpose": "Photo viewer ground and training log.",
+        "tonalRamp": [
+          "oklch(15% 0.013 246)",
+          "oklch(26% 0.015 246)",
+          "oklch(38% 0.018 246)",
+          "oklch(49% 0.021 246)",
+          "oklch(61% 0.023 246)",
+          "oklch(72% 0.020 246)",
+          "oklch(84% 0.018 246)",
+          "oklch(95% 0.015 246)"
+        ]
+      },
+      "gris-dato": {
+        "role": "data",
+        "displayName": "Data Grey",
+        "canonical": "#9aa3a0",
+        "purpose": "Below-threshold reading, no diagnosis, unusable photo.",
+        "tonalRamp": [
+          "oklch(15% 0.006 174)",
+          "oklch(26% 0.007 174)",
+          "oklch(38% 0.009 174)",
+          "oklch(49% 0.010 174)",
+          "oklch(61% 0.011 174)",
+          "oklch(72% 0.010 174)",
+          "oklch(84% 0.008 174)",
+          "oklch(95% 0.007 174)"
+        ]
+      },
+      "categoria-sana": {
+        "role": "data",
+        "displayName": "Healthy",
+        "canonical": "#2e9e44",
+        "purpose": "Category ink, data only.",
+        "tonalRamp": [
+          "oklch(15% 0.089 147)",
+          "oklch(26% 0.108 147)",
+          "oklch(38% 0.127 147)",
+          "oklch(49% 0.145 147)",
+          "oklch(61% 0.162 147)",
+          "oklch(72% 0.143 147)",
+          "oklch(84% 0.124 147)",
+          "oklch(95% 0.106 147)"
+        ]
+      },
+      "categoria-sigatoka": {
+        "role": "data",
+        "displayName": "Sigatoka",
+        "canonical": "#d7263d",
+        "purpose": "Category ink, data only.",
+        "tonalRamp": [
+          "oklch(15% 0.115 21)",
+          "oklch(26% 0.139 21)",
+          "oklch(38% 0.163 21)",
+          "oklch(49% 0.186 21)",
+          "oklch(61% 0.207 21)",
+          "oklch(72% 0.183 21)",
+          "oklch(84% 0.160 21)",
+          "oklch(95% 0.136 21)"
+        ]
+      },
+      "categoria-otra": {
+        "role": "data",
+        "displayName": "Other Condition",
+        "canonical": "#f0a202",
+        "purpose": "Category ink, data only.",
+        "tonalRamp": [
+          "oklch(15% 0.089 74)",
+          "oklch(26% 0.108 74)",
+          "oklch(38% 0.127 74)",
+          "oklch(49% 0.145 74)",
+          "oklch(61% 0.161 74)",
+          "oklch(72% 0.143 74)",
+          "oklch(84% 0.124 74)",
+          "oklch(95% 0.106 74)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Page titles (h1) and verdicts; 1.5rem under 560px."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section titles (h2)."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "h3 and the technical-zone summary."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "Map-margin counts, tabular."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text; intros 68ch, empty states 52ch."
+      },
+      "body-small": {
+        "displayName": "Body small",
+        "purpose": "Tables, fields, notes, legends, messages."
+      },
+      "control": {
+        "displayName": "Control",
+        "purpose": "Buttons and segments."
+      },
+      "label": {
+        "displayName": "Label (rótulo)",
+        "purpose": "Uppercase caps label for control groups and table headers. Never a kicker over a heading."
+      },
+      "nav": {
+        "displayName": "Nav",
+        "purpose": "Uppercase title-bar sections."
+      },
+      "readout": {
+        "displayName": "Readout",
+        "purpose": "Live lat/lon coordinate readout, tabular."
+      }
+    },
+    "shadows": [
+      {
+        "name": "map-popup",
+        "value": "0 6px 20px -8px rgba(19, 32, 43, .45)",
+        "purpose": "The only soft shadow: the photo popup floating over satellite imagery."
+      }
+    ],
+    "motion": [
+      {
+        "name": "salida",
+        "value": "cubic-bezier(.23, 1, .32, 1)",
+        "purpose": "The press curve (--salida); also the technical-zone chevron."
+      },
+      {
+        "name": "press",
+        "value": "transform 160ms cubic-bezier(.23, 1, .32, 1); :active scale(.97), .98 for choice options and gallery cells",
+        "purpose": "The one gesture. Pointer press only; keyboard labelling never animates."
+      },
+      {
+        "name": "state-fade",
+        "value": "150ms ease",
+        "purpose": "Colour, border and background cross-fades on hover and selection."
+      },
+      {
+        "name": "chevron",
+        "value": "transform 200ms cubic-bezier(.23, 1, .32, 1)",
+        "purpose": "Technical-zone disclosure chevron rotates 90 degrees."
+      },
+      {
+        "name": "progress",
+        "value": "transform 300ms linear",
+        "purpose": "Progress fill follows real progress."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "transition-duration: 0ms",
+        "purpose": "All transitions off under prefers-reduced-motion: reduce."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "wide",
+        "value": "1100px",
+        "purpose": "max-width: reading column 20rem; field-exam score hides."
+      },
+      {
+        "name": "tablet",
+        "value": "900px",
+        "purpose": "max-width: nav on its own scrolling row; map stacks above panel; work tables single column; human choices first on Review."
+      },
+      {
+        "name": "phone",
+        "value": "560px",
+        "purpose": "max-width: 1rem gutters; h1 1.5rem; gallery two columns; tool rows full width; tables scroll."
+      },
+      {
+        "name": "fine-hover",
+        "value": "(hover: hover) and (pointer: fine)",
+        "purpose": "Hover styles apply only here."
+      }
+    ],
+    "layout": {
+      "contentMax": "1240px",
+      "titleBar": "3.5rem",
+      "mapPanel": "22rem",
+      "readingColumn": "23rem",
+      "tickRuler": "1px ticks every 8px, 5px below the title bar"
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one action that matters on a view; aeronautical blue, 160ms press.",
+      "html": "<button class=\"ds-btn ds-btn-primary\"><svg viewBox='0 0 24 24' width='16' height='16' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M12 4v12M7 11l5 5 5-5'/><path d='M4 20h16'/></svg>Descargar GeoJSON</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; height: 2.25rem; padding: 0 .95rem; border: 1px solid var(--regla-fuerte, #9aa6ae); border-radius: 2px; background: var(--hoja, #fff); color: var(--tinta, #13202b); font: 500 .875rem/1 'Barlow', 'Segoe UI', system-ui, sans-serif; cursor: pointer; transition: transform 160ms cubic-bezier(.23,1,.32,1), background-color 150ms ease, border-color 150ms ease, color 150ms ease; } .ds-btn:hover { border-color: var(--tinta, #13202b); } .ds-btn:active { transform: scale(.97); } .ds-btn:focus-visible { outline: 2px solid var(--azul, #1d5fa6); outline-offset: 2px; } .ds-btn-primary { background: var(--azul, #1d5fa6); border-color: var(--azul, #1d5fa6); color: #fff; } .ds-btn-primary:hover { background: var(--azul-hondo, #154a84); border-color: var(--azul-hondo, #154a84); }"
+    },
+    {
+      "name": "Default and Disabled Buttons",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "White ruled button with keyboard cap; disabled falls to margin tone.",
+      "html": "<div style=\"display:flex;gap:.6rem\"><button class=\"ds-btn\">Saltar <kbd class=\"ds-kbd\">S</kbd></button><button class=\"ds-btn\" disabled>Deshacer <kbd class=\"ds-kbd\">Z</kbd></button></div>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; height: 2.25rem; padding: 0 .95rem; border: 1px solid var(--regla-fuerte, #9aa6ae); border-radius: 2px; background: var(--hoja, #fff); color: var(--tinta, #13202b); font: 500 .875rem/1 'Barlow', 'Segoe UI', system-ui, sans-serif; cursor: pointer; transition: transform 160ms cubic-bezier(.23,1,.32,1), background-color 150ms ease, border-color 150ms ease, color 150ms ease; } .ds-btn:hover { border-color: var(--tinta, #13202b); } .ds-btn:active { transform: scale(.97); } .ds-btn:focus-visible { outline: 2px solid var(--azul, #1d5fa6); outline-offset: 2px; } .ds-btn:disabled { cursor: not-allowed; color: var(--tinta-3, #5d6a75); background: var(--margen, #e8ecec); border-color: var(--regla, #cfd6da); transform: none; } .ds-kbd { display: inline-grid; place-items: center; min-width: 1.45rem; height: 1.45rem; padding: 0 .3rem; border: 1px solid var(--regla-fuerte, #9aa6ae); border-bottom-width: 2px; border-radius: 2px; background: #fff; color: var(--tinta-2, #3f4d59); font: .78rem/1 ui-monospace, Consolas, monospace; }"
+    },
+    {
+      "name": "Two-step Confirm Button",
+      "kind": "button",
+      "refersTo": "button-confirming",
+      "description": "First click arms it red with an explicit confirm label; second click runs; disarms after 4 s.",
+      "html": "<div style=\"display:flex;gap:.6rem\"><button class=\"ds-btn ds-btn-primary\">Reentrenar ahora</button><button class=\"ds-btn ds-btn-confirming\">Confirmar: empezar a entrenar</button></div>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; height: 2.25rem; padding: 0 .95rem; border: 1px solid var(--regla-fuerte, #9aa6ae); border-radius: 2px; background: var(--hoja, #fff); color: var(--tinta, #13202b); font: 500 .875rem/1 'Barlow', 'Segoe UI', system-ui, sans-serif; cursor: pointer; transition: transform 160ms cubic-bezier(.23,1,.32,1), background-color 150ms ease, border-color 150ms ease, color 150ms ease; } .ds-btn:hover { border-color: var(--tinta, #13202b); } .ds-btn:active { transform: scale(.97); } .ds-btn:focus-visible { outline: 2px solid var(--azul, #1d5fa6); outline-offset: 2px; } .ds-btn-primary { background: var(--azul, #1d5fa6); border-color: var(--azul, #1d5fa6); color: #fff; } .ds-btn-confirming, .ds-btn-confirming:hover { background: var(--rojo, #b3202f); border-color: var(--rojo, #b3202f); color: #fff; }"
+    },
+    {
+      "name": "Field and Select",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Sentence-case label above a 2.25rem ruled control; blue focus.",
+      "html": "<div style=\"display:flex;gap:.75rem;align-items:flex-end\"><label class=\"ds-campo\"><span>Vuelo</span><select class=\"ds-input\"><option>Todos los vuelos</option></select></label><label class=\"ds-campo\"><span>Revisor</span><input class=\"ds-input\" type=\"text\" placeholder=\"Tu nombre\"></label></div>",
+      "css": ".ds-campo { display: grid; gap: .3rem; font-family: 'Barlow', 'Segoe UI', system-ui, sans-serif; } .ds-campo > span { font-size: .78rem; font-weight: 500; color: var(--tinta-2, #3f4d59); } .ds-input { height: 2.25rem; padding: 0 .65rem; border: 1px solid var(--regla-fuerte, #9aa6ae); border-radius: 2px; background: #fff; color: var(--tinta, #13202b); font: 400 .875rem 'Barlow', 'Segoe UI', system-ui, sans-serif; } select.ds-input { appearance: none; padding-right: 2rem; background: #fff url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5' fill='none' stroke='%2313202b' stroke-width='1.4'/%3E%3C/svg%3E\") no-repeat right .6rem center / .75rem; } .ds-input::placeholder { color: var(--tinta-3, #5d6a75); } .ds-input:focus-visible { outline: 2px solid var(--azul, #1d5fa6); outline-offset: 0; border-color: var(--azul, #1d5fa6); }"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "nav",
+      "refersTo": "segment-selected",
+      "description": "View toggle; the selected segment fills with chart ink, not blue.",
+      "html": "<div class=\"ds-seg\" role=\"radiogroup\" aria-label=\"Vista\"><label><input type=\"radio\" name=\"ds-vista\" checked><span>Puntos</span></label><label><input type=\"radio\" name=\"ds-vista\"><span>Zonas</span></label></div>",
+      "css": ".ds-seg { display: inline-flex; border: 1px solid var(--regla-fuerte, #9aa6ae); border-radius: 2px; background: #fff; font-family: 'Barlow', 'Segoe UI', system-ui, sans-serif; } .ds-seg label { position: relative; } .ds-seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; } .ds-seg span { display: block; padding: .45rem .9rem; font-size: .875rem; font-weight: 500; color: var(--tinta-2, #3f4d59); transition: background-color 150ms ease, color 150ms ease; } .ds-seg label + label span { border-left: 1px solid var(--regla, #cfd6da); } .ds-seg input:checked + span { background: var(--tinta, #13202b); color: #fff; } .ds-seg input:focus-visible + span { outline: 2px solid var(--azul, #1d5fa6); outline-offset: 1px; }"
+    },
+    {
+      "name": "Ficha (category swatch)",
+      "kind": "chip",
+      "refersTo": "ficha-swatch",
+      "description": "Category ink always paired with its name; below threshold the swatch hatches.",
+      "html": "<div style=\"display:grid;gap:.5rem\"><span class=\"ds-ficha\"><i class=\"ds-muestra\" style=\"background:#d7263d\"></i>Sigatoka</span><span class=\"ds-ficha\"><i class=\"ds-muestra\" style=\"background:#2e9e44\"></i>Sana</span><span class=\"ds-ficha ds-dudosa\"><i class=\"ds-muestra\"></i>Sigatoka (dudosa)</span></div>",
+      "css": ".ds-ficha { display: inline-flex; align-items: center; gap: .45rem; font: 500 .875rem 'Barlow', 'Segoe UI', system-ui, sans-serif; color: var(--tinta, #13202b); white-space: nowrap; } .ds-muestra { width: .7rem; height: .7rem; flex: none; border-radius: 1px; box-shadow: inset 0 0 0 1px rgba(19,32,43,.35); } .ds-dudosa { color: var(--tinta-3, #5d6a75); } .ds-dudosa .ds-muestra { background: repeating-linear-gradient(45deg, var(--tinta-3, #5d6a75) 0 1.5px, transparent 1.5px 4px); box-shadow: inset 0 0 0 1px var(--tinta-3, #5d6a75); }"
+    },
+    {
+      "name": "Probability Scale",
+      "kind": "custom",
+      "refersTo": "probability-track",
+      "description": "Signature: every reading's track is crossed by a ruled threshold line at 65%.",
+      "html": "<div class=\"ds-escala\" style=\"--umbral:65%\"><div class=\"ds-fila ds-gana\"><span class=\"ds-ficha\"><i class=\"ds-muestra\" style=\"background:#d7263d\"></i>Sigatoka</span><span class=\"ds-val\">82.4 %</span><div class=\"ds-pista\" role=\"meter\" aria-label=\"Sigatoka\" aria-valuemin=\"0\" aria-valuemax=\"100\" aria-valuenow=\"82\"><i style=\"background:#d7263d;transform:scaleX(.824)\"></i></div></div><div class=\"ds-fila\"><span class=\"ds-ficha\"><i class=\"ds-muestra\" style=\"background:#2e9e44\"></i>Sana</span><span class=\"ds-val\">12.1 %</span><div class=\"ds-pista\" role=\"meter\" aria-label=\"Sana\" aria-valuemin=\"0\" aria-valuemax=\"100\" aria-valuenow=\"12\"><i style=\"background:#2e9e44;transform:scaleX(.121)\"></i></div></div><div class=\"ds-umbral\"><span>0 %</span><span class=\"ds-marca\">umbral 65 %</span><span>100 %</span></div></div>",
+      "css": ".ds-escala { display: grid; gap: .85rem; width: 20rem; font-family: 'Barlow', 'Segoe UI', system-ui, sans-serif; color: var(--tinta, #13202b); } .ds-fila { display: grid; grid-template-columns: 1fr auto; gap: .3rem .75rem; align-items: baseline; } .ds-fila:not(.ds-gana) { color: var(--tinta-2, #3f4d59); } .ds-ficha { display: inline-flex; align-items: center; gap: .45rem; font-weight: 500; font-size: .875rem; } .ds-muestra { width: .7rem; height: .7rem; border-radius: 1px; box-shadow: inset 0 0 0 1px rgba(19,32,43,.35); } .ds-val { font-weight: 600; font-size: .875rem; font-variant-numeric: tabular-nums lining-nums; } .ds-pista { grid-column: 1 / -1; position: relative; height: .6rem; background: var(--margen, #e8ecec); border: 1px solid var(--regla, #cfd6da); border-radius: 1px; background-image: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), rgba(19,32,43,.14) calc(10% - 1px) 10%); } .ds-pista > i { position: absolute; inset: 0; display: block; transform-origin: left; } .ds-pista::after { content: ''; position: absolute; left: var(--umbral); top: -5px; bottom: -5px; width: 2px; margin-left: -1px; background: var(--tinta, #13202b); } .ds-umbral { position: relative; height: 1.1rem; margin-top: -.35rem; font-size: .78rem; color: var(--tinta-3, #5d6a75); font-variant-numeric: tabular-nums; } .ds-umbral span { position: absolute; top: 0; } .ds-umbral span:first-child { left: 0; } .ds-umbral span:last-child { right: 0; } .ds-umbral .ds-marca { left: var(--umbral); transform: translateX(-50%); color: var(--tinta, #13202b); font-weight: 600; white-space: nowrap; }"
+    },
+    {
+      "name": "Marco (corner-tick frame)",
+      "kind": "card",
+      "refersTo": "marco",
+      "description": "Ink registration ticks 7px outside the photo viewer or drop zone; no border.",
+      "html": "<div class=\"ds-marco\"><div class=\"ds-visor\">Arrastra aquí la foto de una hoja</div></div>",
+      "css": ".ds-marco { position: relative; margin: 12px; width: 18rem; } .ds-marco::before { content: ''; position: absolute; inset: -7px; pointer-events: none; --m: 16px; --c: var(--tinta, #13202b); background: linear-gradient(var(--c), var(--c)) top left / var(--m) 2px, linear-gradient(var(--c), var(--c)) top left / 2px var(--m), linear-gradient(var(--c), var(--c)) top right / var(--m) 2px, linear-gradient(var(--c), var(--c)) top right / 2px var(--m), linear-gradient(var(--c), var(--c)) bottom left / var(--m) 2px, linear-gradient(var(--c), var(--c)) bottom left / 2px var(--m), linear-gradient(var(--c), var(--c)) bottom right / var(--m) 2px, linear-gradient(var(--c), var(--c)) bottom right / 2px var(--m); background-repeat: no-repeat; } .ds-visor { display: grid; place-items: center; height: 10rem; background: var(--noche, #0f1922); color: #fff; font: 600 1rem 'Barlow Semi Condensed', 'Barlow', system-ui, sans-serif; }"
+    },
+    {
+      "name": "Coordinate Readout",
+      "kind": "custom",
+      "refersTo": "coordinate-readout",
+      "description": "Live lat/lon in the map's lower margin, ink-ruled, tabular figures.",
+      "html": "<div class=\"ds-lectura-pos\">17.99012° N&nbsp;&nbsp;&nbsp;92.95034° O</div>",
+      "css": ".ds-lectura-pos { display: inline-block; padding: .35rem .6rem; background: rgba(255,255,255,.92); border: 1px solid var(--tinta, #13202b); font: 500 .78rem/1.2 'Barlow', 'Segoe UI', system-ui, sans-serif; font-variant-numeric: tabular-nums; letter-spacing: .02em; color: var(--tinta, #13202b); white-space: pre; }"
+    },
+    {
+      "name": "Messages",
+      "kind": "custom",
+      "refersTo": "message",
+      "description": "Inline result under its action; error and success lead with a stroke icon in ink.",
+      "html": "<div style=\"display:grid;gap:.5rem\"><p class=\"ds-msg ds-msg-icono\"><svg viewBox='0 0 24 24' width='16' height='16' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M5 12.5 10 17 19 7'/></svg>Categoría agregada. Ya aparece como opción en Revisar.</p><p class=\"ds-msg ds-msg-icono\"><svg viewBox='0 0 24 24' width='16' height='16' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M12 4 21 19H3Z'/><path d='M12 10v4M12 16.5v.5'/></svg>No se pudo guardar: sin conexión con la estación.</p><p class=\"ds-msg\">Guardando…</p></div>",
+      "css": ".ds-msg { display: flex; gap: .5rem; align-items: flex-start; margin: 0; font: 400 .875rem/1.5 'Barlow', 'Segoe UI', system-ui, sans-serif; color: var(--tinta-2, #3f4d59); } .ds-msg-icono { color: var(--tinta, #13202b); } .ds-msg svg { flex: none; margin-top: .2rem; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Flight Chart",
+    "overview": "The station is the aerial-application crew's flight chart. A fumigation crew reads a chart to know where to fly and spray; the operator reads this one to know where Sigatoka is and how sure the system is about each point. Everything is drawn the way a chart is drawn: cool chart-white paper, navy chart ink, hairline 1px rules, square corners, tick marks in the margins, condensed caps labels and tabular figures. The map is full-bleed, the instruments sit in a ruled margin, and every probability carries its threshold line.\n\nThe system is dense and quiet. There is one action colour, an aeronautical blue, and it means \"do this\" or \"this is selected\". The three category inks (healthy, Sigatoka, other condition) are the meaning of the map and appear only on data: map points, zones, swatches and probability bars. Interface status speaks in ink, the dark alert red, the green ink and the blue, never in a category ink. Depth comes from rules and paper tone, not shadows. The scene is daylight: a Windows laptop on a work table or under a roof beside the crop, so the system is light-only and high-contrast.\n\nIt replaces the earlier green, emoji-heavy agritech dashboard entirely. It refuses both that dashboard of rounded cards and leaf icons and the neon drone HUD.",
+    "keyCharacteristics": [
+      "Cool chart-white paper with white sheets, navy ink, 1px hairline rules.",
+      "One aeronautical blue for actions and selection; category inks reserved for data.",
+      "Square corners (2px), corner-tick frames, a ruler of 8px ticks under the title bar.",
+      "Barlow for reading, Barlow Semi Condensed for headings, caps labels and figures; tabular numerals everywhere numbers line up.",
+      "Every probability scale shows the ruled threshold mark; below it the reading is \"no diagnosticable\".",
+      "Motion is a 160ms press and nothing more; keyboard labelling never animates."
+    ],
+    "rules": [
+      {
+        "name": "The One Blue Rule",
+        "body": "Aeronautical blue is the only colour that means \"act\" or \"selected\". No second accent, no gradient, no tinted variant beyond its deep hover and its wash.",
+        "section": "colors"
+      },
+      {
+        "name": "The Data Ink Rule",
+        "body": "Category inks belong to data only. A button, badge, alert, status chip or heading never borrows healthy green, Sigatoka red or other-condition amber; status is spoken in ink, alert red, green ink and blue.",
+        "section": "colors"
+      },
+      {
+        "name": "The Never Alone Rule",
+        "body": "A category colour is always paired with its name in text. A swatch without a label does not ship.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Figures Rule",
+        "body": "Every number that can sit above another number is set with tabular, lining figures: table cells, counts, percentages, probability values, coordinates, timers, the threshold label.",
+        "section": "typography"
+      },
+      {
+        "name": "The Caps Are Labels Rule",
+        "body": "Uppercase condensed type labels a control group, a table column or a nav item. It never sits above a heading as a kicker.",
+        "section": "typography"
+      },
+      {
+        "name": "The Ruled, Not Raised Rule",
+        "body": "Surfaces never lift. If something must stand apart, give it a heavier rule or a different paper tone. The map popup is the only exception.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** use aeronautical blue (`azul`) for the one action that matters on a view and for selection; keep every other control white with a strong-rule border.",
+      "**Do** separate regions with 1px rules (`regla` between rows, full `tinta` at major edges) and paper tone, not shadows or gaps alone.",
+      "**Do** show the threshold line on every probability scale, and say \"no diagnosticable\" below it; let the doubtful ficha hatch rather than show a category ink.",
+      "**Do** pair every category colour with its name in text.",
+      "**Do** set every comparable number in tabular, lining figures.",
+      "**Do** keep corners at 2px (1px for swatches and tracks).",
+      "**Do** put destructive or heavy actions behind the two-step confirm button: red when armed, self-disarming after 4 seconds.",
+      "**Do** keep motion to the 160ms `cubic-bezier(.23, 1, .32, 1)` press, and leave keyboard labelling instant.",
+      "**Do** draw icons as 24x24 strokes at 1.5px with round caps, in the text colour."
+    ],
+    "donts": [
+      "**Don't** use emojis anywhere: not in labels, messages, empty states, buttons or data.",
+      "**Don't** put an eyebrow or kicker label above a heading. Caps labels name a control group or a column; headings stand on their own.",
+      "**Don't** use category inks (healthy green #2e9e44, Sigatoka red #d7263d, other amber #f0a202) for UI status, buttons, badges or alerts; status uses `rojo`, `verde-tinta`, `azul` and ink.",
+      "**Don't** add drop shadows or elevation; the map popup's shadow is the only one. Box-shadow appears only as zero-blur rings and inset rules.",
+      "**Don't** bring back the green agritech dashboard: no rounded cards, no leaf-icon decoration, no green brand fills.",
+      "**Don't** drift toward a neon drone HUD: no dark theme, no glows, no decorative gradients. Night ground is for the photo viewer and the log only.",
+      "**Don't** introduce a second accent colour or tint the blue for decoration.",
+      "**Don't** animate on keyboard labelling, and don't animate the probability bars."
+    ]
+  }
+}
