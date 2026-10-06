@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+{% block titulo %}Cargar imágenes · Estación Sigatoka{% endblock %}
+{% block contenido %}
+<section class="hoja-flotante" aria-labelledby="titulo">
+<div class="hoja-contenido">
+  <div class="hoja-cabeza">
+    <div>
+      <h1 id="titulo">Cargar imágenes</h1>
+      <p>Sube una imagen, varias o una carpeta completa, o usa la cámara. El modelo te dice qué cree que tiene cada una
+        y se guardan con la fecha de hoy para que después las revises.</p>
+    </div>
+  </div>
+
+  <div class="mesa">
+    <div class="mesa-foto" id="visor">
+      <div class="soltar" id="soltar">
+        <svg class="soltar-icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 15v4h16v-4"/></svg>
+        <div>
+          <h2>Arrastra aquí imágenes o una carpeta</h2>
+          <p style="margin-top:.5rem">Se cargan todas las imágenes que tenga, también las de subcarpetas. Funciona mejor con
+            la hoja llenando la foto, de cerca y con luz de día.</p>
+        </div>
+        <div class="fila" style="justify-content:center">
+          <label class="boton claro grande">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v14H4Z"/><path d="m4 16 5-5 4 4 3-3 4 4"/></svg>
+            Elegir imágenes<input type="file" id="archivos" accept="image/*" multiple hidden></label>
+          <label class="boton grande">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3Z"/></svg>
+            Elegir carpeta<input type="file" id="carpeta" webkitdirectory multiple hidden></label>
+          <button class="boton grande" id="btn-camara" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3v11H4Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+            Usar cámara</button>
+          <input type="file" id="captura-movil" accept="image/*" capture="environment" hidden>
+        </div>
+      </div>
+      <img id="foto" class="oculto" alt="Imagen seleccionada">
+      <video id="video" class="oculto" playsinline muted></video>
+      <span class="en-vivo oculto" id="en-vivo">En vivo</span>
+      <div class="camara-barra oculto" id="camara-barra">
+        <button class="boton claro" id="btn-capturar" type="button">Capturar y guardar</button>
+        <button class="boton" id="btn-continuo" type="button" aria-pressed="true">Pausar lectura continua</button>
+        <button class="boton" id="btn-cerrar-camara" type="button">Cerrar cámara</button>
+      </div>
+    </div>
+
+    <div class="mesa-lectura" aria-live="polite">
+      <div id="lectura" style="display:grid; gap:12px">
+        <h2>Todavía no hay imagen</h2>
+        <p class="suave" style="margin:0">Carga una imagen y aquí verás qué cree el modelo que tiene, con qué seguridad y qué hacer.</p>
+      </div>
+      <div id="probs" class="oculto"></div>
+      <div id="que" class="que-hacer oculto"></div>
+      <div id="acciones" class="oculto" style="display:grid; gap:10px; margin-top:auto">
+        <div class="fila">
+          <a class="boton claro grande" id="btn-revisar-esta" href="/revisar" style="flex:1 1 12rem">Revisar esta imagen</a>
+          <button class="boton grande" id="btn-otra" type="button" style="flex:1 1 8rem">Cargar más</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pie-foto"><span id="pie-foto">Ninguna imagen seleccionada</span><span id="pie-tiempo"></span></div>
+
+  <section class="seccion" id="sec-lote">
+    <div class="fila" style="justify-content:space-between; margin-bottom:12px">
+      <h2 style="font-size:var(--t-l)">Cargadas hoy</h2>
+      <a class="boton claro oculto" id="btn-revisar-dudosas" href="/revisar">Revisar las dudosas</a>
+    </div>
+    <div id="progreso-caja" class="tarjeta oculto" style="margin-bottom:14px">
+      <p class="nota" id="fase" style="margin:0 0 .5rem"></p>
+      <div class="progreso"><i id="barra"></i></div>
+    </div>
+    <p class="mensaje" id="resumen-lote"></p>
+    <div class="rejilla" id="rejilla" style="margin-top:12px"></div>
+  </section>
+</div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+const $ = id => document.getElementById(id);
+const EXT = /\.(jpe?g|png|bmp|webp|json)$/i;
+let seleccion = null, flujo = null, continuo = true, ocupado = false, temporizador = null;
+
+// ------------------------------------------------------------- resultado de una imagen
+function pintarLectura(r, foto) {
+  const c = categoria(r.clase);
+  const humano = foto?.etiqueta ? `<p class="mensaje bien" style="margin:0">Una persona ya la revisó: ${esc(categoria(foto.etiqueta).nombre)}${foto.revisor ? ` (${esc(foto.revisor)})` : ""}.</p>` : "";
+  $("lectura").innerHTML = (r.diagnosticable
+    ? `<span class="chip-diagnostico"><i style="background:${c.color}"></i>${esc(c.nombre)}</span>
+       <div class="veredicto">${esc(titular(r.clase))}</div>
+       <p class="confianza">El modelo está <b>${pct(r.confianza)} seguro</b>. Necesita al menos ${pct(r.umbral)} para dar un diagnóstico.</p>`
+    : `<span class="chip-diagnostico"><i class="muestra vacia" style="border-radius:50%"></i>No está seguro</span>
+       <div class="veredicto">El modelo no está seguro</div>
+       <p class="confianza">Lo más parecido es <b>${esc(c.nombre)}</b> (${pct(r.confianza)}), pero necesita al menos ${pct(r.umbral)} para dar un diagnóstico.</p>`) + humano;
+  $("probs").innerHTML = r.probs ? escala(r.probs, r.umbral) : "";
+  $("probs").classList.toggle("oculto", !r.probs);
+  $("que").innerHTML = `<b>Qué hacer:</b> ${esc(queHacer(r.clase, r.diagnosticable))}`;
+  $("que").classList.remove("oculto");
+}
+
+function pintarError(msg) {
+  $("lectura").innerHTML = `<h2>Sin lectura</h2><p class="mensaje error">${esc(msg)}</p>`;
+  ["probs", "que", "acciones"].forEach(s => $(s).classList.add("oculto"));
+}
+
+// Muestra una imagen ya guardada (con su resultado y las probabilidades del modelo actual).
+async function seleccionar(id) {
+  detenerCamara();
+  seleccion = id;
+  marcarSeleccion();
+  $("soltar").classList.add("oculto");
+  $("foto").src = `/foto/${id}`;
+  $("foto").classList.remove("oculto");
+  $("lectura").classList.add("cargando-lectura");
+  try {
+    const f = (await api(`/api/foto/${id}`)).foto;
+    $("pie-foto").textContent = f.archivo.replace(/^\d{6}_/, "");
+    $("pie-tiempo").textContent = nombreFecha(f.vuelo);
+    if (!f.pred) {
+      $("lectura").innerHTML = `<h2>Sin resultado</h2><p class="suave" style="margin:0">No hay modelo cargado, así que esta imagen quedó sin diagnóstico. Igual la puedes revisar.</p>`;
+      ["probs", "que"].forEach(s => $(s).classList.add("oculto"));
+    } else {
+      pintarLectura({ clase: f.pred, confianza: f.conf, probs: f.probs, umbral: RESUMEN.umbral, diagnosticable: f.conf >= RESUMEN.umbral }, f);
+    }
+    $("btn-revisar-esta").href = `/revisar?foto=${id}`;
+    $("acciones").classList.remove("oculto");
+  } catch (e) { pintarError(e.message); }
+  finally { $("lectura").classList.remove("cargando-lectura"); }
+}
+
+function marcarSeleccion() {
+  document.querySelectorAll("#rejilla .celda").forEach(c => c.setAttribute("aria-pressed", String(+c.dataset.id === seleccion)));
+}
+
+// ------------------------------------------------------------- lote de hoy
+async function cargarLote() {
+  const r = await api("/api/fotos?" + new URLSearchParams({ vuelo: hoy(), orden: "reciente" }));
+  const fotos = r.fotos;
+  const pend = fotos.filter(f => !f.etiqueta).length;
+  $("btn-revisar-dudosas").classList.toggle("oculto", !pend);
+  $("btn-revisar-dudosas").textContent = `Revisar las dudosas primero (${pend})`;
+  $("btn-revisar-dudosas").href = `/revisar?fecha=${hoy()}`;
+  $("rejilla").innerHTML = fotos.map(f => {
+    const d = diagnostico(f);
+    const marca = d.fuente === "humano" ? "Revisada" : d.fuente === "modelo" ? pct(f.conf) : "";
+    return `<button class="celda" type="button" data-id="${f.id}" aria-pressed="false" style="font:inherit; text-align:left; cursor:pointer; padding:0">
+      <img src="/mini/${f.id}" loading="lazy" alt="">
+      <span class="celda-pie">${ficha(d)}<span class="nota"><span>${marca}</span><span title="${esc(f.archivo)}">${esc(f.archivo.replace(/^\d{6}_/, ""))}</span></span></span></button>`;
+  }).join("") || `<p class="nota" style="grid-column:1/-1">Hoy todavía no se ha cargado ninguna imagen.</p>`;
+  $("rejilla").querySelectorAll(".celda").forEach(c => c.onclick = () => seleccionar(+c.dataset.id));
+  marcarSeleccion();
+  return fotos;
+}
+
+function resumenLote(fotos) {
+  const ds = fotos.map(diagnostico);
+  const partes = RESUMEN.categorias.map(c => [c, ds.filter(d => d.clave === c.clave && !d.dudoso).length]).filter(x => x[1])
+    .map(([c, n]) => `${n} ${esc(c.nombre.toLowerCase())}`);
+  const dudosas = ds.filter(d => d.dudoso).length;
+  if (dudosas) partes.push(`${dudosas} en las que el modelo no está seguro`);
+  return `<b>${plural(fotos.length, "imagen cargada", "imágenes cargadas")}</b>${partes.length ? ": " + partes.join(", ") : ""}.`;
+}
+
+// ------------------------------------------------------------- subir
+async function subir(lista) {
+  // lista: [{ f: File|Blob, ruta: "carpeta/sub/foto.jpg" }]
+  lista = lista.filter(x => EXT.test(x.ruta));
+  const fotos = lista.filter(x => !/\.json$/i.test(x.ruta)).length;
+  if (!fotos) return pintarError("No se encontró ninguna imagen JPG o PNG en lo que elegiste.");
+  detenerCamara();
+  const fecha = hoy();
+  const prefijo = new Date().toTimeString().slice(0, 8).replaceAll(":", "");  // evita choques de nombres
+  const caja = $("progreso-caja"), barra = $("barra"), fase = $("fase");
+  caja.classList.remove("oculto");
+  $("resumen-lote").textContent = "";
+  barra.style.transform = "scaleX(0)";
+  const nuevas = [];
+  const LOTE = 20;
+  try {
+    for (let i = 0; i < lista.length; i += LOTE) {
+      const datos = new FormData();
+      datos.append("vuelo", fecha);
+      lista.slice(i, i + LOTE).forEach(x => datos.append("archivos", x.f, `${prefijo}_${x.ruta.replaceAll("/", "_")}`));
+      fase.textContent = `Cargando y revisando con el modelo: ${Math.min(i + LOTE, lista.length)} de ${lista.length} archivos`;
+      await api("/api/subir", { method: "POST", body: datos });
+      const r = await post("/api/procesar", { vuelo: fecha });
+      nuevas.push(...r.fotos);
+      barra.style.transform = `scaleX(${Math.min(i + LOTE, lista.length) / lista.length})`;
+      await cargarLote();
+    }
+    fase.textContent = "Listo";
+    setTimeout(() => caja.classList.add("oculto"), 1200);
+    $("resumen-lote").className = "mensaje bien";
+    $("resumen-lote").innerHTML = resumenLote(nuevas);
+    await cargarResumen();
+    if (nuevas.length) await seleccionar(nuevas[0].id);
+  } catch (e) {
+    fase.textContent = "No se pudo cargar: " + e.message;
+  }
+}
+
+$("archivos").onchange = e => { subir([...e.target.files].map(f => ({ f, ruta: f.name }))); e.target.value = ""; };
+$("carpeta").onchange = e => { subir([...e.target.files].map(f => ({ f, ruta: f.webkitRelativePath || f.name }))); e.target.value = ""; };
+$("captura-movil").onchange = e => { const f = e.target.files[0]; if (f) subir([{ f, ruta: f.name || "foto.jpg" }]); e.target.value = ""; };
+
+// Arrastrar: imágenes sueltas o carpetas completas (con subcarpetas).
+async function leerArrastre(entradas) {
+  const out = [];
+  async function recorrer(e, ruta) {
+    if (e.isFile) {
+      const f = await new Promise((ok, mal) => e.file(ok, mal));
+      out.push({ f, ruta: ruta + f.name });
+    } else if (e.isDirectory) {
+      const lector = e.createReader();
+      let lote;
+      do {
+        lote = await new Promise((ok, mal) => lector.readEntries(ok, mal));
+        for (const x of lote) await recorrer(x, ruta + e.name + "/");
+      } while (lote.length);
+    }
+  }
+  for (const e of entradas) await recorrer(e, "");
+  return out;
+}
+const visor = $("visor");
+visor.addEventListener("dragover", e => { e.preventDefault(); $("soltar").classList.add("encima"); });
+visor.addEventListener("dragleave", () => $("soltar").classList.remove("encima"));
+visor.addEventListener("drop", async e => {
+  e.preventDefault();
+  $("soltar").classList.remove("encima");
+  const entradas = [...e.dataTransfer.items].map(i => i.webkitGetAsEntry?.()).filter(Boolean);
+  const lista = entradas.length ? await leerArrastre(entradas) : [...e.dataTransfer.files].map(f => ({ f, ruta: f.name }));
+  subir(lista);
+});
+document.addEventListener("paste", e => {
+  const f = [...(e.clipboardData?.files || [])].find(f => f.type.startsWith("image/"));
+  if (f) subir([{ f, ruta: "pegada.png" }]);
+});
+
+// ------------------------------------------------------------- cámara en vivo
+async function identificar(blob, nombre) {
+  const datos = new FormData();
+  datos.append("imagen", blob, nombre);
+  return api("/api/identificar", { method: "POST", body: datos });
+}
+
+async function abrirCamara() {
+  // Sin conexión segura (p. ej. abierta desde otro equipo por WiFi) el navegador
+  // no deja usar la cámara en vivo: se usa la cámara del sistema para una foto.
+  if (!navigator.mediaDevices?.getUserMedia) return $("captura-movil").click();
+  try {
+    flujo = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 } }, audio: false });
+  } catch (e) {
+    return pintarError("No se pudo abrir la cámara. Revisa que el navegador tenga permiso, o carga imágenes.");
+  }
+  const v = $("video");
+  v.srcObject = flujo;
+  await v.play();
+  seleccion = null; marcarSeleccion();
+  $("soltar").classList.add("oculto");
+  $("foto").classList.add("oculto");
+  $("acciones").classList.add("oculto");
+  v.classList.remove("oculto");
+  $("camara-barra").classList.remove("oculto");
+  $("pie-foto").textContent = "Cámara en vivo";
+  continuo = true;
+  actualizarContinuo();
+  ciclo();
+}
+
+function cuadro(maximo = 960) {
+  const v = $("video"), k = Math.min(1, maximo / v.videoWidth);
+  const lienzo = document.createElement("canvas");
+  lienzo.width = Math.round(v.videoWidth * k); lienzo.height = Math.round(v.videoHeight * k);
+  lienzo.getContext("2d").drawImage(v, 0, 0, lienzo.width, lienzo.height);
+  return new Promise(res => lienzo.toBlob(res, "image/jpeg", .9));
+}
+
+async function ciclo() {
+  clearTimeout(temporizador);
+  if (!flujo) return;
+  if (continuo && !ocupado && $("video").videoWidth) {
+    ocupado = true;
+    try {
+      const r = await identificar(await cuadro(640), "cuadro.jpg");
+      if (flujo) { pintarLectura(r); $("pie-tiempo").textContent = `lectura cada 0.8 s · ${r.ms.toFixed(0)} ms`; }
+    } catch (e) { pintarError(e.message); }
+    ocupado = false;
+  }
+  temporizador = setTimeout(ciclo, 800);
+}
+
+function actualizarContinuo() {
+  $("btn-continuo").textContent = continuo ? "Pausar lectura continua" : "Reanudar lectura continua";
+  $("btn-continuo").setAttribute("aria-pressed", continuo);
+  $("en-vivo").classList.toggle("oculto", !continuo);
+}
+
+function detenerCamara() {
+  clearTimeout(temporizador);
+  if (flujo) flujo.getTracks().forEach(t => t.stop());
+  flujo = null;
+  $("video").classList.add("oculto");
+  $("camara-barra").classList.add("oculto");
+  $("en-vivo").classList.add("oculto");
+}
+
+function reiniciar() {
+  detenerCamara();
+  seleccion = null; marcarSeleccion();
+  $("foto").classList.add("oculto");
+  $("soltar").classList.remove("oculto");
+  $("pie-foto").textContent = "Ninguna imagen seleccionada";
+  $("pie-tiempo").textContent = "";
+  $("lectura").innerHTML = `<h2>Todavía no hay imagen</h2><p class="suave" style="margin:0">Carga una imagen y aquí verás qué cree el modelo que tiene.</p>`;
+  ["probs", "que", "acciones"].forEach(s => $(s).classList.add("oculto"));
+}
+
+$("btn-camara").onclick = abrirCamara;
+$("btn-cerrar-camara").onclick = reiniciar;
+$("btn-continuo").onclick = () => { continuo = !continuo; actualizarContinuo(); };
+$("btn-capturar").onclick = async () => {
+  const blob = await cuadro(1600);
+  const hora = new Date().toTimeString().slice(0, 8).replaceAll(":", "");
+  subir([{ f: blob, ruta: `camara_${hora}.jpg` }]);
+};
+$("btn-otra").onclick = reiniciar;
+window.addEventListener("pagehide", detenerCamara);
+
+(async () => { await LISTO; await cargarLote(); })();
+</script>
+{% endblock %}

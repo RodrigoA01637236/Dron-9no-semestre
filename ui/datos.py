@@ -222,13 +222,14 @@ def procesar_vuelo(con, vuelo: str, clasificador, version) -> dict:
     carpeta = carpeta_vuelo(vuelo)
     existentes = {r[0] for r in con.execute("SELECT archivo FROM fotos WHERE vuelo=?", (vuelo,))}
     nuevas = con_gps = 0
+    ids = []
     for ruta in sorted(carpeta.iterdir()):
         if ruta.suffix.lower() not in EXT_IMG or ruta.name in existentes:
             continue
         g = leer_gps(ruta)
         crear_miniatura(ruta, MINIS / vuelo / (ruta.stem + ".jpg"))
         pred = clasificador.predecir(ruta) if clasificador else None
-        con.execute(
+        cur = con.execute(
             "INSERT INTO fotos (vuelo, archivo, lat, lon, alt, fecha, pred, conf, modelo_version,"
             " holdout, importada) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
             (vuelo, ruta.name, g.get("lat"), g.get("lon"), g.get("alt"), g.get("fecha"),
@@ -237,5 +238,6 @@ def procesar_vuelo(con, vuelo: str, clasificador, version) -> dict:
         )
         nuevas += 1
         con_gps += "lat" in g
+        ids.append(cur.lastrowid)
     con.commit()
-    return {"nuevas": nuevas, "con_gps": con_gps}
+    return {"nuevas": nuevas, "con_gps": con_gps, "ids": ids}

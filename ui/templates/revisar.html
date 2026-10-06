@@ -1,66 +1,129 @@
 {% extends "base.html" %}
-{% block titulo %}Revisar fotos · Estación Sigatoka{% endblock %}
+{% block titulo %}Revisar · Estación Sigatoka{% endblock %}
 {% block contenido %}
 <section class="hoja-flotante" aria-labelledby="titulo">
 <div class="hoja-contenido">
   <div class="hoja-cabeza">
     <div>
-      <h1 id="titulo">Revisar fotos</h1>
-      <p>Confirma o corrige lo que vio el modelo. Primero salen las fotos donde tiene más dudas: son las que más le enseñan.</p>
+      <h1 id="titulo">Revisar</h1>
+      <p>Confirma o corrige lo que vio el modelo. Las imágenes en las que más duda salen primero: son las que más le enseñan
+        cuando se reentrena.</p>
     </div>
     <div class="acciones" style="align-items:flex-end">
-      <label class="campo"><span>Vuelo</span><select id="vuelo"></select></label>
-      <label class="campo"><span>Quién revisa</span><input type="text" id="revisor" placeholder="Tu nombre" size="14" autocomplete="name"></label>
-      <a class="boton-icono cerrar" href="/" aria-label="Cerrar y volver al mapa">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></a>
+      <label class="campo"><span>Quién revisa</span><input type="text" id="revisor" placeholder="Tu nombre" size="16" autocomplete="name"></label>
     </div>
   </div>
 
-  <div id="vacio" class="vacio oculto">
-    <h2>No quedan fotos por revisar</h2>
-    <p>Todas las fotos de este vuelo ya las confirmó una persona. Mira el mapa, sube otro vuelo, o mejora el modelo con lo que revisaste.</p>
-    <div class="fila"><a class="boton claro grande" href="/">Ver el mapa</a><a class="boton grande" href="/vuelos?subir=1">Subir un vuelo</a><a class="boton grande" href="/modelo">Mejorar el modelo</a></div>
+  <div class="fechas" id="fechas" role="group" aria-label="Fecha de carga"></div>
+  <div class="fila" style="justify-content:space-between; margin-bottom:18px">
+    <div class="segmentos" role="radiogroup" aria-label="Cómo revisar">
+      <label><input type="radio" name="vista" value="una" checked><span>Una por una, dudosas primero</span></label>
+      <label><input type="radio" name="vista" value="todas"><span>Todas las imágenes</span></label>
+    </div>
+    <p class="nota oculto" id="nota-modelo" style="margin:0"></p>
   </div>
 
-  <div id="area" class="oculto">
-    <div class="mesa">
-      <div class="mesa-foto"><img id="img" alt="Foto a revisar"></div>
-      <div class="mesa-lectura">
-        <div id="sugerencia" style="display:grid; gap:10px"></div>
-        <div id="probs"></div>
-        <div>
-          <h2 style="font-size:var(--t-m); margin-bottom:.7rem">¿Qué ves tú en la hoja?</h2>
-          <div class="opciones" id="botones"></div>
-          <div class="fila" style="margin-top:.9rem">
-            <button class="boton" id="btn-saltar" type="button">Saltar <kbd>S</kbd></button>
-            <button class="boton" id="btn-deshacer" type="button" disabled>Deshacer <kbd>Z</kbd></button>
+  <div id="vista-una">
+    <div id="vacio" class="vacio oculto">
+      <h2>No quedan imágenes por revisar aquí</h2>
+      <p>Todas las imágenes de esta fecha ya las confirmó una persona. Puedes ver todas las imágenes, cargar más,
+        o mejorar el modelo con lo que revisaste.</p>
+      <div class="fila"><a class="boton claro grande" href="/">Cargar más imágenes</a><a class="boton grande" href="/modelo">Mejorar el modelo</a></div>
+    </div>
+    <div id="area" class="oculto">
+      <div class="mesa">
+        <div class="mesa-foto"><img id="img" alt="Imagen a revisar"></div>
+        <div class="mesa-lectura">
+          <div id="sugerencia" style="display:grid; gap:10px"></div>
+          <div id="probs"></div>
+          <div>
+            <h2 style="font-size:var(--t-m); margin-bottom:.7rem">¿Qué ves tú en la hoja?</h2>
+            <div class="opciones" id="botones"></div>
+            <div class="fila" style="margin-top:.9rem">
+              <button class="boton" id="btn-saltar" type="button">Saltar <kbd>S</kbd></button>
+              <button class="boton" id="btn-deshacer" type="button" disabled>Deshacer <kbd>Z</kbd></button>
+            </div>
+            <p class="mensaje error" id="msg" role="alert"></p>
           </div>
-          <p class="mensaje error" id="msg" role="alert"></p>
         </div>
       </div>
+      <div class="pie-foto"><span id="meta"></span><span id="contador"></span></div>
     </div>
-    <div class="pie-foto"><span id="meta"></span><span id="contador"></span></div>
+  </div>
+
+  <div id="vista-todas" class="oculto">
+    <div class="herramientas">
+      <label class="campo"><span>Diagnóstico</span><select id="clase"></select></label>
+      <label class="campo"><span>Estado</span>
+        <select id="filtro">
+          <option value="">Todas</option>
+          <option value="pendientes">Sin revisar</option>
+          <option value="revisadas">Revisadas</option>
+        </select></label>
+      <span class="nota num" id="total" style="align-self:center; margin-left:auto"></span>
+    </div>
+    <p class="nota" style="margin:0 0 12px">Ordenadas de la más dudosa a la más segura; las ya revisadas van al final. Haz clic en una para revisarla.</p>
+    <div class="rejilla" id="rejilla"></div>
+    <nav class="paginacion" aria-label="Páginas">
+      <button class="boton" id="ant" type="button">Anterior</button><span class="num" id="pag"></span><button class="boton" id="sig" type="button">Siguiente</button>
+    </nav>
   </div>
 </div>
 </section>
 {% endblock %}
 {% block scripts %}
 <script>
-let actual = null, saltadas = [], historial = [];
+const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
+let fechaSel = params.get("fecha") ?? params.get("vuelo") ?? "";
+let vista = params.get("vista") === "todas" ? "todas" : "una";
 let fotoDirecta = params.get("foto");
+let actual = null, saltadas = [], historial = [], pagina = 1;
 
-const revisor = document.getElementById("revisor");
+const revisor = $("revisor");
 function guardarRevisor() { try { localStorage.setItem("revisor", revisor.value); } catch (e) {} }
 try { revisor.value = localStorage.getItem("revisor") || ""; } catch (e) {}
 revisor.onchange = guardarRevisor;
 
+function actualizarURL() {
+  const q = new URLSearchParams();
+  if (fechaSel) q.set("fecha", fechaSel);
+  if (vista === "todas") q.set("vista", "todas");
+  history.replaceState(null, "", "/revisar" + (q.toString() ? "?" + q : ""));
+}
+
+// ------------------------------------------------------------- fechas
+function pintarFechas() {
+  const total = RESUMEN.total_fotos, pendTotal = RESUMEN.total_fotos - RESUMEN.total_revisadas;
+  const items = [{ clave: "", nombre: "Todas", pend: pendTotal },
+    ...RESUMEN.vuelos.map(v => ({ clave: v.vuelo, nombre: nombreFecha(v.vuelo), pend: v.fotos - v.revisadas }))];
+  $("fechas").innerHTML = items.map(x => `<button type="button" data-fecha="${esc(x.clave)}" aria-pressed="${x.clave === fechaSel}">
+      ${esc(x.nombre)}<span>${x.pend ? `${x.pend} por revisar` : "revisadas"}</span></button>`).join("");
+  $("fechas").querySelectorAll("button").forEach(b => b.onclick = () => {
+    fechaSel = b.dataset.fecha; saltadas = []; pagina = 1; fotoDirecta = null;
+    pintarFechas(); actualizarURL(); recargar();
+  });
+  const nm = $("nota-modelo");
+  if (RESUMEN.modelo && RESUMEN.revisadas_desde_modelo > 0) {
+    nm.innerHTML = `${plural(RESUMEN.revisadas_desde_modelo, "imagen revisada", "imágenes revisadas")} desde el modelo actual.
+      ${RESUMEN.revisadas_desde_modelo >= 50 ? `<a href="/modelo">Ya conviene reentrenar</a>` : "Con unas 50 conviene reentrenar."}`;
+    nm.classList.remove("oculto");
+  }
+}
+
+function recargar() {
+  $("vista-una").classList.toggle("oculto", vista !== "una");
+  $("vista-todas").classList.toggle("oculto", vista !== "todas");
+  return vista === "una" ? siguiente() : cargarTodas();
+}
+
+// ------------------------------------------------------------- una por una
 function opciones() {
-  return [...RESUMEN.categorias, { clave: DESCARTAR, nombre: "La foto no sirve (borrosa, sin hoja)", color: GRIS }];
+  return [...RESUMEN.categorias, { clave: DESCARTAR, nombre: "La imagen no sirve (borrosa, sin hoja)", color: GRIS }];
 }
 
 function pintarBotones(sugerida) {
-  document.getElementById("botones").innerHTML = opciones().map((c, i) => {
+  $("botones").innerHTML = opciones().map((c, i) => {
     const tecla = c.clave === DESCARTAR ? "0" : String(i + 1);
     return `<button class="opcion${c.clave === DESCARTAR ? " descartar" : ""}" type="button" data-clave="${esc(c.clave)}">
       <i class="muestra" style="background:${c.color}"></i><span>${esc(c.nombre)}${c.clave === sugerida ? "<small>la propuesta</small>" : ""}</span>
@@ -70,26 +133,24 @@ function pintarBotones(sugerida) {
 }
 
 async function mostrar(f, pendientes) {
-  document.getElementById("vacio").classList.toggle("oculto", !!f);
-  document.getElementById("area").classList.toggle("oculto", !f);
+  $("vacio").classList.toggle("oculto", !!f);
+  $("area").classList.toggle("oculto", !f);
   actual = f;
   if (!f) return;
   const det = (await api(`/api/foto/${f.id}`)).foto;
-  document.getElementById("img").src = `/foto/${f.id}`;
+  $("img").src = `/foto/${f.id}`;
   const seguro = det.conf != null && det.conf >= RESUMEN.umbral;
   const c = categoria(det.pred);
-  document.getElementById("sugerencia").innerHTML = det.pred
-    ? `<span class="chip-diagnostico">${seguro ? `<i style="background:${c.color}"></i>` : `<i class="muestra vacia" style="border-radius:50%"></i>`}Propuesta del modelo</span>
+  $("sugerencia").innerHTML = det.pred
+    ? `<span class="chip-diagnostico">${seguro ? `<i style="background:${c.color}"></i>` : `<i class="muestra vacia" style="border-radius:50%"></i>`}Lo que cree el modelo</span>
        <div class="veredicto" style="font-size:1.9rem">${seguro ? esc(c.nombre) : `${esc(c.nombre)}, pero no está seguro`}</div>
        <p class="confianza">${seguro ? `Está <b>${pct(det.conf)} seguro</b>.` : `Solo <b>${pct(det.conf)}</b>; necesita ${pct(RESUMEN.umbral)}. Aquí tu respuesta es la que más le enseña.`}</p>`
-    : `<div class="veredicto" style="font-size:1.6rem">Sin propuesta del modelo</div><p class="confianza">Tu revisión sigue sirviendo para entrenar.</p>`;
-  document.getElementById("probs").innerHTML = det.probs ? escala(det.probs) : "";
+    : `<div class="veredicto" style="font-size:1.6rem">Sin resultado del modelo</div><p class="confianza">Tu revisión sigue sirviendo para entrenar.</p>`;
+  $("probs").innerHTML = det.probs ? escala(det.probs) : "";
   pintarBotones(det.pred);
   const ya = det.etiqueta ? ` · ya revisada como ${esc(categoria(det.etiqueta).nombre)}${det.revisor ? " por " + esc(det.revisor) : ""}` : "";
-  document.getElementById("meta").innerHTML = `${esc(det.vuelo)} / ${esc(det.archivo)}` +
-    (det.lat != null ? ` · ${det.lat.toFixed(6)}, ${det.lon.toFixed(6)}` : " · sin ubicación") + ya;
-  document.getElementById("contador").textContent = pendientes != null
-    ? `${plural(pendientes, "pendiente", "pendientes")}${document.getElementById("vuelo").value ? " en este vuelo" : ""}` : "";
+  $("meta").innerHTML = `${esc(nombreFecha(det.vuelo))} · ${esc(det.archivo.replace(/^\d{6}_/, ""))}` + ya;
+  $("contador").textContent = pendientes != null ? `${plural(pendientes, "pendiente", "pendientes")}${fechaSel ? " en esta fecha" : ""}` : "";
 }
 
 async function siguiente() {
@@ -98,40 +159,39 @@ async function siguiente() {
     fotoDirecta = null;
     return mostrar(f, null);
   }
-  const vuelo = document.getElementById("vuelo").value;
-  const q = new URLSearchParams({ vuelo, excluir: saltadas.join(",") });
+  const q = new URLSearchParams({ vuelo: fechaSel, excluir: saltadas.join(",") });
   const r = await api("/api/siguiente?" + q);
   await mostrar(r.foto, r.pendientes);
 }
 
 async function etiquetar(clave) {
   if (!actual) return;
-  const msg = document.getElementById("msg");
   if (!revisor.value.trim()) {
-    msg.textContent = "Escribe tu nombre en \"Quién revisa\" antes de etiquetar: así queda registrado quién confirmó cada foto.";
+    $("msg").textContent = "Escribe tu nombre en \"Quién revisa\" antes de etiquetar: así queda registrado quién confirmó cada imagen.";
     revisor.focus();
     return;
   }
-  msg.textContent = "";
+  $("msg").textContent = "";
   guardarRevisor();
   await post("/api/etiquetar", { id: actual.id, etiqueta: clave, revisor: revisor.value });
   historial.push(actual.id);
-  document.getElementById("btn-deshacer").disabled = false;
+  $("btn-deshacer").disabled = false;
   await siguiente();
-  cargarResumen();
+  await cargarResumen(); pintarFechas();
 }
 
 async function deshacer() {
   const id = historial.pop();
   if (id == null) return;
   await post("/api/etiquetar", { id, etiqueta: null });
-  document.getElementById("btn-deshacer").disabled = !historial.length;
+  $("btn-deshacer").disabled = !historial.length;
   fotoDirecta = id;
   await siguiente();
-  cargarResumen();
+  await cargarResumen(); pintarFechas();
 }
 
 document.addEventListener("keydown", e => {
+  if (vista !== "una") return;
   if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT" || e.ctrlKey || e.metaKey || e.altKey) return;
   const ops = opciones();
   if (e.key === "0") return etiquetar(DESCARTAR);
@@ -141,15 +201,46 @@ document.addEventListener("keydown", e => {
   if (e.key.toLowerCase() === "z") deshacer();
 });
 
+// ------------------------------------------------------------- todas
+async function cargarTodas() {
+  const q = new URLSearchParams({ vuelo: fechaSel, clase: $("clase").value, filtro: $("filtro").value, pagina, orden: "duda" });
+  const r = await api("/api/fotos?" + q);
+  $("total").textContent = plural(r.total, "imagen", "imágenes");
+  const paginas = Math.max(1, Math.ceil(r.total / 60));
+  $("pag").textContent = `Página ${pagina} de ${paginas}`;
+  $("ant").disabled = pagina <= 1;
+  $("sig").disabled = pagina >= paginas;
+  document.querySelector(".paginacion").classList.toggle("oculto", paginas <= 1);
+  $("rejilla").innerHTML = r.fotos.map(f => {
+    const d = diagnostico(f);
+    const marca = d.fuente === "humano" ? "Revisada" : d.fuente === "modelo" ? `Modelo ${pct(f.conf)}` : "Sin resultado";
+    return `<button class="celda" type="button" data-id="${f.id}" style="font:inherit; text-align:left; cursor:pointer; padding:0">
+      <img src="/mini/${f.id}" loading="lazy" alt="">
+      <span class="celda-pie">${ficha(d)}<span class="nota"><span>${marca}</span><span>${esc(nombreFecha(f.vuelo))}</span></span></span></button>`;
+  }).join("") || `<p class="nota" style="grid-column:1/-1">No hay imágenes con ese filtro.</p>`;
+  $("rejilla").querySelectorAll(".celda").forEach(c => c.onclick = () => {
+    fotoDirecta = +c.dataset.id;
+    document.querySelector("input[name=vista][value=una]").checked = true;
+    vista = "una"; actualizarURL(); recargar();
+    document.querySelector(".hoja-flotante").scrollTo({ top: 0 });
+  });
+}
+
 (async () => {
   await LISTO;
-  const vuelo = document.getElementById("vuelo");
-  llenarVuelos(vuelo);
-  if (params.get("vuelo") !== null) vuelo.value = params.get("vuelo");
-  vuelo.onchange = () => { saltadas = []; siguiente(); };
-  document.getElementById("btn-saltar").onclick = () => { if (actual) saltadas.push(actual.id); siguiente(); };
-  document.getElementById("btn-deshacer").onclick = deshacer;
-  await siguiente();
+  if (fechaSel && !RESUMEN.vuelos.some(v => v.vuelo === fechaSel)) fechaSel = "";
+  $("clase").innerHTML = `<option value="">Todos</option>` +
+    RESUMEN.categorias.map(c => `<option value="${esc(c.clave)}">${esc(c.nombre)}</option>`).join("") +
+    `<option value="${DESCARTAR}">La imagen no sirve</option>`;
+  ["clase", "filtro"].forEach(id => $(id).onchange = () => { pagina = 1; cargarTodas(); });
+  $("ant").onclick = () => { pagina--; cargarTodas(); };
+  $("sig").onclick = () => { pagina++; cargarTodas(); };
+  document.querySelector(`input[name=vista][value=${vista}]`).checked = true;
+  document.querySelectorAll("input[name=vista]").forEach(r => r.onchange = () => { vista = r.value; actualizarURL(); recargar(); });
+  $("btn-saltar").onclick = () => { if (actual) saltadas.push(actual.id); siguiente(); };
+  $("btn-deshacer").onclick = deshacer;
+  pintarFechas();
+  await recargar();
 })();
 </script>
 {% endblock %}

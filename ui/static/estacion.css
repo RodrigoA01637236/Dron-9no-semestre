@@ -381,8 +381,20 @@ pre.registro {
 .celda:active { transform: scale(.98); }
 @media (hover: hover) and (pointer: fine) { .celda:hover { border-color: var(--borde-fuerte); color: var(--texto); } }
 .celda img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--panel-3); }
+.celda[aria-pressed="true"] { border-color: var(--acento); }
+.celda .celda-pie { display: grid; }
+.fechas { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.fechas button {
+  padding: .55rem .95rem; border: 1px solid var(--borde-fuerte); border-radius: 999px; background: transparent; color: var(--texto-2);
+  font: 700 var(--t-s) var(--sans); cursor: pointer; transition: background-color 150ms ease, color 150ms ease, transform 160ms var(--salida);
+}
+.fechas button:active { transform: scale(.97); }
+.fechas button[aria-pressed="true"] { background: var(--claro); border-color: var(--claro); color: var(--sobre-claro); }
+.fechas button span { font-weight: 600; opacity: .75; margin-left: .3rem; }
 .celda-pie { display: grid; gap: .15rem; padding: .6rem .7rem; font-size: var(--t-s); }
 .celda-pie .nota { display: flex; justify-content: space-between; gap: .4rem; font-size: var(--t-xs); }
+.celda-pie .nota > span { white-space: nowrap; }
+.celda-pie .nota > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .paginacion { display: flex; gap: 1rem; justify-content: center; align-items: center; margin-top: 1.5rem; font-size: var(--t-s); color: var(--texto-2); }
 
 /* modelo y tablas */

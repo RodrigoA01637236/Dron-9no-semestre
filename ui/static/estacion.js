@@ -99,10 +99,23 @@ function escala(probs, umbral = RESUMEN?.umbral ?? 0.65) {
     <div class="escala-umbral">La línea blanca marca la seguridad mínima: ${pct(umbral)}.</div></div>`;
 }
 
-function llenarVuelos(select, conTodos = true) {
-  select.innerHTML = (conTodos ? `<option value="">Todos los vuelos</option>` : "") +
-    RESUMEN.vuelos.map(v => `<option value="${esc(v.vuelo)}">${esc(v.vuelo)} · ${v.fotos} fotos</option>`).join("");
+// Las imágenes se agrupan por la fecha en que se cargaron ("2026-10-06").
+const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+function hoy() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
+function nombreFecha(clave) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?:_(.+))?$/.exec(clave || "");
+  if (!m) return clave || "Sin fecha";
+  const base = clave.slice(0, 10) === hoy() ? "Hoy" : `${+m[3]} ${MESES[+m[2] - 1]} ${m[1]}`;
+  return m[4] ? `${base} · ${m[4].replaceAll("_", " ")}` : base;
+}
+function llenarFechas(select, conTodas = true) {
+  select.innerHTML = (conTodas ? `<option value="">Todas las fechas</option>` : "") +
+    RESUMEN.vuelos.map(v => `<option value="${esc(v.vuelo)}">${esc(nombreFecha(v.vuelo))} · ${plural(v.fotos, "imagen", "imágenes")}</option>`).join("");
+}
+const llenarVuelos = llenarFechas;
 
 // Botón de dos pasos para acciones serias: el primer clic pide confirmación,
 // el segundo ejecuta. Se desarma solo a los 4 s.

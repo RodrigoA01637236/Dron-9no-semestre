@@ -14,27 +14,24 @@
 <div class="velo-mapa"></div>
 
 <header class="barra-sup">
-  <a class="pastilla" href="/" aria-label="Estación Sigatoka, ir al mapa">
+  <a class="pastilla" href="/" aria-label="Estación Sigatoka, ir a Cargar">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 8V3h5M16 3h5v5M21 16v5h-5M8 21H3v-5"/><circle cx="12" cy="12" r="2.5" fill="#ff5a6e" stroke="none"/></svg>
     <span class="marca-nombre">Estación Sigatoka</span>
   </a>
   {% block barra_centro %}{% endblock %}
   <span class="espacio"></span>
-  <a class="boton primario boton-identificar" href="/identificar" {% if pagina == "identificar" %}aria-current="page"{% endif %}>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3v11H4Z"/><circle cx="12" cy="13" r="3.5"/></svg>
-    <span class="texto-largo">Identificar una hoja</span></a>
 </header>
 
 <nav class="riel" aria-label="Secciones">
-  <a href="/" {% if pagina == "mapa" %}aria-current="page"{% endif %}>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2Z"/><path d="M9 4v14M15 6v14"/></svg>Mapa</a>
-  <a href="/vuelos" {% if pagina == "vuelos" %}aria-current="page"{% endif %}>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3Z"/></svg>Vuelos</a>
+  <a href="/" {% if pagina == "cargar" %}aria-current="page"{% endif %}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 15v4h16v-4"/></svg>Cargar</a>
   <a href="/revisar" {% if pagina == "revisar" %}aria-current="page"{% endif %}>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 10 17 19 7"/></svg>Revisar
-    <span class="insignia oculto" id="pendientes-nav" title="Fotos sin revisar"></span></a>
+    <span class="insignia oculto" id="pendientes-nav" title="Imágenes sin revisar"></span></a>
   <a href="/modelo" {% if pagina == "modelo" %}aria-current="page"{% endif %}>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg><span id="version-nav">Modelo</span></a>
+  <a href="/mapa" {% if pagina == "mapa" %}aria-current="page"{% endif %}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2Z"/><path d="M9 4v14M15 6v14"/></svg>Mapa</a>
 </nav>
 
 <div id="aviso-modelo" class="aviso oculto" role="status"></div>

@@ -62,24 +62,22 @@ def foto_dict(f) -> dict:
 
 @app.get("/")
 def inicio():
-    """La estación abre en el mapa del cultivo; las demás páginas flotan encima."""
-    return render_template("mapa.html", pagina="mapa")
+    """La estación abre en Cargar: subir imágenes o usar la cámara y ver qué cree el modelo."""
+    return render_template("cargar.html", pagina="cargar")
 
 
-@app.get("/<any(identificar, vuelos, revisar, modelo):pagina>")
+@app.get("/<any(revisar, modelo, mapa):pagina>")
 def pagina(pagina):
     return render_template(f"{pagina}.html", pagina=pagina)
 
 
-@app.get("/<any(inicio, mapa, importar, galeria):viejo>")
+@app.get("/<any(inicio, identificar, vuelos, importar, galeria):viejo>")
 def pagina_vieja(viejo):
     """Direcciones de versiones anteriores: siguen sirviendo."""
-    destino = {"inicio": "/", "mapa": "/", "importar": "/vuelos", "galeria": "/vuelos"}[viejo]
-    if viejo == "importar":
-        destino += "?subir=1"
-    elif request.query_string:
-        destino += "?" + request.query_string.decode()
-    return redirect(destino)
+    fecha = request.args.get("vuelo")
+    if viejo in ("vuelos", "galeria") and fecha:
+        return redirect(f"/revisar?fecha={fecha}&vista=todas")
+    return redirect("/")
 
 
 @app.get("/foto/<int:fid>")
@@ -151,7 +149,9 @@ def api_fotos():
         sql += " AND lat IS NULL"
     with conectar() as con:
         total = con.execute(sql.replace("SELECT *", "SELECT COUNT(*)"), args).fetchone()[0]
-        filas = con.execute(sql + " ORDER BY vuelo, archivo LIMIT 60 OFFSET ?",
+        orden = {"duda": " ORDER BY etiqueta IS NOT NULL, conf IS NOT NULL, conf ASC, id",
+                 "reciente": " ORDER BY id DESC"}.get(request.args.get("orden"), " ORDER BY vuelo, archivo")
+        filas = con.execute(sql + orden + " LIMIT 60 OFFSET ?",
                             args + [(pagina_n - 1) * 60]).fetchall()
     return jsonify(total=total, pagina=pagina_n, fotos=[foto_dict(f) for f in filas])
 
@@ -289,7 +289,11 @@ def api_procesar():
     clf, version = clasificador()
     with conectar() as con:
         r = datos.procesar_vuelo(con, vuelo, clf, version)
-    return jsonify(ok=True, vuelo=vuelo, sin_modelo=clf is None, **r)
+        marcas = ",".join("?" * len(r["ids"]))
+        fotos = [foto_dict(f) for f in con.execute(
+            f"SELECT * FROM fotos WHERE id IN ({marcas}) ORDER BY id", r["ids"])] if r["ids"] else []
+    return jsonify(ok=True, vuelo=vuelo, sin_modelo=clf is None, fotos=fotos,
+                   nuevas=r["nuevas"], con_gps=r["con_gps"])
 
 
 @app.get("/api/entrenamiento")

@@ -1,18 +1,14 @@
 # Estación de tierra — guía de uso
 
 Aplicación web local que corre en la laptop del equipo y se usa desde el navegador.
-Se abre en el **mapa del cultivo**, que queda siempre de fondo. Todo lo demás se abre como
-un panel encima del mapa y se cierra con la X para volver a él:
+Tiene cuatro pestañas en la barra de la izquierda (abajo, en el celular):
 
-| Dónde | Para qué |
+| Pestaña | Para qué |
 |---|---|
-| **Mapa** (barra izquierda) | La pantalla principal: zonas del lote en verde, ámbar o rojo, el resumen "Así está el lote" a la derecha y las fotos del vuelo abajo. Arriba eliges el vuelo. Descarga para Google Earth/QGIS. |
-| **Identificar una hoja** (botón azul, arriba a la derecha) | Subir o tomar la foto de una hoja (o usar la cámara en vivo) y ver al instante si está sana, tiene Sigatoka u otra condición, con qué seguridad y qué hacer. |
-| **Vuelos** | Subir la carpeta de fotos de un vuelo (el modelo las diagnostica al instante), ver la lista de vuelos con su avance y todas las fotos con filtros. |
-| **Revisar** | Una persona (idealmente el agrónomo) confirma o corrige cada diagnóstico. Empieza por las fotos donde el modelo tiene más dudas. El número rojo es cuántas faltan. |
-| **Modelo** | Reentrenar con las correcciones, comparar contra el modelo actual y activar el nuevo solo si mejora. |
-
-En el celular la barra izquierda se vuelve una barra de pestañas abajo.
+| **Cargar** (la principal) | Subir una imagen, varias, o arrastrar una carpeta completa (con subcarpetas), o usar la cámara en vivo. El modelo dice al momento qué cree que tiene cada imagen (sana, Sigatoka u otra condición), con qué seguridad y qué hacer. Todo se guarda con la fecha de hoy. |
+| **Revisar** | Elige la fecha arriba. *Una por una*: salen primero las imágenes en las que el modelo tiene más dudas y una persona confirma o corrige. *Todas las imágenes*: todas las de esa fecha, de la más dudosa a la más segura. |
+| **Modelo** | Reentrenar con lo revisado, comparar contra el modelo actual y activar el nuevo solo si mejora. |
+| **Mapa** | Opcional por ahora: muestra en el mapa las imágenes que traen ubicación (GPS). |
 
 ## Cómo abrirla
 
@@ -30,34 +26,26 @@ Requisitos: el entorno `dron-vision` de la guía del modelo, más `pip install f
 (el `.bat` lo instala solo la primera vez), y el modelo `sigatoka_cls_v1.onnx`
 (de tu Drive) copiado en `vision\models\`.
 
-## Identificar una hoja
+## Cómo se lee el resultado
 
-En **Identificar** arrastra una foto, elige un archivo o pulsa *Usar cámara*:
-
-- Con una foto, la estación muestra el diagnóstico, su confianza y una barra por condición.
-  La línea vertical de cada barra es el **umbral (65 %)**: si ninguna condición lo pasa, el
+- Cada imagen muestra el diagnóstico, su seguridad y una barra por condición. La línea
+  blanca de cada barra es la **seguridad mínima (65 %)**: si ninguna condición la pasa, el
   resultado es **El modelo no está seguro** y la estación pide otra foto en vez de adivinar.
-- Con la cámara (webcam de la laptop) el diagnóstico se actualiza cada 0.8 s. *Capturar y
-  fijar* congela el cuadro para guardarlo.
-- *Guardar para revisión* manda la foto al vuelo `identificaciones_<fecha>`: aparece en
-  Revisar y Fotos, y una vez confirmada sirve para reentrenar.
+- Con la cámara (webcam de la laptop) el diagnóstico se actualiza cada 0.8 s sin guardar
+  nada. *Capturar y guardar* guarda ese cuadro como una imagen más de hoy.
 - Desde otro equipo (`--red`) el navegador no permite la cámara en vivo por no ser una
   conexión segura; en el celular, *Usar cámara* abre la cámara del teléfono para tomar una foto.
 
 ## El flujo de trabajo
 
-1. **Vuelos → Subir un vuelo nuevo**: elige la carpeta del vuelo. Acepta:
-   - Fotos del dron con su `.json` gemelo del Pixhawk (`docs/04` §5): la fuente de GPS más precisa.
-   - Fotos de celular o GoPro con ubicación activada (el GPS va en el EXIF de la foto).
-     **Sirve para trabajar hoy, sin dron**: tomen fotos de hojas en una parcela con el celular.
-2. **Revisar**: el agrónomo escribe su nombre y etiqueta. Atajos: `1` `2` `3`… categorías,
-   `0` foto no sirve, `S` saltar, `Z` deshacer.
-3. **Mapa**: revisen el panorama. La vista *Zonas* agrupa las fotos en cuadros de 10–100 m
-   (el tamaño está en *Más opciones*); *Fotos* muestra cada foto como un punto.
-4. **Modelo** (solo de vez en cuando): con unas 50 fotos
-   revisadas nuevas, *Reentrenar ahora*. Al terminar aparece la versión nueva con su
-   resultado en el **examen de campo**; si mejora, *Usar este modelo* (todas las fotos se
-   vuelven a diagnosticar con él).
+1. **Cargar**: arrastra la carpeta con las fotos (o elige imágenes, o usa la cámara). Cada
+   imagen muestra al instante lo que cree el modelo. Quedan guardadas en la fecha de hoy.
+2. **Revisar**: elige la fecha y revisa *una por una*, empezando por las dudosas. El
+   agrónomo escribe su nombre y etiqueta. Atajos: `1` `2` `3`… categorías, `0` la imagen
+   no sirve, `S` saltar, `Z` deshacer.
+3. **Modelo** (de vez en cuando): con unas 50 imágenes revisadas nuevas, *Reentrenar
+   ahora*. Al terminar aparece la versión nueva con su resultado en el **examen de campo**;
+   si mejora, *Usar este modelo* (todas las imágenes se vuelven a diagnosticar con él).
 
 ## Cómo "aprende" el modelo (honestamente)
 

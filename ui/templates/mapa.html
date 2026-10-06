@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block titulo %}Mapa del cultivo · Estación Sigatoka{% endblock %}
 {% block barra_centro %}
-<label class="chip-vuelo"><span class="oculto">Vuelo</span><select id="vuelo" aria-label="Vuelo a mostrar"></select></label>
+<label class="chip-vuelo"><span class="oculto">Vuelo</span><select id="vuelo" aria-label="Fecha a mostrar"></select></label>
 {% endblock %}
 {% block contenido %}
 <div class="leyenda-mapa" id="leyenda"></div>
@@ -10,15 +10,14 @@
   <div id="bienvenida" class="oculto" style="display:grid; gap:18px">
     <div>
       <h1 style="font-size:1.6rem">Empieza aquí</h1>
-      <p class="suave" style="margin:.4rem 0 0">La estación revisa fotos de hojas de plátano y marca en el mapa dónde hay Sigatoka.</p>
+      <p class="suave" style="margin:.4rem 0 0">Aquí se verán en el mapa las imágenes que tengan ubicación (GPS). Por ahora el mapa es opcional.</p>
     </div>
     <ol class="pasos-inicio">
-      <li><span><b>Sube las fotos de un vuelo</b>La carpeta del dron, o fotos de celular con la ubicación activada.</span></li>
+      <li><span><b>Carga imágenes</b>Fotos de celular o del dron con la ubicación activada.</span></li>
       <li><span><b>Revisa lo que vio el modelo</b>Una persona confirma o corrige cada foto.</span></li>
       <li><span><b>Mira aquí el mapa del lote</b>Las zonas en rojo son las que más Sigatoka tienen.</span></li>
     </ol>
-    <a class="boton claro grande ancho" href="/vuelos?subir=1">Subir un vuelo</a>
-    <a class="boton grande ancho" href="/identificar">Identificar una sola hoja</a>
+    <a class="boton claro grande ancho" href="/">Cargar imágenes</a>
   </div>
 
   <div id="resumen" class="oculto" style="display:grid; gap:18px">
@@ -73,7 +72,7 @@ function leyenda() {
 function resumen(vuelo) {
   const fotos = Mapa.fotos(), obj = Mapa.op.objetivo, nombre = categoria(obj).nombre;
   const v = RESUMEN.vuelos.find(x => x.vuelo === vuelo);
-  $("sub-vuelo").textContent = v ? `${vuelo} · ${plural(v.fotos, "foto", "fotos")}` : `Todos los vuelos · ${plural(RESUMEN.total_fotos, "foto", "fotos")}`;
+  $("sub-vuelo").textContent = v ? `${nombreFecha(vuelo)} · ${plural(v.fotos, "imagen", "imágenes")}` : `Todas las fechas · ${plural(RESUMEN.total_fotos, "imagen", "imágenes")}`;
   const seguros = fotos.map(diagnostico).filter(d => d.clave && !d.dudoso && d.clave !== DESCARTAR);
   const nObj = seguros.filter(d => d.clave === obj).length;
   $("n-objetivo").textContent = nObj;
@@ -91,7 +90,7 @@ function resumen(vuelo) {
     : `Ninguna zona pasa de 25 % de fotos con ${esc(nombre)}.`;
   const pend = v ? v.fotos - v.revisadas : RESUMEN.total_fotos - RESUMEN.total_revisadas;
   $("btn-revisar").textContent = pend ? `Revisar ${plural(pend, "foto pendiente", "fotos pendientes")}` : "Todo está revisado";
-  $("btn-revisar").href = "/revisar" + (vuelo ? `?vuelo=${encodeURIComponent(vuelo)}` : "");
+  $("btn-revisar").href = "/revisar" + (vuelo ? `?fecha=${encodeURIComponent(vuelo)}` : "");
   $("geojson").href = "/api/geojson" + (vuelo ? `?vuelo=${encodeURIComponent(vuelo)}` : "");
   const sg = Mapa.sinGps();
   $("nota-gps").textContent = "Ubicación aproximada (±3 m): cada punto es dónde estaba el dron, no una planta exacta." +
@@ -106,7 +105,7 @@ async function tira(vuelo) {
     const txt = d.fuente === "modelo" && !d.dudoso ? `${d.nombre} ${pct(f.conf)}` : d.nombre;
     return `<a class="foto" href="/revisar?foto=${f.id}"><img src="/mini/${f.id}" loading="lazy" alt="">
       <span>${d.dudoso ? `<i class="muestra vacia"></i>` : `<i class="muestra" style="background:${d.color}"></i>`}${esc(txt)}</span></a>`;
-  }).join("") + `<a class="ver-todas" href="/vuelos${vuelo ? `?vuelo=${encodeURIComponent(vuelo)}` : ""}">Ver las ${r.total}</a>`;
+  }).join("") + `<a class="ver-todas" href="/revisar?vista=todas${vuelo ? `&fecha=${encodeURIComponent(vuelo)}` : ""}">Ver las ${r.total}</a>`;
 }
 
 async function cargar() {
