@@ -24,17 +24,13 @@
     <span class="marca-texto"><span class="marca-nombre">Estación Sigatoka</span><span class="marca-sub">Estación de tierra · Platanos Machos</span></span>
   </a>
   <nav class="navegacion" aria-label="Secciones">
-    {% for clave, nombre, paso in [("inicio", "Inicio", None), ("identificar", "Identificar hoja", None),
-                                  ("importar", "Importar", 1), ("revisar", "Revisar", 2), ("mapa", "Mapa", 3), ("modelo", "Modelo", 4),
-                                  ("galeria", "Fotos", None)] %}
-    {% if paso == 1 %}<span class="nav-separador" aria-hidden="true"></span>{% endif %}
-    <a href="/{{ clave }}" {% if pagina == clave %}aria-current="page"{% endif %}{% if paso %} title="Paso {{ paso }} de 4"{% endif %}>
-      {%- if paso %}<span class="nav-paso">{{ paso }}</span>{% endif %}{{ nombre }}
+    {% for clave, nombre in [("inicio", "Inicio"), ("identificar", "Identificar"), ("vuelos", "Vuelos"), ("revisar", "Revisar"), ("mapa", "Mapa")] %}
+    <a href="/{{ clave }}" {% if pagina == clave %}aria-current="page"{% endif %}>{{ nombre }}
       {%- if clave == "revisar" %}<span class="contador-nav oculto" id="pendientes-nav"></span>{% endif %}</a>
-    {% if paso == 4 %}<span class="nav-separador" aria-hidden="true"></span>{% endif %}
     {% endfor %}
   </nav>
-  <div class="estado-modelo" id="estado-modelo" aria-live="polite"></div>
+  <a class="estado-modelo" id="estado-modelo" href="/modelo" {% if pagina == "modelo" %}aria-current="page"{% endif %}
+     title="Ver y mejorar el modelo" aria-live="polite"></a>
 </header>
 <div id="aviso-modelo" class="aviso oculto" role="status"></div>
 <main class="{% block clase_main %}{% endblock %}">

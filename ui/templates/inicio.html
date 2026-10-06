@@ -22,9 +22,10 @@
   <section class="hoja camino">
     <div class="hoja-cuerpo camino-cabeza">
       <h2>Trabajar con un vuelo del dron</h2>
-      <p class="nota" style="margin:.3rem 0 0">Cuatro pasos, en este orden. Cada uno te dice cómo vas y cuál sigue.</p>
+      <p class="nota" style="margin:.3rem 0 0">Tres pasos, en este orden. Cada uno te dice cómo vas.</p>
     </div>
     <ol class="flujo" id="flujo" aria-live="polite"></ol>
+    <p class="nota-modelo oculto" id="nota-modelo"></p>
   </section>
 </div>
 {% endblock %}
@@ -38,22 +39,19 @@ function pasos(R) {
   const ultimo = R.vuelos[0];
   const nuevas = R.revisadas_desde_modelo;
   const lista = [
-    { titulo: "Importar las fotos del vuelo", href: "/importar", boton: "Importar un vuelo", hecho: vuelos > 0,
+    { titulo: "Subir las fotos del vuelo", href: "/vuelos?subir=1", boton: "Subir un vuelo", hecho: vuelos > 0,
       texto: vuelos ? `Último vuelo: <b>${esc(ultimo.vuelo)}</b>, ${plural(ultimo.fotos, "foto", "fotos")}. Llevas ${plural(vuelos, "vuelo", "vuelos")}.`
-                    : "Copia a la laptop la carpeta del vuelo (fotos y archivos de GPS) y súbela aquí." },
-    { titulo: "Revisar los diagnósticos", href: "/revisar", hecho: fotos > 0 && pend === 0,
+                    : "Copia a la laptop la carpeta del vuelo (fotos y archivos de ubicación) y súbela aquí." },
+    { titulo: "Revisar las fotos", href: "/revisar", hecho: fotos > 0 && pend === 0,
       boton: pend > 0 ? `Revisar ${plural(pend, "foto", "fotos")}` : "Abrir Revisar",
       texto: !fotos ? "Después de importar, una persona confirma o corrige lo que vio el modelo."
            : pend > 0 ? `<b>${plural(pend, "foto espera", "fotos esperan")}</b> que una persona confirme lo que vio el modelo. Empiezan las más dudosas.`
            : "Todas las fotos ya están revisadas." },
     { titulo: "Ver el mapa del cultivo", href: "/mapa", boton: "Abrir el mapa", hecho: false,
       texto: R.con_gps ? `<b>${plural(R.sigatoka_mapa, "foto con Sigatoka", "fotos con Sigatoka")}</b> de ${R.con_gps} con ubicación. La vista por zonas ayuda a decidir dónde aplicar.`
-                       : "Cuando importes fotos con GPS, aquí verás dónde se tomó cada una." },
-    { titulo: "Mejorar el modelo", href: "/modelo", boton: "Ir a Modelo", hecho: false,
-      texto: !R.modelo ? "Primero hay que cargar el modelo (mira el aviso de arriba)."
-           : `<b>${plural(nuevas, "foto revisada", "fotos revisadas")}</b> desde la versión actual (v${R.modelo.version}). Conviene reentrenar al juntar unas 50.` },
+                       : "Cuando subas fotos con ubicación, aquí verás dónde se tomó cada una." },
   ];
-  const sig = !vuelos ? 0 : pend > 0 ? 1 : nuevas >= 50 ? 3 : 2;
+  const sig = !vuelos ? 0 : pend > 0 ? 1 : 2;
   lista[sig].siguiente = true;
   return lista;
 }
@@ -69,6 +67,12 @@ function pasos(R) {
       </div>
       <a class="boton${p.siguiente ? " primario" : ""}" href="${p.href}">${p.boton}</a>
     </li>`).join("");
+  // Mejorar el modelo no es un paso de todos los días: solo se sugiere cuando ya conviene.
+  const nm = document.getElementById("nota-modelo");
+  if (R.modelo && R.revisadas_desde_modelo >= 50) {
+    nm.innerHTML = `Ya hay <b>${R.revisadas_desde_modelo} fotos revisadas</b> desde la versión actual del modelo. <a href="/modelo">Mejorar el modelo</a>`;
+    nm.classList.remove("oculto");
+  }
 })();
 </script>
 {% endblock %}

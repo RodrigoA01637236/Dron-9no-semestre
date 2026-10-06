@@ -24,7 +24,7 @@ import time
 import webbrowser
 from pathlib import Path
 
-from flask import Flask, abort, jsonify, render_template, request, send_file
+from flask import Flask, abort, jsonify, redirect, render_template, request, send_file
 
 AQUI = Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI.parent))  # para importar vision.clasificador
@@ -65,9 +65,18 @@ def inicio():
     return render_template("inicio.html", pagina="inicio")
 
 
-@app.get("/<any(inicio, mapa, identificar, revisar, galeria, importar, modelo):pagina>")
+@app.get("/<any(inicio, identificar, vuelos, revisar, mapa, modelo):pagina>")
 def pagina(pagina):
     return render_template(f"{pagina}.html", pagina=pagina)
+
+
+@app.get("/<any(importar, galeria):viejo>")
+def pagina_vieja(viejo):
+    """Importar y Fotos ahora viven juntos en Vuelos; los enlaces viejos siguen sirviendo."""
+    destino = "/vuelos" + ("?subir=1" if viejo == "importar" else "")
+    if request.query_string and viejo == "galeria":
+        destino += "?" + request.query_string.decode()
+    return redirect(destino)
 
 
 @app.get("/foto/<int:fid>")

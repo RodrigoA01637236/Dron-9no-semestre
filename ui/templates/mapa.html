@@ -12,7 +12,7 @@
         <h2>Todavía no hay fotos con GPS</h2>
         <p>Importa un vuelo con su archivo de GPS del Pixhawk, o fotos de celular con la ubicación activada.
           Cada foto aparecerá aquí en el lugar donde se tomó.</p>
-        <a class="boton primario" href="/importar">Importar un vuelo</a>
+        <a class="boton primario" href="/vuelos?subir=1">Subir un vuelo</a>
       </div>
     </div>
   </div>
@@ -39,12 +39,15 @@
         <label><input type="radio" name="vista" value="puntos" checked><span>Puntos</span></label>
         <label><input type="radio" name="vista" value="zonas"><span>Zonas</span></label>
       </div>
-      <div class="fila" style="margin-top:.9rem; align-items:flex-end">
-        <label class="campo" style="flex:1 1 9rem"><span>Condición a resaltar</span><select id="objetivo"></select></label>
-        <label class="campo oculto" id="caja-zona"><span>Tamaño de zona</span>
-          <select id="tam-zona"><option value="10">10 m</option><option value="20" selected>20 m</option>
-            <option value="50">50 m</option><option value="100">100 m</option></select></label>
-      </div>
+      <details class="mas-opciones">
+        <summary>Más opciones</summary>
+        <div class="fila" style="margin-top:.7rem; align-items:flex-end">
+          <label class="campo" style="flex:1 1 9rem"><span>Condición a resaltar</span><select id="objetivo"></select></label>
+          <label class="campo oculto" id="caja-zona"><span>Tamaño de zona</span>
+            <select id="tam-zona"><option value="10">10 m</option><option value="20" selected>20 m</option>
+              <option value="50">50 m</option><option value="100">100 m</option></select></label>
+        </div>
+      </details>
     </section>
     <section>
       <span class="rotulo">Leyenda</span>
@@ -56,7 +59,7 @@
       <a id="geojson" class="boton" href="/api/geojson" style="width:100%">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>
         Descargar para Google Earth o QGIS</a>
-      <p class="nota" style="margin:.7rem 0 0">Siguiente paso: <a href="/modelo">mejorar el modelo</a> con las fotos que revisaste.</p>
+
     </section>
   </aside>
 </div>
@@ -179,6 +182,8 @@ async function cargar() {
 (async () => {
   await cargarResumen();
   llenarVuelos(document.getElementById("vuelo"));
+  const pv = new URLSearchParams(location.search).get("vuelo");
+  if (pv) document.getElementById("vuelo").value = pv;
   objetivoSel.innerHTML = RESUMEN.categorias.map(c => `<option value="${esc(c.clave)}">${esc(c.nombre)}</option>`).join("");
   objetivoSel.value = RESUMEN.categorias.some(c => c.clave === "sigatoka") ? "sigatoka" : RESUMEN.categorias[0]?.clave;
   document.getElementById("vuelo").onchange = cargar;

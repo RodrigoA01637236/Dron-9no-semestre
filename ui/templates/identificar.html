@@ -50,9 +50,6 @@
       <span class="rotulo" style="display:block; margin-bottom:.8rem">Probabilidad por condición</span>
       <div id="probs"></div>
     </section>
-    <section id="sec-datos" class="oculto">
-      <dl class="datos-lista" id="datos"></dl>
-    </section>
     <section id="sec-acciones" class="oculto">
       <div class="fila">
         <button class="boton" id="btn-guardar" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11l3 3v13H5Z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/></svg>
@@ -97,15 +94,13 @@ function pintarLectura(r) {
        <p class="consejo">Toma otra foto más cerca, con la hoja llenando el cuadro y sin sombra fuerte.
          Si la duda sigue, guárdala para que un agrónomo la revise.</p>`;
   $("probs").innerHTML = escala(r.probs, r.umbral);
-  $("datos").innerHTML = `<dt>Modelo</dt><dd>v${r.modelo_version}</dd>
-    <dt>Imagen</dt><dd>${r.ancho} × ${r.alto} px</dd>
-    <dt>Tiempo</dt><dd>${r.ms.toFixed(0)} ms</dd>`;
-  ["sec-probs", "sec-datos"].forEach(s => $(s).classList.remove("oculto"));
+  $("probs").insertAdjacentHTML("beforeend", `<p class="nota num" style="margin:.9rem 0 0">Modelo v${r.modelo_version} · ${r.ancho} × ${r.alto} px · ${r.ms.toFixed(0)} ms</p>`);
+  $("sec-probs").classList.remove("oculto");
 }
 
 function pintarError(msg) {
   $("lectura").innerHTML = `<h2 style="margin-bottom:.4rem">Sin lectura</h2><p class="mensaje error">${esc(msg)}</p>`;
-  ["sec-probs", "sec-datos", "sec-acciones"].forEach(s => $(s).classList.add("oculto"));
+  ["sec-probs", "sec-acciones"].forEach(s => $(s).classList.add("oculto"));
 }
 
 async function identificar(blob, nombre) {
@@ -243,7 +238,7 @@ function reiniciar() {
   $("pie-foto").textContent = "Ninguna foto cargada";
   $("pie-tiempo").textContent = "";
   $("lectura").innerHTML = `<h2 style="margin-bottom:.4rem">Sin foto todavía</h2><p class="esperando" style="margin:0">Carga una foto para ver el diagnóstico.</p>`;
-  ["sec-probs", "sec-datos", "sec-acciones"].forEach(s => $(s).classList.add("oculto"));
+  ["sec-probs", "sec-acciones"].forEach(s => $(s).classList.add("oculto"));
   pintarHistorial();
 }
 

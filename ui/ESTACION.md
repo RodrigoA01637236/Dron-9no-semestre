@@ -1,15 +1,16 @@
 # Estación de tierra — guía de uso
 
 Aplicación web local que corre en la laptop del equipo y se usa desde el navegador.
-Sirve para cinco cosas:
+Tiene cinco pestañas, en el orden en que se usan, y un enlace al modelo:
 
-| Página | Para qué |
+| Pestaña | Para qué |
 |---|---|
-| **Mapa** | Ver dónde se tomó cada foto y su diagnóstico; vista **por zonas** con el % de plantas enfermas. Descarga GeoJSON para Google Earth/QGIS. |
+| **Inicio** | Dos caminos: revisar una hoja ahora, o trabajar con un vuelo en 3 pasos. Cada paso dice cómo vas y resalta el siguiente. |
 | **Identificar** | Subir o tomar la foto de una hoja (o usar la cámara en vivo) y ver al instante si está sana, tiene Sigatoka u otra condición, con la probabilidad de cada una. |
-| **Revisar** | Un humano (idealmente el agrónomo) confirma o corrige cada diagnóstico. Empieza por las fotos donde el modelo tiene más dudas. |
-| **Fotos** e **Importar** | Subir la carpeta de fotos de un vuelo (el modelo las diagnostica al instante) y explorarlas con filtros. |
-| **Modelo** | Reentrenar con las correcciones, comparar contra el modelo actual y activar el nuevo solo si mejora. |
+| **Vuelos** | Subir la carpeta de fotos de un vuelo (el modelo las diagnostica al instante), ver la lista de vuelos con su avance y todas las fotos con filtros. |
+| **Revisar** | Una persona (idealmente el agrónomo) confirma o corrige cada diagnóstico. Empieza por las fotos donde el modelo tiene más dudas. |
+| **Mapa** | Ver dónde se tomó cada foto; vista **por zonas** con el % de plantas enfermas. Descarga para Google Earth/QGIS. |
+| **Modelo** (recuadro de la derecha) | Reentrenar con las correcciones, comparar contra el modelo actual y activar el nuevo solo si mejora. |
 
 ## Cómo abrirla
 
@@ -43,16 +44,18 @@ En **Identificar** arrastra una foto, elige un archivo o pulsa *Usar cámara*:
 
 ## El flujo de trabajo
 
-1. **Importar** la carpeta del vuelo (botón *Elegir carpeta*). Acepta:
-   - Fotos del dron con su `.json` gemelo del Pixhawk (`docs/04` §5) — la fuente de GPS más precisa.
+1. **Vuelos → Subir un vuelo nuevo**: elige la carpeta del vuelo. Acepta:
+   - Fotos del dron con su `.json` gemelo del Pixhawk (`docs/04` §5): la fuente de GPS más precisa.
    - Fotos de celular o GoPro con ubicación activada (el GPS va en el EXIF de la foto).
      **Sirve para trabajar hoy, sin dron**: tomen fotos de hojas en una parcela con el celular.
-2. **Mapa**: revisen el panorama. La vista *Zonas* agrupa las fotos en cuadros de 10–100 m.
-3. **Revisar**: el agrónomo escribe su nombre y etiqueta. Atajos: `1` `2` `3`… categorías,
+2. **Revisar**: el agrónomo escribe su nombre y etiqueta. Atajos: `1` `2` `3`… categorías,
    `0` foto no sirve, `S` saltar, `Z` deshacer.
-4. **Modelo**: cuando haya varias decenas de fotos revisadas, *Reentrenar ahora*. Al
-   terminar aparece la versión nueva con su resultado en el **examen de campo**; si
-   mejora, *Usar este modelo* (todas las fotos se vuelven a diagnosticar con él).
+3. **Mapa**: revisen el panorama. La vista *Zonas* agrupa las fotos en cuadros de 10–100 m
+   (el tamaño está en *Más opciones*).
+4. **Modelo** (solo de vez en cuando; Inicio avisa cuando conviene): con unas 50 fotos
+   revisadas nuevas, *Reentrenar ahora*. Al terminar aparece la versión nueva con su
+   resultado en el **examen de campo**; si mejora, *Usar este modelo* (todas las fotos se
+   vuelven a diagnosticar con él).
 
 ## Cómo "aprende" el modelo (honestamente)
 

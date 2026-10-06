@@ -4,6 +4,7 @@
    Todo color pasa por un token; las apariencias alternativas (data-tema) solo
    cambian tokens, al final del archivo. */
 @import url("fuentes/fuentes.css");
+@import url("fuentes/prueba.css");
 
 :root {
   --papel: #f3f5f2;
@@ -52,6 +53,13 @@
   --t-xxl: 1.875rem;/* 30 */
 
   --radio: 2px;
+  --radio-panel: var(--radio);
+  --radio-control: var(--radio);
+  --radio-boton: var(--radio-control);
+  --caps: uppercase;
+  --enlace: var(--azul);
+  --enlace-hondo: var(--azul-hondo);
+  --caps-espacio: .08em;
   --alto-control: 2.25rem;
   --barra: 3.5rem;
   --salida: cubic-bezier(.23, 1, .32, 1);
@@ -67,8 +75,8 @@ body {
 }
 ::selection { background: var(--seleccion); color: var(--tinta); }
 :focus-visible { outline: 2px solid var(--azul); outline-offset: 2px; }
-a { color: var(--azul); text-underline-offset: .18em; text-decoration-thickness: 1px; }
-a:hover { color: var(--azul-hondo); }
+a { color: var(--enlace); text-underline-offset: .18em; text-decoration-thickness: 1px; }
+a:hover { color: var(--enlace-hondo); }
 img { display: block; max-width: 100%; }
 code, kbd { font-family: var(--mono); font-size: .86em; }
 code { background: var(--margen); padding: .05em .35em; border-radius: var(--radio); }
@@ -87,8 +95,8 @@ p { margin: 0 0 .75rem; }
 .entrada { color: var(--tinta-2); max-width: 68ch; margin: .4rem 0 0; }
 .nota { color: var(--tinta-3); font-size: var(--t-s); }
 .rotulo {
-  font-family: var(--cond); font-weight: 600; font-size: var(--t-xs); letter-spacing: .08em;
-  text-transform: uppercase; color: var(--tinta-2);
+  font-family: var(--cond); font-weight: 600; font-size: var(--t-xs); letter-spacing: var(--caps-espacio);
+  text-transform: var(--caps); color: var(--tinta-2);
 }
 .oculto { display: none !important; }
 .fila { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
@@ -109,13 +117,13 @@ p { margin: 0 0 .75rem; }
 .marca { display: flex; align-items: center; gap: .6rem; color: var(--barra-texto); text-decoration: none; flex: none; }
 .marca svg { width: 1.6rem; height: 1.6rem; }
 .marca-texto { display: grid; line-height: 1.05; }
-.marca-nombre { font-family: var(--cond); font-weight: 700; font-size: 1.02rem; letter-spacing: .06em; text-transform: uppercase; }
+.marca-nombre { font-family: var(--cond); font-weight: 700; font-size: 1.02rem; letter-spacing: var(--caps-espacio); text-transform: var(--caps); }
 .marca-sub { font-size: var(--t-xs); color: var(--barra-texto-2); }
 .navegacion { display: flex; align-items: stretch; gap: .1rem; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
 .navegacion::-webkit-scrollbar { display: none; }
 .navegacion a {
   display: flex; align-items: center; gap: .4rem; padding: 0 .75rem; white-space: nowrap;
-  font-family: var(--cond); font-weight: 600; font-size: var(--t-s); letter-spacing: .07em; text-transform: uppercase;
+  font-family: var(--cond); font-weight: 600; font-size: var(--t-s); letter-spacing: var(--caps-espacio); text-transform: var(--caps);
   color: var(--barra-texto-2); text-decoration: none; box-shadow: inset 0 0 0 transparent;
   transition: color 150ms ease, box-shadow 150ms ease;
 }
@@ -133,10 +141,11 @@ p { margin: 0 0 .75rem; }
 }
 .estado-modelo {
   margin-left: auto; align-self: center; flex: none; display: flex; gap: .9rem; align-items: center;
-  padding: .3rem .7rem; border: 1px solid var(--barra-marcas); border-radius: var(--radio); font-size: var(--t-xs);
+  padding: .3rem .7rem; border: 1px solid var(--barra-marcas); border-radius: var(--radio-boton); font-size: var(--t-xs); text-decoration: none;
   color: var(--barra-texto-2);
 }
 .estado-modelo b { color: var(--barra-texto); font-weight: 600; }
+.estado-modelo:hover, .estado-modelo[aria-current="page"] { border-color: var(--barra-activo); color: var(--barra-texto); }
 .estado-modelo .sin { color: var(--rojo); font-weight: 600; }
 
 .aviso {
@@ -154,7 +163,7 @@ main.ancho { max-width: none; padding: 0; }
 .seccion { margin-top: 2.5rem; }
 .seccion > h2 { margin-bottom: .75rem; }
 
-.hoja { background: var(--hoja); border: 1px solid var(--regla); border-radius: var(--radio); }
+.hoja { background: var(--hoja); border: 1px solid var(--regla); border-radius: var(--radio-panel); }
 .hoja-cuerpo { padding: 1.1rem 1.25rem; }
 .hoja-cabeza {
   display: flex; align-items: center; gap: .75rem; padding: .7rem 1.25rem; border-bottom: 1px solid var(--regla);
@@ -163,7 +172,7 @@ main.ancho { max-width: none; padding: 0; }
 /* ---------------------------------------------------------------- controles */
 .boton {
   display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
-  height: var(--alto-control); padding: 0 .95rem; border: 1px solid var(--regla-fuerte); border-radius: var(--radio);
+  height: var(--alto-control); padding: 0 .95rem; border: 1px solid var(--regla-fuerte); border-radius: var(--radio-boton);
   background: var(--hoja); color: var(--tinta); font: 500 var(--t-s)/1 var(--sans); text-decoration: none;
   cursor: pointer; user-select: none; white-space: nowrap;
   transition: transform 160ms var(--salida), background-color 150ms ease, border-color 150ms ease, color 150ms ease;
@@ -185,7 +194,7 @@ main.ancho { max-width: none; padding: 0; }
 .campo > span { font-size: var(--t-xs); font-weight: 500; color: var(--tinta-2); }
 input[type=text], input[type=number], select {
   height: var(--alto-control); padding: 0 .65rem; min-width: 0;
-  border: 1px solid var(--regla-fuerte); border-radius: var(--radio); background: var(--hoja); color: var(--tinta);
+  border: 1px solid var(--regla-fuerte); border-radius: var(--radio-control); background: var(--hoja); color: var(--tinta);
   font: 400 var(--t-s) var(--sans);
 }
 input::placeholder { color: var(--tinta-3); }
@@ -202,7 +211,7 @@ input[type=checkbox], input[type=radio] { accent-color: var(--azul); width: 1rem
 .casilla { display: inline-flex; gap: .45rem; align-items: center; font-size: var(--t-s); cursor: pointer; }
 
 /* conmutador segmentado (Puntos / Zonas) */
-.segmentos { display: inline-flex; border: 1px solid var(--regla-fuerte); border-radius: var(--radio); background: var(--hoja); }
+.segmentos { display: inline-flex; border: 1px solid var(--regla-fuerte); border-radius: var(--radio-boton); background: var(--hoja); overflow: hidden; }
 .segmentos label { position: relative; }
 .segmentos input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
 .segmentos span {
@@ -251,7 +260,7 @@ input[type=checkbox], input[type=radio] { accent-color: var(--azul); width: 1rem
 table { border-collapse: collapse; width: 100%; font-size: var(--t-s); }
 th, td { text-align: left; padding: .6rem .9rem; border-bottom: 1px solid var(--regla); vertical-align: middle; }
 th {
-  font-family: var(--cond); font-weight: 600; font-size: var(--t-xs); letter-spacing: .07em; text-transform: uppercase;
+  font-family: var(--cond); font-weight: 600; font-size: var(--t-xs); letter-spacing: var(--caps-espacio); text-transform: var(--caps);
   color: var(--tinta-2); background: var(--papel); white-space: nowrap;
 }
 tbody tr:last-child td { border-bottom: 0; }
@@ -354,7 +363,7 @@ pre.registro {
 /* ================================================================ IDENTIFICAR / REVISAR */
 .mesa { display: grid; grid-template-columns: minmax(0, 1fr) 23rem; gap: 1.5rem; align-items: start; }
 .visor { position: relative;
-  background: var(--visor); min-height: 26rem; height: min(70vh, 44rem);
+  background: var(--visor); min-height: 26rem; height: min(70vh, 44rem); border-radius: var(--radio-visor, 0);
   display: grid; place-items: center; overflow: hidden;
 }
 .visor img, .visor video { max-width: 100%; max-height: 100%; object-fit: contain; }
@@ -396,7 +405,7 @@ pre.registro {
 .historial { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: .75rem; }
 .historial button {
   display: grid; gap: .35rem; padding: 0; border: 1px solid var(--regla); background: var(--hoja); text-align: left;
-  font: inherit; color: inherit; cursor: pointer; border-radius: var(--radio); overflow: hidden;
+  font: inherit; color: inherit; cursor: pointer; border-radius: var(--radio-panel); overflow: hidden;
   transition: transform 160ms var(--salida), border-color 150ms ease;
 }
 .historial button:active { transform: scale(.97); }
@@ -412,20 +421,20 @@ pre.registro {
 .opciones { display: grid; gap: .45rem; }
 .opcion {
   display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: .7rem; width: 100%;
-  min-height: 3rem; padding: .55rem .8rem; border: 1px solid var(--regla-fuerte); border-radius: var(--radio);
+  min-height: 3rem; padding: .55rem .8rem; border: 1px solid var(--regla-fuerte); border-radius: var(--radio-control);
   background: var(--hoja); color: var(--tinta); font: 500 var(--t-m) var(--sans); text-align: left; cursor: pointer;
   transition: transform 160ms var(--salida), border-color 150ms ease, background-color 150ms ease;
 }
 .opcion .muestra { width: .95rem; height: .95rem; }
 .opcion:active { transform: scale(.98); }
-.opcion small { font: 600 var(--t-xs) var(--cond); color: var(--tinta-3); letter-spacing: .08em; text-transform: uppercase; margin-left: .3rem; }
+.opcion small { font: 600 var(--t-xs) var(--cond); color: var(--tinta-3); letter-spacing: var(--caps-espacio); text-transform: var(--caps); margin-left: .3rem; }
 .opcion.descartar { margin-top: .9rem; color: var(--tinta-2); border-style: dashed; }
 @media (hover: hover) and (pointer: fine) { .opcion:hover { border-color: var(--tinta); background: var(--papel); } }
 
 /* ================================================================ GALERÍA */
 .rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: 1rem; }
 .celda {
-  display: grid; background: var(--hoja); border: 1px solid var(--regla); border-radius: var(--radio);
+  display: grid; background: var(--hoja); border: 1px solid var(--regla); border-radius: var(--radio-panel);
   color: inherit; text-decoration: none; overflow: hidden;
   transition: transform 160ms var(--salida), border-color 150ms ease;
 }
@@ -488,17 +497,37 @@ details.zona-tecnica[open] summary { border-bottom: 1px solid var(--regla); }
 .paso-texto p { margin: .25rem 0 0; color: var(--tinta-2); font-size: var(--t-s); max-width: 60ch; }
 .paso-texto b { color: var(--tinta); }
 .etiqueta-siguiente {
-  font: 600 var(--t-xs)/1 var(--cond); letter-spacing: .08em; text-transform: uppercase;
+  font: 600 var(--t-xs)/1 var(--cond); letter-spacing: var(--caps-espacio); text-transform: var(--caps);
   padding: .3rem .45rem; border: 1px solid var(--azul); color: var(--azul); border-radius: var(--radio);
 }
 
 /* banda de "siguiente paso" al final de cada página del flujo */
 .siguiente-paso {
   display: flex; gap: 1rem; align-items: center; justify-content: space-between; flex-wrap: wrap;
-  margin-top: 2.5rem; padding: 1rem 1.25rem; border: 1px solid var(--regla); border-radius: var(--radio); background: var(--hoja);
+  margin-top: 2.5rem; padding: 1rem 1.25rem; border: 1px solid var(--regla); border-radius: var(--radio-panel); background: var(--hoja);
 }
 .siguiente-paso p { margin: 0; color: var(--tinta-2); font-size: var(--t-s); }
 .siguiente-paso b { color: var(--tinta); font-size: var(--t-m); display: block; }
+
+/* ================================================================ VUELOS */
+.subida { margin-bottom: 1rem; }
+.subida-rejilla { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 2rem; align-items: start; }
+.vuelos-lista { display: grid; gap: .75rem; }
+.vuelo {
+  display: grid; grid-template-columns: minmax(0, 1.4fr) auto minmax(9rem, 1fr) auto; gap: 1.25rem; align-items: center;
+  padding: 1rem 1.25rem;
+}
+.vuelo h3 { font-size: var(--t-l); overflow-wrap: anywhere; }
+.vuelo-nombre { display: grid; gap: .15rem; }
+.vuelo-datos { display: grid; gap: .1rem; font-size: var(--t-s); color: var(--tinta-2); }
+.vuelo-datos b { color: var(--tinta); }
+.vuelo-avance { display: grid; gap: .35rem; }
+.vuelo-acciones { display: flex; gap: .5rem; flex-wrap: wrap; justify-content: flex-end; }
+.vuelo .progreso > i { transition: none; }
+
+.mas-opciones { margin-top: .9rem; }
+.mas-opciones summary { cursor: pointer; font-size: var(--t-s); color: var(--enlace); width: max-content; }
+.nota-modelo { margin: 0; padding: .9rem 1.25rem; border-top: 1px solid var(--regla); font-size: var(--t-s); color: var(--tinta-2); }
 
 /* ================================================================ responsive */
 @media (max-width: 1100px) {
@@ -517,7 +546,9 @@ details.zona-tecnica[open] summary { border-bottom: 1px solid var(--regla); }
   .navegacion a { padding: 0 .6rem; letter-spacing: .05em; }
   .mapa-marco { grid-template-columns: 1fr; grid-template-rows: 62dvh auto; height: auto; }
   .panel-mapa { border-left: 0; border-top: 1px solid var(--tinta); }
-  .mesa, .pasos, .caminos { grid-template-columns: 1fr; }
+  .mesa, .pasos, .caminos, .subida-rejilla { grid-template-columns: 1fr; }
+  .vuelo { grid-template-columns: 1fr 1fr; }
+  .vuelo-acciones { grid-column: 1 / -1; justify-content: flex-start; }
   .visor { height: auto; min-height: 16rem; max-height: 72vh; }
   .visor img, .visor video { max-height: 72vh; }
   .lectura { display: flex; flex-direction: column; }
@@ -538,64 +569,101 @@ details.zona-tecnica[open] summary { border-bottom: 1px solid var(--regla); }
   .tabla-marco td { white-space: nowrap; }
   .paso { grid-template-columns: 2.25rem minmax(0, 1fr); }
   .paso .boton { grid-column: 2; justify-self: start; }
+  .vuelo { grid-template-columns: 1fr; gap: .75rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0ms !important; }
 }
 
-/* ================================================================ APARIENCIAS ALTERNATIVAS
-   Se prueban con ?tema=radar, ?tema=mesa o ?tema=senal (y ?tema=carta para volver). */
 
-/* Radar de cultivo: consola de radar meteorológico. Pizarra azul oscura, un azul
-   cielo para acciones; los colores de los diagnósticos se leen como una tormenta. */
-:root[data-tema="radar"] {
-  --papel: #11171d; --hoja: #18212a; --margen: #212c36;
-  --tinta: #e6edf2; --tinta-2: #b0bec8; --tinta-3: #8795a0;
-  --regla: #2b3843; --regla-fuerte: #465663;
-  --azul: #5aa9e2; --azul-hondo: #82bfeb; --azul-tenue: #17293a; --sobre-azul: #06131f; --sobre-tinta: #11171d;
-  --rojo: #f2777f; --rojo-tenue: #3a1f25; --verde-tinta: #82d293; --alerta-dato: #ff6672;
-  --seleccion: #2b4a66; --mapa-fondo: #0d1318;
-  --visor: #0a0f14; --visor-2: #121b23; --visor-regla: #465663;
-  --barra-fondo: #0c1116; --barra-regla: #2b3843; --barra-marcas: #3b4a56; --barra-activo: #5aa9e2;
+/* ================================================================ APARIENCIAS EN PRUEBA
+   Se eligen con ?tema=conversa, ?tema=carretera, ?tema=parque o ?tema=libreta
+   (?tema=carta vuelve a la original). Solo cambian tokens y unas pocas reglas. */
+
+/* E. Conversación: como un chat. Las fotos de hojas ya se mandan por mensaje al
+   agrónomo; aquí la estación contesta. Verde azulado oscuro, Figtree, burbujas. */
+:root[data-tema="conversa"] {
+  --sans: "Figtree", "Segoe UI", system-ui, sans-serif; --cond: var(--sans);
+  --caps: none; --caps-espacio: 0;
+  --radio-panel: 18px; --radio-control: 12px; --radio-boton: 999px; --radio-visor: 18px;
+  --papel: #0d1b1f; --hoja: #142a30; --margen: #1b353c;
+  --tinta: #e9f2f1; --tinta-2: #b4c7c7; --tinta-3: #8ba4a5;
+  --regla: #21393f; --regla-fuerte: #3a5960;
+  --azul: #5cc8ec; --azul-hondo: #85d6f1; --azul-tenue: #16384a; --sobre-azul: #05212c; --sobre-tinta: #0d1b1f;
+  --rojo: #ff8088; --rojo-tenue: #3b2227; --verde-tinta: #8fd6a0; --alerta-dato: #ff6b78;
+  --seleccion: #23506a; --mapa-fondo: #0a1619;
+  --visor: #091417; --visor-2: #10232a; --visor-regla: #3a5960;
+  --barra-fondo: #142a30; --barra-regla: #21393f; --barra-marcas: #2c4a51; --barra-activo: #5cc8ec;
   --filtro-iconos-mapa: invert(1) hue-rotate(180deg);
   color-scheme: dark;
 }
+:root[data-tema="conversa"] .barra::after, :root[data-tema="conversa"] .marco::before { display: none; }
+:root[data-tema="conversa"] .navegacion a[aria-current="page"] { box-shadow: none; background: var(--azul-tenue); border-radius: 999px; margin: .55rem 0; }
+:root[data-tema="conversa"] .lectura { border-radius: 4px 20px 20px 20px; }
+:root[data-tema="conversa"] .visor { border-radius: 20px 20px 4px 20px; }
+:root[data-tema="conversa"] h1 { letter-spacing: -.02em; }
 
-/* Mesa de luz: estación de revisión de fotos. Grises neutros sin tinte para que
-   el único color en pantalla sea el de la hoja y el de los diagnósticos. */
-:root[data-tema="mesa"] {
-  --papel: #1e1e1e; --hoja: #282828; --margen: #323232;
-  --tinta: #ececec; --tinta-2: #bcbcbc; --tinta-3: #969696;
-  --regla: #3a3a3a; --regla-fuerte: #575757;
-  --azul: #e6e6e6; --azul-hondo: #ffffff; --azul-tenue: #353535; --sobre-azul: #161616; --sobre-tinta: #1e1e1e;
-  --rojo: #ff7b7b; --rojo-tenue: #3a2626; --verde-tinta: #8fd19e; --alerta-dato: #ff6b78;
-  --seleccion: #4d4d4d; --mapa-fondo: #181818;
-  --visor: #141414; --visor-2: #1d1d1d; --visor-texto: #bcbcbc; --visor-regla: #575757;
-  --barra-fondo: #171717; --barra-regla: #3a3a3a; --barra-marcas: #4a4a4a; --barra-activo: #ffffff;
+/* F. Señal de carretera: el azul de los letreros de servicios en las carreteras
+   de México, letras blancas y tableros con filete blanco. Overpass. */
+:root[data-tema="carretera"] {
+  --sans: "Overpass", "Segoe UI", system-ui, sans-serif; --cond: var(--sans);
+  --caps: none; --caps-espacio: .01em;
+  --radio-panel: 12px; --radio-control: 8px; --radio-visor: 12px;
+  --papel: #0a4a93; --hoja: #083e7c; --margen: #0b5099;
+  --tinta: #ffffff; --tinta-2: #dbe7f6; --tinta-3: #b4cdec;
+  --regla: #4f7fb8; --regla-fuerte: #a9c4e6;
+  --azul: #ffffff; --azul-hondo: #e6eefa; --azul-tenue: #0f5cad; --sobre-azul: #083e7c; --sobre-tinta: #083e7c;
+  --rojo: #ffb3b8; --rojo-tenue: #5a2440; --verde-tinta: #b9f0c6; --alerta-dato: #ffb3ba;
+  --seleccion: #3d7cc7; --mapa-fondo: #073566;
+  --visor: #052a55; --visor-2: #073566; --visor-regla: #6d97cc;
+  --barra-fondo: #06356a; --barra-regla: #ffffff; --barra-marcas: #4f7fb8; --barra-activo: #ffffff;
   --filtro-iconos-mapa: invert(1);
   color-scheme: dark;
 }
+:root[data-tema="carretera"] .hoja, :root[data-tema="carretera"] .siguiente-paso { border: 2px solid #ffffff; }
+:root[data-tema="carretera"] .barra::after { display: none; }
+:root[data-tema="carretera"] h1, :root[data-tema="carretera"] h2, :root[data-tema="carretera"] h3 { font-weight: 700; }
+:root[data-tema="carretera"] .marco::before { --c: #ffffff; }
 
-/* Señalética de aeropuerto: bandas amarillas solo para orientarse (barra, paso
-   siguiente, acción principal) sobre gris carbón; texto negro sobre amarillo. */
-:root[data-tema="senal"] {
-  --papel: #1b1e21; --hoja: #24282c; --margen: #2e3338;
-  --tinta: #f3f3f3; --tinta-2: #c5c9cd; --tinta-3: #9ca2a8;
-  --regla: #363c42; --regla-fuerte: #555d65;
-  --azul: #ffd100; --azul-hondo: #ffe04d; --azul-tenue: #33301d; --sobre-azul: #111111; --sobre-tinta: #1b1e21;
-  --rojo: #ff7c7c; --rojo-tenue: #3a2525; --verde-tinta: #8fd19e; --alerta-dato: #ff6b78;
-  --seleccion: #4d4520; --mapa-fondo: #15181a;
-  --visor: #111315; --visor-2: #1b1e21; --visor-regla: #555d65;
-  --barra-fondo: #ffd100; --barra-texto: #111111; --barra-texto-2: #2b2b2b; --barra-regla: #111111;
-  --barra-marcas: #8a7300; --barra-activo: #111111;
+/* G. Mapa de parque: colores planos como un mapa de zoológico o jardín, botones
+   en cápsula amarillos; agua azul clara de fondo y "terrenos" lila. Rubik. */
+:root[data-tema="parque"] {
+  --sans: "Rubik", "Segoe UI", system-ui, sans-serif; --cond: var(--sans);
+  --caps: none; --caps-espacio: 0;
+  --radio-panel: 26px; --radio-control: 14px; --radio-boton: 999px; --radio-visor: 26px;
+  --papel: #bfe3ee; --hoja: #efe8ff; --margen: #e2d8fb;
+  --tinta: #22213a; --tinta-2: #45436a; --tinta-3: #5d5a86;
+  --regla: #d4c7f5; --regla-fuerte: #9d8fd0;
+  --azul: #ffd93b; --azul-hondo: #ffcd00; --azul-tenue: #fff4c2; --sobre-azul: #22213a; --sobre-tinta: #efe8ff;
+  --seleccion: #ffe98a; --mapa-fondo: #a9d8e6; --enlace: #2b47b8; --enlace-hondo: #1f3690;
+  --visor: #2a2850; --visor-2: #36336a; --visor-regla: #7a75b8;
+  --barra-fondo: #22213a; --barra-texto: #ffffff; --barra-texto-2: #cfcbef; --barra-regla: #22213a; --barra-marcas: #4a4775; --barra-activo: #ffd93b;
+}
+:root[data-tema="parque"] .barra::after, :root[data-tema="parque"] .marco::before { display: none; }
+:root[data-tema="parque"] .hoja { border: 0; }
+:root[data-tema="parque"] .boton.primario { border-color: #22213a; }
+:root[data-tema="parque"] .navegacion a[aria-current="page"] { box-shadow: none; background: #ffd93b; color: #22213a; border-radius: 999px; margin: .55rem 0; }
+:root[data-tema="parque"] .contador-nav { background: #ffd93b; color: #22213a; }
+:root[data-tema="parque"] .etiqueta-siguiente { color: var(--tinta); border-color: var(--tinta); }
+:root[data-tema="parque"] h1 { font-weight: 700; letter-spacing: -.02em; }
+
+/* H. Libreta de campo: tapa verde olivo de libreta impermeable y la cinta rosa
+   fluorescente con que se marcan las plantas en campo. Archivo. */
+:root[data-tema="libreta"] {
+  --sans: "Archivo", "Segoe UI", system-ui, sans-serif; --cond: var(--sans);
+  --caps: uppercase; --caps-espacio: .06em;
+  --radio-panel: 4px; --radio-control: 4px;
+  --papel: #252a20; --hoja: #2f3529; --margen: #394032;
+  --tinta: #eeebdf; --tinta-2: #c6c3b3; --tinta-3: #a09e8d;
+  --regla: #434a39; --regla-fuerte: #646d55;
+  --azul: #ff5ca8; --azul-hondo: #ff85bf; --azul-tenue: #46283a; --sobre-azul: #2b0718; --sobre-tinta: #252a20;
+  --rojo: #ff8a80; --rojo-tenue: #432826; --verde-tinta: #a9dba0; --alerta-dato: #ff7680;
+  --seleccion: #6b3a55; --mapa-fondo: #1d2118;
+  --visor: #171a13; --visor-2: #20241b; --visor-regla: #646d55;
+  --barra-fondo: #1d2118; --barra-regla: #434a39; --barra-marcas: #4f5744; --barra-activo: #ff5ca8;
   --filtro-iconos-mapa: invert(1);
   color-scheme: dark;
 }
-:root[data-tema="senal"] .navegacion a[aria-current="page"] { background: #111; color: #ffd100; box-shadow: none; }
-:root[data-tema="senal"] .navegacion a[aria-current="page"] .nav-paso { background: #ffd100; border-color: #ffd100; color: #111; }
-:root[data-tema="senal"] .estado-modelo .sin { color: #8a0f1a; }
-:root[data-tema="senal"] .paso.siguiente { background: #ffd100; }
-:root[data-tema="senal"] .paso.siguiente, :root[data-tema="senal"] .paso.siguiente * { color: #111; }
-:root[data-tema="senal"] .paso.siguiente .paso-num { background: #111; border-color: #111; color: #ffd100; }
-:root[data-tema="senal"] .paso.siguiente .etiqueta-siguiente { border-color: #111; }
-:root[data-tema="senal"] .paso.siguiente .boton.primario { background: #111; border-color: #111; color: #ffd100; }
+:root[data-tema="libreta"] .hoja { background-image: repeating-linear-gradient(transparent 0 31px, rgba(238, 235, 223, .035) 31px 32px); }
+:root[data-tema="libreta"] h1, :root[data-tema="libreta"] h2 { font-weight: 700; letter-spacing: -.01em; }
+:root[data-tema="libreta"] .marco::before { --c: #ff5ca8; }

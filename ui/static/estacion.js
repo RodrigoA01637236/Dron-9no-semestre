@@ -44,8 +44,7 @@ async function cargarResumen() {
   }
   const estado = document.getElementById("estado-modelo");
   estado.innerHTML = RESUMEN.modelo
-    ? `<span><span class="palabra">Modelo </span><b>v${RESUMEN.modelo.version}</b></span><span title="El modelo solo da un diagnóstico si está al menos así de seguro"><span class="palabra">Seguridad mínima </span><b>${pct(RESUMEN.umbral)}</b></span>` +
-      (RESUMEN.modelo.acc_campo != null ? `<span class="opcional">Examen de campo <b>${pct(RESUMEN.modelo.acc_campo)}</b></span>` : "")
+    ? `<span><span class="palabra">Modelo </span><b>v${RESUMEN.modelo.version}</b></span><span title="El modelo solo da un diagnóstico si está al menos así de seguro"><span class="palabra">Seguridad mínima </span><b>${pct(RESUMEN.umbral)}</b></span>`
     : `<span class="sin">Sin modelo</span>`;
   const pend = RESUMEN.total_fotos - RESUMEN.total_revisadas;
   const nav = document.getElementById("pendientes-nav");

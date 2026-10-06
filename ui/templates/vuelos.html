@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+{% block titulo %}Vuelos · Estación Sigatoka{% endblock %}
+{% block contenido %}
+<div class="encabezado">
+  <div>
+    <h1>Vuelos</h1>
+    <p class="entrada">Aquí subes las fotos de cada vuelo del dron y las ves todas. El modelo diagnostica cada foto al subirla.</p>
+  </div>
+  <button class="boton primario grande" id="btn-abrir-subida" type="button" aria-expanded="false" aria-controls="subida">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 15v4h16v-4"/></svg>
+    Subir un vuelo nuevo</button>
+</div>
+
+<section class="hoja subida oculto" id="subida" aria-label="Subir un vuelo nuevo">
+  <div class="hoja-cuerpo">
+    <div class="subida-rejilla">
+      <div style="display:grid; gap:1rem">
+        <label class="campo"><span>Nombre del vuelo, por ejemplo <code>2026-10-15_finca-lopez</code></span>
+          <input type="text" id="nombre" placeholder="Se llena solo con el nombre de la carpeta"></label>
+        <div class="zona-subida marco" id="zona">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3Z"/></svg>
+          <p><b>Elige la carpeta del vuelo</b> o arrastra aquí las fotos.</p>
+          <div class="fila" style="justify-content:center">
+            <label class="boton primario">Elegir carpeta<input type="file" id="carpeta" webkitdirectory multiple hidden></label>
+            <label class="boton">Elegir fotos sueltas<input type="file" id="sueltas" multiple accept=".jpg,.jpeg,.png,.bmp,.webp,.json" hidden></label>
+          </div>
+          <p class="num" id="seleccion"></p>
+        </div>
+        <div class="fila">
+          <button class="boton primario grande" id="btn-subir" type="button" disabled>Subir y diagnosticar</button>
+          <button class="boton grande" id="btn-cerrar-subida" type="button">Cancelar</button>
+        </div>
+        <div id="progreso-caja" class="oculto">
+          <p class="nota" id="fase" style="margin-bottom:.4rem"></p>
+          <div class="progreso"><i id="barra"></i></div>
+        </div>
+        <div id="resultado" class="oculto"></div>
+      </div>
+      <ul class="lista-pasos">
+        <li><b>Fotos del dron</b>Sube la carpeta completa: cada foto trae un archivo <code>.json</code> con su ubicación.</li>
+        <li><b>Fotos de celular</b>Con la ubicación activada, el GPS va dentro de la foto. Sirven sin dron.</li>
+        <li><b>Fotos sin ubicación</b>Se pueden revisar y sirven para entrenar, pero no salen en el mapa.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="seccion" id="sec-vuelos">
+  <h2>Tus vuelos</h2>
+  <div class="vuelos-lista" id="lista"></div>
+</section>
+
+<section class="seccion" id="fotos">
+  <h2>Fotos</h2>
+  <div class="herramientas">
+    <label class="campo"><span>Vuelo</span><select id="vuelo"></select></label>
+    <label class="campo"><span>Diagnóstico</span><select id="clase"></select></label>
+    <label class="campo"><span>Estado</span>
+      <select id="filtro">
+        <option value="">Todas</option>
+        <option value="pendientes">Sin revisar</option>
+        <option value="revisadas">Revisadas</option>
+        <option value="sin_gps">Sin ubicación</option>
+      </select></label>
+    <span class="nota num empuja" id="total" style="align-self:center"></span>
+  </div>
+  <div class="rejilla" id="rejilla"></div>
+  <nav class="paginacion" aria-label="Páginas">
+    <button class="boton" id="ant" type="button">Anterior</button><span class="num" id="pag"></span><button class="boton" id="sig" type="button">Siguiente</button>
+  </nav>
+</section>
+
+<div class="siguiente-paso">
+  <p><b>Siguiente paso: revisar las fotos</b>Una persona confirma o corrige lo que vio el modelo en cada foto.</p>
+  <a class="boton primario" href="/revisar">Ir a Revisar</a>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const $ = id => document.getElementById(id);
+const EXT = /\.(jpe?g|png|bmp|webp|json)$/i;
+let archivos = [], pagina = 1;
+
+// ------------------------------------------------------------- subir
+function abrirSubida(abrir) {
+  $("subida").classList.toggle("oculto", !abrir);
+  $("btn-abrir-subida").classList.toggle("oculto", abrir);
+  $("btn-abrir-subida").setAttribute("aria-expanded", abrir);
+  if (abrir) $("subida").scrollIntoView({ block: "nearest" });
+}
+$("btn-abrir-subida").onclick = () => abrirSubida(true);
+$("btn-cerrar-subida").onclick = () => abrirSubida(false);
+
+function elegir(lista) {
+  archivos = [...lista].filter(f => EXT.test(f.name));
+  const fotos = archivos.filter(f => !/\.json$/i.test(f.name)).length;
+  $("seleccion").textContent = archivos.length
+    ? `${fotos} fotos y ${archivos.length - fotos} archivos de ubicación listos.`
+    : "No se encontraron fotos JPG o PNG en lo que elegiste.";
+  $("btn-subir").disabled = !fotos;
+  const carpeta = lista[0]?.webkitRelativePath?.split("/")[0];
+  if (!$("nombre").value && carpeta) $("nombre").value = carpeta;
+  if (!$("nombre").value) $("nombre").value = new Date().toISOString().slice(0, 10) + "_vuelo";
+}
+$("carpeta").onchange = e => elegir(e.target.files);
+$("sueltas").onchange = e => elegir(e.target.files);
+const zona = $("zona");
+zona.addEventListener("dragover", e => { e.preventDefault(); zona.classList.add("encima"); });
+zona.addEventListener("dragleave", () => zona.classList.remove("encima"));
+zona.addEventListener("drop", e => { e.preventDefault(); zona.classList.remove("encima"); elegir(e.dataTransfer.files); });
+
+async function subir() {
+  const vuelo = $("nombre").value.trim();
+  if (!vuelo) { $("nombre").focus(); $("nombre").placeholder = "Escribe un nombre para el vuelo"; return; }
+  $("btn-subir").disabled = true;
+  $("resultado").classList.add("oculto");
+  $("progreso-caja").classList.remove("oculto");
+  const LOTE = 20;
+  let nombreFinal = vuelo;
+  for (let i = 0; i < archivos.length; i += LOTE) {
+    const datos = new FormData();
+    datos.append("vuelo", vuelo);
+    archivos.slice(i, i + LOTE).forEach(f => datos.append("archivos", f, f.name));
+    const r = await api("/api/subir", { method: "POST", body: datos });
+    nombreFinal = r.vuelo;
+    const hechos = Math.min(i + LOTE, archivos.length);
+    $("fase").textContent = `Subiendo ${hechos} de ${archivos.length} archivos`;
+    $("barra").style.transform = `scaleX(${(hechos / archivos.length) * .8})`;
+  }
+  $("fase").textContent = "Leyendo la ubicación y diagnosticando cada foto. Con muchas fotos tarda un poco.";
+  const r = await post("/api/procesar", { vuelo: nombreFinal });
+  $("barra").style.transform = "scaleX(1)";
+  $("fase").textContent = "Listo";
+  const sinGps = r.nuevas - r.con_gps;
+  $("resultado").classList.remove("oculto");
+  $("resultado").innerHTML = `<p class="mensaje bien"><b>${r.nuevas} fotos nuevas en ${esc(r.vuelo)}</b>, ${r.con_gps} con ubicación.
+    ${sinGps > 0 ? `${sinGps} sin ubicación: se pueden revisar pero no salen en el mapa.` : ""}
+    ${r.sin_modelo ? "No hay modelo cargado, así que quedaron sin diagnóstico." : ""}</p>
+    <div class="fila" style="margin-top:.8rem"><a class="boton primario" href="/revisar?vuelo=${encodeURIComponent(r.vuelo)}">Revisar este vuelo</a>
+    <a class="boton" href="/mapa?vuelo=${encodeURIComponent(r.vuelo)}">Verlo en el mapa</a></div>`;
+  archivos = [];
+  $("seleccion").textContent = "";
+  await cargarTodo();
+}
+$("btn-subir").onclick = () => subir().catch(e => {
+  $("fase").textContent = "No se pudo subir: " + e.message;
+  $("btn-subir").disabled = false;
+});
+
+// ------------------------------------------------------------- lista de vuelos
+function pintarVuelos() {
+  const v = RESUMEN.vuelos;
+  $("lista").innerHTML = v.map(x => {
+    const pend = x.fotos - x.revisadas;
+    const q = encodeURIComponent(x.vuelo);
+    return `<article class="vuelo hoja">
+      <div class="vuelo-nombre"><h3>${esc(x.vuelo)}</h3><span class="nota">Subido ${fecha(x.importada)}</span></div>
+      <div class="vuelo-datos num"><span><b>${x.fotos}</b> fotos</span><span><b>${x.con_gps}</b> con ubicación</span></div>
+      <div class="vuelo-avance">
+        <span class="nota num">${x.revisadas} de ${x.fotos} revisadas</span>
+        <div class="progreso"><i style="transform:scaleX(${x.fotos ? x.revisadas / x.fotos : 0})"></i></div>
+      </div>
+      <div class="vuelo-acciones">
+        <a class="boton${pend > 0 ? " primario" : ""}" href="/revisar?vuelo=${q}">${pend > 0 ? `Revisar ${pend}` : "Revisado"}</a>
+        <button class="boton" type="button" data-vuelo="${esc(x.vuelo)}">Ver fotos</button>
+        <a class="boton" href="/mapa?vuelo=${q}">Mapa</a>
+      </div></article>`;
+  }).join("") || `<div class="hoja vacio"><h2>Todavía no hay vuelos</h2>
+      <p>Sube la carpeta de fotos de tu primer vuelo. También sirven fotos de celular con la ubicación activada.</p></div>`;
+  $("lista").querySelectorAll("button[data-vuelo]").forEach(b => b.onclick = () => {
+    $("vuelo").value = b.dataset.vuelo; pagina = 1; cargarFotos();
+    $("fotos").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
+
+// ------------------------------------------------------------- fotos
+async function cargarFotos() {
+  const q = new URLSearchParams({ vuelo: $("vuelo").value, clase: $("clase").value, filtro: $("filtro").value, pagina });
+  const r = await api("/api/fotos?" + q);
+  $("total").textContent = `${r.total} ${r.total === 1 ? "foto" : "fotos"}`;
+  const paginas = Math.max(1, Math.ceil(r.total / 60));
+  $("pag").textContent = `Página ${pagina} de ${paginas}`;
+  $("ant").disabled = pagina <= 1;
+  $("sig").disabled = pagina >= paginas;
+  document.querySelector(".paginacion").classList.toggle("oculto", paginas <= 1);
+  $("rejilla").innerHTML = r.fotos.map(f => {
+    const d = diagnostico(f);
+    const marca = d.fuente === "humano" ? "Revisada" : d.fuente === "modelo" ? `Modelo ${pct(f.conf)}` : "";
+    return `<a class="celda" href="/revisar?foto=${f.id}">
+      <img src="/mini/${f.id}" loading="lazy" alt="${esc(f.archivo)}">
+      <div class="celda-pie">${ficha(d)}<span class="etiqueta-fuente"><span>${marca}</span><span>${f.lat == null ? "sin ubicación" : ""}</span></span></div></a>`;
+  }).join("") || `<p class="nota" style="grid-column:1/-1">No hay fotos con ese filtro.</p>`;
+}
+
+async function cargarTodo() {
+  await cargarResumen();
+  const actual = $("vuelo").value;
+  llenarVuelos($("vuelo"));
+  $("vuelo").value = actual;
+  pintarVuelos();
+  $("sec-vuelos").classList.toggle("oculto", false);
+  $("fotos").classList.toggle("oculto", !RESUMEN.vuelos.length);
+  if (!RESUMEN.vuelos.length) abrirSubida(true);
+  await cargarFotos();
+}
+
+(async () => {
+  const params = new URLSearchParams(location.search);
+  await cargarResumen();
+  llenarVuelos($("vuelo"));
+  if (params.get("vuelo")) $("vuelo").value = params.get("vuelo");
+  $("clase").innerHTML = `<option value="">Todos</option>` +
+    RESUMEN.categorias.map(c => `<option value="${esc(c.clave)}">${esc(c.nombre)}</option>`).join("") +
+    `<option value="${DESCARTAR}">Foto no sirve</option>`;
+  ["vuelo", "clase", "filtro"].forEach(id => $(id).onchange = () => { pagina = 1; cargarFotos(); });
+  $("ant").onclick = () => { pagina--; cargarFotos(); };
+  $("sig").onclick = () => { pagina++; cargarFotos(); };
+  await cargarTodo();
+  if (params.get("subir")) abrirSubida(true);
+})();
+</script>
+{% endblock %}
