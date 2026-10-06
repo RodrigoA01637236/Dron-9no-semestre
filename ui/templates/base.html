@@ -4,20 +4,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block titulo %}Estación Sigatoka{% endblock %}</title>
-<meta name="theme-color" content="#ffffff">
+<script>
+  // Apariencia: ?tema=<nombre> la cambia y se recuerda en este navegador.
+  (() => { try {
+    const p = new URLSearchParams(location.search).get("tema");
+    if (p) localStorage.setItem("tema", p);
+    const t = localStorage.getItem("tema");
+    if (t && t !== "carta") document.documentElement.dataset.tema = t;
+  } catch (e) {} })();
+</script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23ffffff'/%3E%3Cpath d='M3 10V3h7M22 3h7v7M29 22v7h-7M10 29H3v-7' fill='none' stroke='%2313202b' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%23d7263d'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="{{ url_for('static', filename='estacion.css') }}">
 {% block head %}{% endblock %}
 </head>
 <body>
 <header class="barra">
-  <a class="marca" href="/mapa" aria-label="Estación Sigatoka, ir al mapa">
+  <a class="marca" href="/" aria-label="Estación Sigatoka, ir al inicio">
     <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3 10V3h7M22 3h7v7M29 22v7h-7M10 29H3v-7" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M16 9v4M16 19v4M9 16h4M19 16h4" stroke="currentColor" stroke-width="1.5"/><circle cx="16" cy="16" r="2.6" fill="#d7263d"/></svg>
     <span class="marca-texto"><span class="marca-nombre">Estación Sigatoka</span><span class="marca-sub">Estación de tierra · Platanos Machos</span></span>
   </a>
   <nav class="navegacion" aria-label="Secciones">
-    {% for clave, nombre in [("mapa", "Mapa"), ("identificar", "Identificar"), ("revisar", "Revisar"), ("galeria", "Fotos"), ("importar", "Importar"), ("modelo", "Modelo")] %}
-    <a href="/{{ clave }}" {% if pagina == clave %}aria-current="page"{% endif %}>{{ nombre }}{% if clave == "revisar" %}<span class="contador-nav oculto" id="pendientes-nav"></span>{% endif %}</a>
+    {% for clave, nombre, paso in [("inicio", "Inicio", None), ("identificar", "Identificar hoja", None),
+                                  ("importar", "Importar", 1), ("revisar", "Revisar", 2), ("mapa", "Mapa", 3), ("modelo", "Modelo", 4),
+                                  ("galeria", "Fotos", None)] %}
+    {% if paso == 1 %}<span class="nav-separador" aria-hidden="true"></span>{% endif %}
+    <a href="/{{ clave }}" {% if pagina == clave %}aria-current="page"{% endif %}{% if paso %} title="Paso {{ paso }} de 4"{% endif %}>
+      {%- if paso %}<span class="nav-paso">{{ paso }}</span>{% endif %}{{ nombre }}
+      {%- if clave == "revisar" %}<span class="contador-nav oculto" id="pendientes-nav"></span>{% endif %}</a>
+    {% if paso == 4 %}<span class="nav-separador" aria-hidden="true"></span>{% endif %}
     {% endfor %}
   </nav>
   <div class="estado-modelo" id="estado-modelo" aria-live="polite"></div>

@@ -5,7 +5,7 @@
   <div>
     <h1>Identificar una hoja</h1>
     <p class="entrada">Sube o toma una foto de una hoja de plátano y el modelo dice si está sana, tiene Sigatoka
-      u otra condición. Si su confianza no pasa el umbral, la estación lo dice en vez de adivinar.</p>
+      u otra condición. Si el modelo no está seguro, te lo dice en vez de adivinar.</p>
   </div>
 </div>
 
@@ -43,7 +43,7 @@
       <div id="lectura">
         <h2 style="margin-bottom:.4rem">Sin foto todavía</h2>
         <p class="esperando" style="margin:0">Carga una foto para ver el diagnóstico y la probabilidad de cada
-          condición. La línea vertical de cada barra marca el umbral de confianza.</p>
+          condición. La línea vertical de cada barra marca la seguridad mínima para dar un diagnóstico.</p>
       </div>
     </section>
     <section id="sec-probs" class="oculto">
@@ -92,8 +92,8 @@ function pintarLectura(r) {
   $("lectura").innerHTML = fuerte
     ? `<div class="veredicto"><i class="muestra" style="background:${c.color}"></i><h2>${esc(c.nombre)}</h2></div>
        <p class="confianza">Lectura del modelo: <b>${pct(r.confianza)}</b> de confianza, ${textoConfianza(r.confianza)}.</p>`
-    : `<div class="veredicto dudoso"><i class="muestra vacia"></i><h2>No diagnosticable</h2></div>
-       <p class="confianza">Lo más parecido es <b>${esc(c.nombre)}</b>, con ${pct(r.confianza)}: no llega al umbral de ${pct(r.umbral)}.</p>
+    : `<div class="veredicto dudoso"><i class="muestra vacia"></i><h2>El modelo no está seguro</h2></div>
+       <p class="confianza">Lo más parecido es <b>${esc(c.nombre)}</b> (${pct(r.confianza)}), pero necesita al menos ${pct(r.umbral)} para dar un diagnóstico.</p>
        <p class="consejo">Toma otra foto más cerca, con la hoja llenando el cuadro y sin sombra fuerte.
          Si la duda sigue, guárdala para que un agrónomo la revise.</p>`;
   $("probs").innerHTML = escala(r.probs, r.umbral);
@@ -141,7 +141,7 @@ function pintarHistorial() {
   $("sec-historial").classList.toggle("oculto", !historial.length);
   $("historial").innerHTML = historial.slice(0, 24).map((h, i) => {
     const c = categoria(h.r.clase);
-    const d = h.r.diagnosticable ? c : { ...c, nombre: "No diagnosticable", dudoso: true };
+    const d = h.r.diagnosticable ? c : { ...c, nombre: "No está seguro", dudoso: true };
     return `<button type="button" data-i="${i}" aria-pressed="${h === actual}"><img src="${h.url}" alt="">
       <span>${ficha(d)}<br><span class="nota">${pct(h.r.confianza)}${h.guardada ? " · guardada" : ""}</span></span></button>`;
   }).join("");

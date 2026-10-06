@@ -33,7 +33,7 @@ En **Identificar** arrastra una foto, elige un archivo o pulsa *Usar cámara*:
 
 - Con una foto, la estación muestra el diagnóstico, su confianza y una barra por condición.
   La línea vertical de cada barra es el **umbral (65 %)**: si ninguna condición lo pasa, el
-  resultado es **No diagnosticable** y la estación pide otra foto en vez de adivinar.
+  resultado es **El modelo no está seguro** y la estación pide otra foto en vez de adivinar.
 - Con la cámara (webcam de la laptop) el diagnóstico se actualiza cada 0.8 s. *Capturar y
   fijar* congela el cuadro para guardarlo.
 - *Guardar para revisión* manda la foto al vuelo `identificaciones_<fecha>`: aparece en

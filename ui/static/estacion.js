@@ -44,7 +44,7 @@ async function cargarResumen() {
   }
   const estado = document.getElementById("estado-modelo");
   estado.innerHTML = RESUMEN.modelo
-    ? `<span><span class="palabra">Modelo </span><b>v${RESUMEN.modelo.version}</b></span><span><span class="palabra">Umbral </span><b>${pct(RESUMEN.umbral)}</b></span>` +
+    ? `<span><span class="palabra">Modelo </span><b>v${RESUMEN.modelo.version}</b></span><span title="El modelo solo da un diagnóstico si está al menos así de seguro"><span class="palabra">Seguridad mínima </span><b>${pct(RESUMEN.umbral)}</b></span>` +
       (RESUMEN.modelo.acc_campo != null ? `<span class="opcional">Examen de campo <b>${pct(RESUMEN.modelo.acc_campo)}</b></span>` : "")
     : `<span class="sin">Sin modelo</span>`;
   const pend = RESUMEN.total_fotos - RESUMEN.total_revisadas;
@@ -93,7 +93,7 @@ function escala(probs, umbral = RESUMEN?.umbral ?? 0.65) {
       <div class="pista" role="meter" aria-label="${esc(c.nombre)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(p * 100)}">
         <i style="background:${c.color}; transform:scaleX(${p.toFixed(4)})"></i></div></div>`;
   }).join("")}
-    <div class="escala-umbral"><span>0 %</span><span class="marca-umbral">umbral ${pct(umbral)}</span><span>100 %</span></div></div>`;
+    <div class="escala-umbral"><span>0 %</span><span class="marca-umbral">mínimo ${pct(umbral)}</span><span>100 %</span></div></div>`;
 }
 
 function llenarVuelos(select, conTodos = true) {

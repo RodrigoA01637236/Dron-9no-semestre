@@ -62,10 +62,10 @@ def foto_dict(f) -> dict:
 
 @app.get("/")
 def inicio():
-    return render_template("mapa.html", pagina="mapa")
+    return render_template("inicio.html", pagina="inicio")
 
 
-@app.get("/<any(mapa, identificar, revisar, galeria, importar, modelo):pagina>")
+@app.get("/<any(inicio, mapa, identificar, revisar, galeria, importar, modelo):pagina>")
 def pagina(pagina):
     return render_template(f"{pagina}.html", pagina=pagina)
 
@@ -107,9 +107,18 @@ def api_resumen():
     if mod:
         clf, _ = clasificador()
         umbral = clf.umbral if clf else umbral
+    # Para la página de inicio: qué tan avanzado va cada paso del flujo.
+    with conectar() as con:
+        con_gps = con.execute("SELECT COUNT(*) FROM fotos WHERE lat IS NOT NULL").fetchone()[0]
+        sigatoka_mapa = con.execute(
+            "SELECT COUNT(*) FROM fotos WHERE lat IS NOT NULL AND (etiqueta='sigatoka'"
+            " OR (etiqueta IS NULL AND pred='sigatoka' AND conf>=?))", (umbral,)).fetchone()[0]
+        nuevas = con.execute("SELECT COUNT(*) FROM fotos WHERE etiqueta IS NOT NULL AND etiqueta!=?"
+                             " AND fecha_etiqueta > ?", (DESCARTAR, mod["creado"] if mod else "")).fetchone()[0]
     return jsonify(categorias=cats, vuelos=vuelos, umbral=umbral,
                    modelo=dict(mod) if mod else None,
                    total_fotos=tot[0] or 0, total_revisadas=tot[1] or 0,
+                   con_gps=con_gps, sigatoka_mapa=sigatoka_mapa, revisadas_desde_modelo=nuevas,
                    modelo_inicial=str(datos.MODELO_INICIAL.relative_to(RAIZ)))
 
 

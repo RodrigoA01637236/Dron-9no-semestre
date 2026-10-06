@@ -55,7 +55,8 @@
     <section>
       <a id="geojson" class="boton" href="/api/geojson" style="width:100%">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>
-        Descargar GeoJSON (QGIS, Google Earth)</a>
+        Descargar para Google Earth o QGIS</a>
+      <p class="nota" style="margin:.7rem 0 0">Siguiente paso: <a href="/modelo">mejorar el modelo</a> con las fotos que revisaste.</p>
     </section>
   </aside>
 </div>
@@ -84,6 +85,7 @@ mapa.on("mousemove", e => leer(e.latlng));
 mapa.on("move", () => { if (!matchMedia("(hover: hover)").matches) leer(mapa.getCenter()); });
 
 const capa = L.layerGroup().addTo(mapa);
+const TINTA = getComputedStyle(document.documentElement).getPropertyValue("--tinta").trim() || "#13202b";
 let FOTOS = [];
 const objetivoSel = document.getElementById("objetivo");
 
@@ -104,7 +106,7 @@ function dibujarPuntos() {
     const resalta = d.clave === objetivo && !d.dudoso;
     L.circleMarker([f.lat, f.lon], {
       radius: resalta ? 8 : 6.5,
-      color: d.fuente === "humano" ? "#13202b" : "#ffffff", weight: d.fuente === "humano" ? 2.5 : 1.5,
+      color: d.fuente === "humano" ? TINTA : "#ffffff", weight: d.fuente === "humano" ? 2.5 : 1.5,
       fillColor: d.color, fillOpacity: resalta ? .95 : .6,
     }).bindPopup(fichaMapa(f)).addTo(capa);
   });
