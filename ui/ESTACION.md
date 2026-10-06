@@ -1,16 +1,18 @@
 # Estación de tierra — guía de uso
 
 Aplicación web local que corre en la laptop del equipo y se usa desde el navegador.
-Tiene cinco pestañas, en el orden en que se usan, y un enlace al modelo:
+Se abre en el **mapa del cultivo**, que queda siempre de fondo. Todo lo demás se abre como
+un panel encima del mapa y se cierra con la X para volver a él:
 
-| Pestaña | Para qué |
+| Dónde | Para qué |
 |---|---|
-| **Inicio** | Dos caminos: revisar una hoja ahora, o trabajar con un vuelo en 3 pasos. Cada paso dice cómo vas y resalta el siguiente. |
-| **Identificar** | Subir o tomar la foto de una hoja (o usar la cámara en vivo) y ver al instante si está sana, tiene Sigatoka u otra condición, con la probabilidad de cada una. |
+| **Mapa** (barra izquierda) | La pantalla principal: zonas del lote en verde, ámbar o rojo, el resumen "Así está el lote" a la derecha y las fotos del vuelo abajo. Arriba eliges el vuelo. Descarga para Google Earth/QGIS. |
+| **Identificar una hoja** (botón azul, arriba a la derecha) | Subir o tomar la foto de una hoja (o usar la cámara en vivo) y ver al instante si está sana, tiene Sigatoka u otra condición, con qué seguridad y qué hacer. |
 | **Vuelos** | Subir la carpeta de fotos de un vuelo (el modelo las diagnostica al instante), ver la lista de vuelos con su avance y todas las fotos con filtros. |
-| **Revisar** | Una persona (idealmente el agrónomo) confirma o corrige cada diagnóstico. Empieza por las fotos donde el modelo tiene más dudas. |
-| **Mapa** | Ver dónde se tomó cada foto; vista **por zonas** con el % de plantas enfermas. Descarga para Google Earth/QGIS. |
-| **Modelo** (recuadro de la derecha) | Reentrenar con las correcciones, comparar contra el modelo actual y activar el nuevo solo si mejora. |
+| **Revisar** | Una persona (idealmente el agrónomo) confirma o corrige cada diagnóstico. Empieza por las fotos donde el modelo tiene más dudas. El número rojo es cuántas faltan. |
+| **Modelo** | Reentrenar con las correcciones, comparar contra el modelo actual y activar el nuevo solo si mejora. |
+
+En el celular la barra izquierda se vuelve una barra de pestañas abajo.
 
 ## Cómo abrirla
 
@@ -51,8 +53,8 @@ En **Identificar** arrastra una foto, elige un archivo o pulsa *Usar cámara*:
 2. **Revisar**: el agrónomo escribe su nombre y etiqueta. Atajos: `1` `2` `3`… categorías,
    `0` foto no sirve, `S` saltar, `Z` deshacer.
 3. **Mapa**: revisen el panorama. La vista *Zonas* agrupa las fotos en cuadros de 10–100 m
-   (el tamaño está en *Más opciones*).
-4. **Modelo** (solo de vez en cuando; Inicio avisa cuando conviene): con unas 50 fotos
+   (el tamaño está en *Más opciones*); *Fotos* muestra cada foto como un punto.
+4. **Modelo** (solo de vez en cuando): con unas 50 fotos
    revisadas nuevas, *Reentrenar ahora*. Al terminar aparece la versión nueva con su
    resultado en el **examen de campo**; si mejora, *Usar este modelo* (todas las fotos se
    vuelven a diagnosticar con él).

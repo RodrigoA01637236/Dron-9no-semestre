@@ -1,20 +1,24 @@
 {% extends "base.html" %}
 {% block titulo %}Modelo · Estación Sigatoka{% endblock %}
 {% block contenido %}
-<div class="encabezado">
+<section class="hoja-flotante" aria-labelledby="titulo">
+<div class="hoja-contenido">
+<div class="hoja-cabeza">
   <div>
-    <h1>Mejorar el modelo</h1>
-    <p class="entrada">Cada foto que revisas le enseña al modelo. Cuando juntes varias correcciones, reentrénalo aquí.
+    <h1 id="titulo">Mejorar el modelo</h1>
+    <p>Cada foto que revisas le enseña al modelo. Cuando juntes varias correcciones, reentrénalo aquí.
       El modelo nuevo se compara con el actual en un examen de campo (fotos revisadas que nunca se usan para entrenar)
       y una persona decide si se activa.</p>
   </div>
+  <div class="acciones"><a class="boton-icono cerrar" href="/" aria-label="Cerrar y volver al mapa">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></a></div>
 </div>
 
-<div class="hoja" id="activo"></div>
+<div class="tarjeta" id="activo"></div>
 
 <section class="seccion">
   <h2>Datos disponibles por categoría</h2>
-  <div class="hoja tabla-marco">
+  <div class="tabla-marco">
     <table><thead><tr><th>Categoría</th><th class="der">Fotos base (públicas)</th><th class="der">Revisadas en campo</th>
       <th class="der">Examen de campo</th><th>Para entrenar</th></tr></thead><tbody id="datos"></tbody></table>
   </div>
@@ -25,7 +29,7 @@
 
 <section class="seccion">
   <h2>Reentrenar</h2>
-  <div class="hoja hoja-cuerpo">
+  <div class="tarjeta">
     <div id="form-entrenar">
       <div class="fila" style="align-items:flex-end">
         <label class="campo"><span>Duración</span>
@@ -33,7 +37,7 @@
             <option value="10">Prueba rápida (unos 10 minutos)</option>
             <option value="50" selected>Completo, recomendado (unos 35 minutos)</option>
           </select></label>
-        <button class="boton primario" id="btn-entrenar" type="button">Reentrenar ahora</button>
+        <button class="boton claro" id="btn-entrenar" type="button">Reentrenar ahora</button>
       </div>
       <p class="nota" style="margin:.75rem 0 0">La computadora debe quedarse encendida con esta ventana abierta.
         Puedes seguir revisando fotos mientras entrena.</p>
@@ -48,7 +52,7 @@
 
 <section class="seccion">
   <h2>Versiones del modelo</h2>
-  <div class="hoja tabla-marco">
+  <div class="tabla-marco">
     <table><thead><tr><th>Versión</th><th>Creado</th><th class="der">Categorías</th><th>Examen de campo</th>
       <th class="der">Prueba pública</th><th></th></tr></thead><tbody id="versiones"></tbody></table>
   </div>
@@ -61,14 +65,14 @@
 </section>
 
 <section class="seccion">
-  <details class="hoja zona-tecnica">
+  <details class="tarjeta zona-tecnica">
     <summary><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
       Zona del equipo técnico: agregar una categoría</summary>
-    <div class="hoja-cuerpo">
-      <p style="max-width:68ch">Una categoría nueva, por ejemplo <i>Fusarium</i> o <i>Daño por insecto</i>, aparece como opción en
+    <div style="margin-top:1rem">
+      <p style="max-width:68ch" class="suave">Una categoría nueva, por ejemplo <i>Fusarium</i> o <i>Daño por insecto</i>, aparece como opción en
         Revisar. El modelo solo aprende a reconocerla después de juntar al menos <b id="minimo"></b> fotos revisadas de ella
         y reentrenar.</p>
-      <p class="consejo" style="max-width:68ch">Agrégala solo si un agrónomo puede distinguirla en las fotos: una categoría
+      <p class="que-hacer" style="max-width:68ch">Agrégala solo si un agrónomo puede distinguirla en las fotos: una categoría
         confusa empeora el modelo para todas las demás.</p>
       <div class="fila" style="align-items:flex-end; margin-top:1rem">
         <label class="campo"><span>Nombre</span><input type="text" id="cat-nombre" placeholder="Por ejemplo, Fusarium"></label>
@@ -79,6 +83,8 @@
       <p id="cat-msg" class="mensaje"></p>
     </div>
   </details>
+</section>
+</div>
 </section>
 {% endblock %}
 {% block scripts %}
@@ -102,15 +108,15 @@ async function cargar() {
   const r = await api("/api/entrenamiento");
   const activo = r.modelos.find(m => m.activo);
   $("activo").innerHTML = activo
-    ? `<div class="hoja-cuerpo"><h2>En uso: versión ${activo.version}</h2>
-         <p class="nota" style="margin:.3rem 0 0">Activa desde ${fecha(activo.creado)}.</p></div>
-       <dl class="modelo-hechos">
+    ? `<h2>En uso: versión ${activo.version}</h2>
+         <p class="nota" style="margin:.3rem 0 .8rem">Activa desde ${fecha(activo.creado)}.</p>
+       <dl class="hechos">
          <dt>Reconoce</dt><dd class="fichas">${JSON.parse(activo.clases).map(c => ficha(categoria(c))).join("")}</dd>
          <dt>Examen de campo</dt><dd>${activo.acc_campo != null ? `<b class="num">${pct(activo.acc_campo)}</b> de aciertos en ${activo.n_campo} fotos revisadas que nunca entrenó` : "Sin examen aún: se crea al revisar fotos"}</dd>
          <dt>Prueba pública</dt><dd><b class="num">${pct(activo.top1_test)}</b> de aciertos con fotos cercanas de internet, no aéreas</dd>
        </dl>`
-    : `<div class="hoja-cuerpo"><h2>No hay modelo en uso</h2><p class="nota" style="margin:.4rem 0 0">Copia
-       <code>sigatoka_cls_v1.onnx</code> a <code>${esc(RESUMEN.modelo_inicial)}</code> y reinicia la estación.</p></div>`;
+    : `<h2>No hay modelo en uso</h2><p class="nota" style="margin:.4rem 0 0">Copia
+       <code>sigatoka_cls_v1.onnx</code> a <code>${esc(RESUMEN.modelo_inicial)}</code> y reinicia la estación.</p>`;
 
   $("datos").innerHTML = r.datos.map(d => `<tr>
     <td>${ficha(d)}</td><td class="der">${d.base}</td><td class="der">${d.campo}</td><td class="der">${d.examen}</td>
@@ -123,7 +129,7 @@ async function cargar() {
     const peor = m.acc_campo_anterior != null && m.acc_campo < m.acc_campo_anterior;
     return `<tr><td><b>v${m.version}</b>${m.activo ? ` <span class="nota">en uso</span>` : ""}</td><td>${fecha(m.creado)}</td>
       <td class="der">${JSON.parse(m.clases).length}</td><td>${comparacion(m)}</td><td class="der">${pct(m.top1_test)}</td>
-      <td class="der">${m.activo ? "" : `<button class="boton${peor ? "" : " primario"}" type="button" data-v="${m.version}">Usar este modelo</button>`}</td></tr>`;
+      <td class="der">${m.activo ? "" : `<button class="boton${peor ? "" : " claro"}" type="button" data-v="${m.version}">Usar este modelo</button>`}</td></tr>`;
   }).join("");
   document.querySelectorAll("#versiones button").forEach(b =>
     dosPasos(b, "Confirmar: rediagnosticar todo", () => activar(+b.dataset.v)));
@@ -172,6 +178,6 @@ $("btn-cat").onclick = async () => {
   } catch (e) { msg.className = "mensaje error"; msg.textContent = e.message; }
 };
 
-(async () => { await cargarResumen(); await cargar(); })();
+(async () => { await LISTO; await cargar(); })();
 </script>
 {% endblock %}

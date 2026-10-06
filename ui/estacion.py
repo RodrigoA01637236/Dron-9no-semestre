@@ -62,19 +62,22 @@ def foto_dict(f) -> dict:
 
 @app.get("/")
 def inicio():
-    return render_template("inicio.html", pagina="inicio")
+    """La estación abre en el mapa del cultivo; las demás páginas flotan encima."""
+    return render_template("mapa.html", pagina="mapa")
 
 
-@app.get("/<any(inicio, identificar, vuelos, revisar, mapa, modelo):pagina>")
+@app.get("/<any(identificar, vuelos, revisar, modelo):pagina>")
 def pagina(pagina):
     return render_template(f"{pagina}.html", pagina=pagina)
 
 
-@app.get("/<any(importar, galeria):viejo>")
+@app.get("/<any(inicio, mapa, importar, galeria):viejo>")
 def pagina_vieja(viejo):
-    """Importar y Fotos ahora viven juntos en Vuelos; los enlaces viejos siguen sirviendo."""
-    destino = "/vuelos" + ("?subir=1" if viejo == "importar" else "")
-    if request.query_string and viejo == "galeria":
+    """Direcciones de versiones anteriores: siguen sirviendo."""
+    destino = {"inicio": "/", "mapa": "/", "importar": "/vuelos", "galeria": "/vuelos"}[viejo]
+    if viejo == "importar":
+        destino += "?subir=1"
+    elif request.query_string:
         destino += "?" + request.query_string.decode()
     return redirect(destino)
 

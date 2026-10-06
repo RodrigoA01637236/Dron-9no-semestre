@@ -1,27 +1,33 @@
 {% extends "base.html" %}
 {% block titulo %}Vuelos · Estación Sigatoka{% endblock %}
 {% block contenido %}
-<div class="encabezado">
+<section class="hoja-flotante" aria-labelledby="titulo">
+<div class="hoja-contenido">
+<div class="hoja-cabeza">
   <div>
-    <h1>Vuelos</h1>
-    <p class="entrada">Aquí subes las fotos de cada vuelo del dron y las ves todas. El modelo diagnostica cada foto al subirla.</p>
+    <h1 id="titulo">Vuelos</h1>
+    <p>Aquí subes las fotos de cada vuelo del dron y las ves todas. El modelo diagnostica cada foto al subirla.</p>
   </div>
-  <button class="boton primario grande" id="btn-abrir-subida" type="button" aria-expanded="false" aria-controls="subida">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 15v4h16v-4"/></svg>
-    Subir un vuelo nuevo</button>
+  <div class="acciones">
+    <button class="boton claro grande" id="btn-abrir-subida" type="button" aria-expanded="false" aria-controls="subida">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 15v4h16v-4"/></svg>
+      Subir un vuelo nuevo</button>
+    <a class="boton-icono cerrar" href="/" aria-label="Cerrar y volver al mapa">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></a>
+  </div>
 </div>
 
-<section class="hoja subida oculto" id="subida" aria-label="Subir un vuelo nuevo">
-  <div class="hoja-cuerpo">
+<section class="tarjeta subida oculto" id="subida" aria-label="Subir un vuelo nuevo">
+  <div>
     <div class="subida-rejilla">
       <div style="display:grid; gap:1rem">
         <label class="campo"><span>Nombre del vuelo, por ejemplo <code>2026-10-15_finca-lopez</code></span>
           <input type="text" id="nombre" placeholder="Se llena solo con el nombre de la carpeta"></label>
-        <div class="zona-subida marco" id="zona">
+        <div class="zona-subida" id="zona">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3Z"/></svg>
           <p><b>Elige la carpeta del vuelo</b> o arrastra aquí las fotos.</p>
           <div class="fila" style="justify-content:center">
-            <label class="boton primario">Elegir carpeta<input type="file" id="carpeta" webkitdirectory multiple hidden></label>
+            <label class="boton claro">Elegir carpeta<input type="file" id="carpeta" webkitdirectory multiple hidden></label>
             <label class="boton">Elegir fotos sueltas<input type="file" id="sueltas" multiple accept=".jpg,.jpeg,.png,.bmp,.webp,.json" hidden></label>
           </div>
           <p class="num" id="seleccion"></p>
@@ -36,7 +42,7 @@
         </div>
         <div id="resultado" class="oculto"></div>
       </div>
-      <ul class="lista-pasos">
+      <ul class="lista-ayuda">
         <li><b>Fotos del dron</b>Sube la carpeta completa: cada foto trae un archivo <code>.json</code> con su ubicación.</li>
         <li><b>Fotos de celular</b>Con la ubicación activada, el GPS va dentro de la foto. Sirven sin dron.</li>
         <li><b>Fotos sin ubicación</b>Se pueden revisar y sirven para entrenar, pero no salen en el mapa.</li>
@@ -62,7 +68,7 @@
         <option value="revisadas">Revisadas</option>
         <option value="sin_gps">Sin ubicación</option>
       </select></label>
-    <span class="nota num empuja" id="total" style="align-self:center"></span>
+    <span class="nota num" id="total" style="align-self:center; margin-left:auto"></span>
   </div>
   <div class="rejilla" id="rejilla"></div>
   <nav class="paginacion" aria-label="Páginas">
@@ -70,10 +76,8 @@
   </nav>
 </section>
 
-<div class="siguiente-paso">
-  <p><b>Siguiente paso: revisar las fotos</b>Una persona confirma o corrige lo que vio el modelo en cada foto.</p>
-  <a class="boton primario" href="/revisar">Ir a Revisar</a>
 </div>
+</section>
 {% endblock %}
 {% block scripts %}
 <script>
@@ -136,8 +140,8 @@ async function subir() {
   $("resultado").innerHTML = `<p class="mensaje bien"><b>${r.nuevas} fotos nuevas en ${esc(r.vuelo)}</b>, ${r.con_gps} con ubicación.
     ${sinGps > 0 ? `${sinGps} sin ubicación: se pueden revisar pero no salen en el mapa.` : ""}
     ${r.sin_modelo ? "No hay modelo cargado, así que quedaron sin diagnóstico." : ""}</p>
-    <div class="fila" style="margin-top:.8rem"><a class="boton primario" href="/revisar?vuelo=${encodeURIComponent(r.vuelo)}">Revisar este vuelo</a>
-    <a class="boton" href="/mapa?vuelo=${encodeURIComponent(r.vuelo)}">Verlo en el mapa</a></div>`;
+    <div class="fila" style="margin-top:.8rem"><a class="boton claro" href="/revisar?vuelo=${encodeURIComponent(r.vuelo)}">Revisar este vuelo</a>
+    <a class="boton" href="/?vuelo=${encodeURIComponent(r.vuelo)}">Verlo en el mapa</a></div>`;
   archivos = [];
   $("seleccion").textContent = "";
   await cargarTodo();
@@ -153,7 +157,7 @@ function pintarVuelos() {
   $("lista").innerHTML = v.map(x => {
     const pend = x.fotos - x.revisadas;
     const q = encodeURIComponent(x.vuelo);
-    return `<article class="vuelo hoja">
+    return `<article class="vuelo">
       <div class="vuelo-nombre"><h3>${esc(x.vuelo)}</h3><span class="nota">Subido ${fecha(x.importada)}</span></div>
       <div class="vuelo-datos num"><span><b>${x.fotos}</b> fotos</span><span><b>${x.con_gps}</b> con ubicación</span></div>
       <div class="vuelo-avance">
@@ -161,11 +165,11 @@ function pintarVuelos() {
         <div class="progreso"><i style="transform:scaleX(${x.fotos ? x.revisadas / x.fotos : 0})"></i></div>
       </div>
       <div class="vuelo-acciones">
-        <a class="boton${pend > 0 ? " primario" : ""}" href="/revisar?vuelo=${q}">${pend > 0 ? `Revisar ${pend}` : "Revisado"}</a>
+        <a class="boton${pend > 0 ? " claro" : ""}" href="/revisar?vuelo=${q}">${pend > 0 ? `Revisar ${pend}` : "Revisado"}</a>
         <button class="boton" type="button" data-vuelo="${esc(x.vuelo)}">Ver fotos</button>
-        <a class="boton" href="/mapa?vuelo=${q}">Mapa</a>
+        <a class="boton" href="/?vuelo=${q}">Mapa</a>
       </div></article>`;
-  }).join("") || `<div class="hoja vacio"><h2>Todavía no hay vuelos</h2>
+  }).join("") || `<div class="vacio"><h2>Todavía no hay vuelos</h2>
       <p>Sube la carpeta de fotos de tu primer vuelo. También sirven fotos de celular con la ubicación activada.</p></div>`;
   $("lista").querySelectorAll("button[data-vuelo]").forEach(b => b.onclick = () => {
     $("vuelo").value = b.dataset.vuelo; pagina = 1; cargarFotos();
@@ -188,7 +192,7 @@ async function cargarFotos() {
     const marca = d.fuente === "humano" ? "Revisada" : d.fuente === "modelo" ? `Modelo ${pct(f.conf)}` : "";
     return `<a class="celda" href="/revisar?foto=${f.id}">
       <img src="/mini/${f.id}" loading="lazy" alt="${esc(f.archivo)}">
-      <div class="celda-pie">${ficha(d)}<span class="etiqueta-fuente"><span>${marca}</span><span>${f.lat == null ? "sin ubicación" : ""}</span></span></div></a>`;
+      <div class="celda-pie">${ficha(d)}<span class="nota"><span>${marca}</span><span>${f.lat == null ? "sin ubicación" : ""}</span></span></div></a>`;
   }).join("") || `<p class="nota" style="grid-column:1/-1">No hay fotos con ese filtro.</p>`;
 }
 
@@ -206,7 +210,7 @@ async function cargarTodo() {
 
 (async () => {
   const params = new URLSearchParams(location.search);
-  await cargarResumen();
+  await LISTO;
   llenarVuelos($("vuelo"));
   if (params.get("vuelo")) $("vuelo").value = params.get("vuelo");
   $("clase").innerHTML = `<option value="">Todos</option>` +

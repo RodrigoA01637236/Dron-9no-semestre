@@ -2,44 +2,39 @@
 version: 1
 slug: "ui-templates-base-html"
 primary_target: "ui/templates/base.html"
-related_targets: ["ui/templates/mapa.html","ui/templates/identificar.html","ui/templates/revisar.html","ui/templates/galeria.html","ui/templates/importar.html","ui/templates/modelo.html","ui/static/estacion.css"]
+related_targets: ["ui/templates/mapa.html","ui/templates/identificar.html","ui/templates/revisar.html","ui/templates/vuelos.html","ui/templates/modelo.html","ui/static/estacion.css"]
 ---
 
 # Estación de tierra — superficie de trabajo (Operate)
 
-Unattended direction round (user asked to proceed without further questions): assigned
-direction built; challengers judged below. Code-led (no image generation available).
-
-Grounded list (by resonance): 1 herbarium sheet with determinavit slips; 2 finca lot plan;
-3 Sigatoka severity field form (Stover/Gauhl); 4 agricultural-aviation flight chart and spray
-log; 5 INEGI topographic sheet; 6 Munsell colour book; 7 packing-station QC tally.
-Assigned: 4. Challengers: type specimen (declined), dark console (declined, daylight scene),
-midnight transit diagram (declined), streaming wall (re-roll pool).
+History: the first build ("carta de vuelo", light chart paper) and two rounds of re-skins
+(radar, mesa de luz, señalética; conversación, carretera, parque, libreta) were rejected by the
+user: they read as the same page in different colours. Four structurally different concepts
+were then prototyped on a design canvas (map first, step by step, phone app, desk with sidebar);
+the user chose A, "Mapa primero". Code-led build; no image generation.
 
 ## Direction contract
 
-THESIS: The station is the aerial-application crew's flight chart: the map tells the
-fumigation crew where Sigatoka is, and every reading shows its threshold. It refuses the
-green agritech dashboard of rounded cards and leaf icons, and the neon drone HUD.
+THESIS: The station is the drone's ground-control screen: the plantation map is always the
+ground of the app and every task floats over it. It refuses the page-with-tabs dashboard.
 
-OWN-WORLD: Cool chart-white ground (#F3F5F2), navy chart ink (#13202B), one aeronautical
-blue (#1D5FA6) for actions and selection, category inks only for data. Hairline 1px rules,
-square-cornered panels (2px radius), margin tick marks, Barlow / Barlow Semi Condensed caps
-labels with tabular figures. Raises: hairline seams and isolated destructive actions (dark
-console); fixed-size labels and the selected category at full ink while others recede
-(transit diagram); live coordinate readout in the margin (type specimen).
+OWN-WORLD: Satellite map full-bleed; solid near-black navy panels (#0f171d, #1a2833) with
+14–22 px radii and soft drop shadows; one sky-blue action colour (#4da3ff) plus a light
+"claro" button (#eaf0f4) for the main step; diagnosis inks (green, red, amber) only for data.
+Manrope throughout, heavy 800 headings, tabular numbers.
 
-STORY: The operator sees where disease is, opens the evidence, confirms or corrects it, and
-retrains only when the field exam says the new model is better.
+STORY: The operator sees where the disease is, opens the evidence, confirms or corrects it,
+and improves the model only when the field exam says the new one is better.
 
-FIRST VIEWPORT: A title strip (station mark, nav, active model and threshold on the right),
-then a full-bleed map with a 320px right margin panel: flight selector, four tabular counts,
-view toggle, legend, and export. A live lat/lon readout sits in the map's lower margin.
-Identify page: the frame on the left with corner ticks, the reading on the right.
+FIRST VIEWPORT: Top bar (brand pill, flight selector chip, blue "Identificar una hoja"),
+left icon rail (Mapa, Vuelos, Revisar with pending badge, Modelo vN), map zones in the middle,
+right summary panel ("Así está el lote", big Sigatoka count, stacked bar, red-zone sentence,
+"Revisar N fotos pendientes"), bottom photo strip. On a phone the rail becomes a bottom tab bar
+and the summary a bottom sheet.
 
-FORM: Agricultural-aviation flight chart, position 4 of 7, seed key 28770a99. Signature
-interaction: every probability scale carries a ruled threshold mark at 65%; readings below it
-read "no diagnosticable". Motion: 160ms ease-out press and reveal only, never on keyboard
-labelling.
+FORM: Map-first ground control, chosen by the user from the four-concept canvas; seed key
+28770a99 (round 3, user choice). Signature: the map never leaves; Identificar, Revisar, Vuelos
+and Modelo are sheets over the dimmed map, closed back to it. Probability bars keep the white
+line at the 65 % minimum. Motion: 160 ms press, 200 ms dim of the map; none on keyboard labelling.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance

@@ -4,40 +4,53 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block titulo %}Estación Sigatoka{% endblock %}</title>
-<script>
-  // Apariencia: ?tema=<nombre> la cambia y se recuerda en este navegador.
-  (() => { try {
-    const p = new URLSearchParams(location.search).get("tema");
-    if (p) localStorage.setItem("tema", p);
-    const t = localStorage.getItem("tema");
-    if (t && t !== "carta") document.documentElement.dataset.tema = t;
-  } catch (e) {} })();
-</script>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23ffffff'/%3E%3Cpath d='M3 10V3h7M22 3h7v7M29 22v7h-7M10 29H3v-7' fill='none' stroke='%2313202b' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%23d7263d'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#0f171d">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f171d'/%3E%3Cpath d='M6 12V6h6M20 6h6v6M26 20v6h-6M12 26H6v-6' fill='none' stroke='%23eaf0f4' stroke-width='2.4'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23ff5a6e'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="{{ url_for('static', filename='leaflet/leaflet.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='estacion.css') }}">
-{% block head %}{% endblock %}
 </head>
-<body>
-<header class="barra">
-  <a class="marca" href="/" aria-label="Estación Sigatoka, ir al inicio">
-    <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3 10V3h7M22 3h7v7M29 22v7h-7M10 29H3v-7" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M16 9v4M16 19v4M9 16h4M19 16h4" stroke="currentColor" stroke-width="1.5"/><circle cx="16" cy="16" r="2.6" fill="#d7263d"/></svg>
-    <span class="marca-texto"><span class="marca-nombre">Estación Sigatoka</span><span class="marca-sub">Estación de tierra · Platanos Machos</span></span>
+<body class="{% if pagina != 'mapa' %}con-hoja{% endif %}">
+<div id="mapa-base" aria-label="Mapa del cultivo"></div>
+<div class="velo-mapa"></div>
+
+<header class="barra-sup">
+  <a class="pastilla" href="/" aria-label="Estación Sigatoka, ir al mapa">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 8V3h5M16 3h5v5M21 16v5h-5M8 21H3v-5"/><circle cx="12" cy="12" r="2.5" fill="#ff5a6e" stroke="none"/></svg>
+    <span class="marca-nombre">Estación Sigatoka</span>
   </a>
-  <nav class="navegacion" aria-label="Secciones">
-    {% for clave, nombre in [("inicio", "Inicio"), ("identificar", "Identificar"), ("vuelos", "Vuelos"), ("revisar", "Revisar"), ("mapa", "Mapa")] %}
-    <a href="/{{ clave }}" {% if pagina == clave %}aria-current="page"{% endif %}>{{ nombre }}
-      {%- if clave == "revisar" %}<span class="contador-nav oculto" id="pendientes-nav"></span>{% endif %}</a>
-    {% endfor %}
-  </nav>
-  <a class="estado-modelo" id="estado-modelo" href="/modelo" {% if pagina == "modelo" %}aria-current="page"{% endif %}
-     title="Ver y mejorar el modelo" aria-live="polite"></a>
+  {% block barra_centro %}{% endblock %}
+  <span class="espacio"></span>
+  <a class="boton primario boton-identificar" href="/identificar" {% if pagina == "identificar" %}aria-current="page"{% endif %}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3v11H4Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+    <span class="texto-largo">Identificar una hoja</span></a>
 </header>
+
+<nav class="riel" aria-label="Secciones">
+  <a href="/" {% if pagina == "mapa" %}aria-current="page"{% endif %}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2Z"/><path d="M9 4v14M15 6v14"/></svg>Mapa</a>
+  <a href="/vuelos" {% if pagina == "vuelos" %}aria-current="page"{% endif %}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3Z"/></svg>Vuelos</a>
+  <a href="/revisar" {% if pagina == "revisar" %}aria-current="page"{% endif %}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 10 17 19 7"/></svg>Revisar
+    <span class="insignia oculto" id="pendientes-nav" title="Fotos sin revisar"></span></a>
+  <a href="/modelo" {% if pagina == "modelo" %}aria-current="page"{% endif %}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg><span id="version-nav">Modelo</span></a>
+</nav>
+
 <div id="aviso-modelo" class="aviso oculto" role="status"></div>
-<main class="{% block clase_main %}{% endblock %}">
+
 {% block contenido %}{% endblock %}
-</main>
+
+<script src="{{ url_for('static', filename='leaflet/leaflet.js') }}"></script>
 <script src="{{ url_for('static', filename='estacion.js') }}"></script>
-<script>document.querySelector('.navegacion [aria-current="page"]')?.scrollIntoView({ block: "nearest", inline: "center" });</script>
+<script src="{{ url_for('static', filename='mapa.js') }}"></script>
+<script>
+  // Todas las páginas esperan este resumen; las que no son el mapa lo dejan atenuado detrás.
+  const LISTO = cargarResumen();
+  {% if pagina != "mapa" %}
+  LISTO.then(() => { Mapa.iniciar(false); return Mapa.cargar(vueloActual(), { tl: [40, 40], br: [40, 40] }); }).catch(() => {});
+  {% endif %}
+</script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

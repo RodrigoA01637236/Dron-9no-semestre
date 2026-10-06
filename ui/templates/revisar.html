@@ -1,53 +1,48 @@
 {% extends "base.html" %}
 {% block titulo %}Revisar fotos · Estación Sigatoka{% endblock %}
 {% block contenido %}
-<div class="encabezado">
-  <div>
-    <h1>Revisar fotos</h1>
-    <p class="entrada">Confirma o corrige el diagnóstico. Primero salen las fotos donde el modelo tiene más dudas:
-      son las correcciones que más le enseñan.</p>
+<section class="hoja-flotante" aria-labelledby="titulo">
+<div class="hoja-contenido">
+  <div class="hoja-cabeza">
+    <div>
+      <h1 id="titulo">Revisar fotos</h1>
+      <p>Confirma o corrige lo que vio el modelo. Primero salen las fotos donde tiene más dudas: son las que más le enseñan.</p>
+    </div>
+    <div class="acciones" style="align-items:flex-end">
+      <label class="campo"><span>Vuelo</span><select id="vuelo"></select></label>
+      <label class="campo"><span>Quién revisa</span><input type="text" id="revisor" placeholder="Tu nombre" size="14" autocomplete="name"></label>
+      <a class="boton-icono cerrar" href="/" aria-label="Cerrar y volver al mapa">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></a>
+    </div>
   </div>
-  <div class="herramientas" style="margin:0">
-    <label class="campo"><span>Vuelo</span><select id="vuelo"></select></label>
-    <label class="campo"><span>Revisor</span><input type="text" id="revisor" placeholder="Tu nombre" size="16" autocomplete="name"></label>
-  </div>
-</div>
 
-<div id="vacio" class="hoja vacio oculto">
-  <h2>No quedan fotos por revisar</h2>
-  <p>Todas las fotos de este vuelo ya tienen un diagnóstico confirmado por una persona. Importa un vuelo nuevo,
-    o ve a Modelo para reentrenar con tus correcciones.</p>
-  <div class="fila"><a class="boton primario" href="/modelo">Ir a Modelo</a><a class="boton" href="/vuelos?subir=1">Subir un vuelo</a></div>
-</div>
-
-<div id="area" class="mesa oculto">
-  <div>
-    <div class="marco"><div class="visor"><img id="img" alt="Foto a revisar"></div></div>
-    <div class="visor-pie"><span id="meta"></span><span id="contador"></span></div>
+  <div id="vacio" class="vacio oculto">
+    <h2>No quedan fotos por revisar</h2>
+    <p>Todas las fotos de este vuelo ya las confirmó una persona. Mira el mapa, sube otro vuelo, o mejora el modelo con lo que revisaste.</p>
+    <div class="fila"><a class="boton claro grande" href="/">Ver el mapa</a><a class="boton grande" href="/vuelos?subir=1">Subir un vuelo</a><a class="boton grande" href="/modelo">Mejorar el modelo</a></div>
   </div>
-  <aside class="hoja lectura">
-    <section class="segundo-movil">
-      <div id="sugerencia"></div>
-    </section>
-    <section id="sec-probs">
-      <div id="probs"></div>
-    </section>
-    <section class="primero-movil">
-      <span class="rotulo" style="display:block; margin-bottom:.7rem">¿Qué ves tú en la hoja?</span>
-      <div class="opciones" id="botones"></div>
-      <div class="fila" style="margin-top:1rem">
-        <button class="boton" id="btn-saltar" type="button">Saltar <kbd>S</kbd></button>
-        <button class="boton" id="btn-deshacer" type="button" disabled>Deshacer <kbd>Z</kbd></button>
+
+  <div id="area" class="oculto">
+    <div class="mesa">
+      <div class="mesa-foto"><img id="img" alt="Foto a revisar"></div>
+      <div class="mesa-lectura">
+        <div id="sugerencia" style="display:grid; gap:10px"></div>
+        <div id="probs"></div>
+        <div>
+          <h2 style="font-size:var(--t-m); margin-bottom:.7rem">¿Qué ves tú en la hoja?</h2>
+          <div class="opciones" id="botones"></div>
+          <div class="fila" style="margin-top:.9rem">
+            <button class="boton" id="btn-saltar" type="button">Saltar <kbd>S</kbd></button>
+            <button class="boton" id="btn-deshacer" type="button" disabled>Deshacer <kbd>Z</kbd></button>
+          </div>
+          <p class="mensaje error" id="msg" role="alert"></p>
+        </div>
       </div>
-      <p class="mensaje error" id="msg" role="alert"></p>
-    </section>
-  </aside>
+    </div>
+    <div class="pie-foto"><span id="meta"></span><span id="contador"></span></div>
+  </div>
 </div>
-
-<div class="siguiente-paso">
-  <p><b>Cuando termines: ver el mapa</b>Las fotos confirmadas aparecen en el mapa del cultivo, agrupadas por zonas.</p>
-  <a class="boton" href="/mapa">Abrir el mapa</a>
-</div>
+</section>
 {% endblock %}
 {% block scripts %}
 <script>
@@ -61,14 +56,14 @@ try { revisor.value = localStorage.getItem("revisor") || ""; } catch (e) {}
 revisor.onchange = guardarRevisor;
 
 function opciones() {
-  return [...RESUMEN.categorias, { clave: DESCARTAR, nombre: "Foto no sirve (borrosa, sin hoja)", color: GRIS }];
+  return [...RESUMEN.categorias, { clave: DESCARTAR, nombre: "La foto no sirve (borrosa, sin hoja)", color: GRIS }];
 }
 
 function pintarBotones(sugerida) {
   document.getElementById("botones").innerHTML = opciones().map((c, i) => {
     const tecla = c.clave === DESCARTAR ? "0" : String(i + 1);
     return `<button class="opcion${c.clave === DESCARTAR ? " descartar" : ""}" type="button" data-clave="${esc(c.clave)}">
-      <i class="muestra" style="background:${c.color}"></i><span>${esc(c.nombre)}${c.clave === sugerida ? " <small>SUGERIDA</small>" : ""}</span>
+      <i class="muestra" style="background:${c.color}"></i><span>${esc(c.nombre)}${c.clave === sugerida ? "<small>la propuesta</small>" : ""}</span>
       <kbd>${tecla}</kbd></button>`;
   }).join("");
   document.querySelectorAll("#botones button").forEach(b => b.onclick = () => etiquetar(b.dataset.clave));
@@ -81,20 +76,20 @@ async function mostrar(f, pendientes) {
   if (!f) return;
   const det = (await api(`/api/foto/${f.id}`)).foto;
   document.getElementById("img").src = `/foto/${f.id}`;
-  const dudoso = det.conf != null && det.conf < RESUMEN.umbral;
+  const seguro = det.conf != null && det.conf >= RESUMEN.umbral;
+  const c = categoria(det.pred);
   document.getElementById("sugerencia").innerHTML = det.pred
-    ? `<div class="veredicto${dudoso ? " dudoso" : ""}"><i class="muestra${dudoso ? " vacia" : ""}" style="background:${categoria(det.pred).color}"></i>
-        <h2>${esc(categoria(det.pred).nombre)}</h2></div>
-       <p class="confianza">Propuesta del modelo: <b>${pct(det.conf)}</b> de confianza, ${textoConfianza(det.conf)}.</p>`
-    : `<h2 style="margin-bottom:.4rem">Sin propuesta del modelo</h2><p class="esperando" style="margin:0">Tu revisión sigue sirviendo para entrenar.</p>`;
-  document.getElementById("sec-probs").classList.toggle("oculto", !det.probs);
+    ? `<span class="chip-diagnostico">${seguro ? `<i style="background:${c.color}"></i>` : `<i class="muestra vacia" style="border-radius:50%"></i>`}Propuesta del modelo</span>
+       <div class="veredicto" style="font-size:1.9rem">${seguro ? esc(c.nombre) : `${esc(c.nombre)}, pero no está seguro`}</div>
+       <p class="confianza">${seguro ? `Está <b>${pct(det.conf)} seguro</b>.` : `Solo <b>${pct(det.conf)}</b>; necesita ${pct(RESUMEN.umbral)}. Aquí tu respuesta es la que más le enseña.`}</p>`
+    : `<div class="veredicto" style="font-size:1.6rem">Sin propuesta del modelo</div><p class="confianza">Tu revisión sigue sirviendo para entrenar.</p>`;
   document.getElementById("probs").innerHTML = det.probs ? escala(det.probs) : "";
   pintarBotones(det.pred);
   const ya = det.etiqueta ? ` · ya revisada como ${esc(categoria(det.etiqueta).nombre)}${det.revisor ? " por " + esc(det.revisor) : ""}` : "";
   document.getElementById("meta").innerHTML = `${esc(det.vuelo)} / ${esc(det.archivo)}` +
-    (det.lat != null ? ` · ${det.lat.toFixed(6)}, ${det.lon.toFixed(6)}` : " · sin GPS") + ya;
+    (det.lat != null ? ` · ${det.lat.toFixed(6)}, ${det.lon.toFixed(6)}` : " · sin ubicación") + ya;
   document.getElementById("contador").textContent = pendientes != null
-    ? `${pendientes} pendientes${document.getElementById("vuelo").value ? " en este vuelo" : ""}` : "";
+    ? `${plural(pendientes, "pendiente", "pendientes")}${document.getElementById("vuelo").value ? " en este vuelo" : ""}` : "";
 }
 
 async function siguiente() {
@@ -113,7 +108,7 @@ async function etiquetar(clave) {
   if (!actual) return;
   const msg = document.getElementById("msg");
   if (!revisor.value.trim()) {
-    msg.textContent = "Escribe tu nombre en Revisor antes de etiquetar: así queda registrado quién confirmó cada foto.";
+    msg.textContent = "Escribe tu nombre en \"Quién revisa\" antes de etiquetar: así queda registrado quién confirmó cada foto.";
     revisor.focus();
     return;
   }
@@ -147,10 +142,10 @@ document.addEventListener("keydown", e => {
 });
 
 (async () => {
-  await cargarResumen();
+  await LISTO;
   const vuelo = document.getElementById("vuelo");
   llenarVuelos(vuelo);
-  if (params.get("vuelo")) vuelo.value = params.get("vuelo");
+  if (params.get("vuelo") !== null) vuelo.value = params.get("vuelo");
   vuelo.onchange = () => { saltadas = []; siguiente(); };
   document.getElementById("btn-saltar").onclick = () => { if (actual) saltadas.push(actual.id); siguiente(); };
   document.getElementById("btn-deshacer").onclick = deshacer;
