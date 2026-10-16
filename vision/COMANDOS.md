@@ -26,6 +26,21 @@ Guía: `ui\ESTACION.md`. Datos en `data\estacion\` (respaldar en Drive).
 
 ---
 
+## Tomar fotos (Jetson o laptop, sin ZED Explorer)
+
+```bash
+python vision/capture.py                         # Enter = foto, q = salir (webcam USB)
+python vision/capture.py --intervalo 2 --cantidad 20 --vuelo patio --operador SH
+python vision/capture.py --camara 1              # si la webcam no es la 0
+python vision/capture.py --fuente argus          # ZED X sin ZED SDK (cuando el driver funcione)
+python vision/capture.py --mavlink /dev/ttyACM0  # agrega el GPS de la Pixhawk (pip install pymavlink)
+```
+
+Quedan en `data/flights/<fecha>_<vuelo>/` (foto `.jpg` + `.json` con hora y GPS).
+Arrastra esa carpeta a la pestaña **Cargar** de la estación.
+
+---
+
 ## Demos (para presentar)
 
 ```powershell
