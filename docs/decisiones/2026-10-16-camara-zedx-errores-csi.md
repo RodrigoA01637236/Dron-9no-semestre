@@ -49,6 +49,21 @@ diferencia entre 39.2.0 y 39.2.1 en esa capa produce justo errores de CRC con un
 
 Hacer 1 y 5 hoy. Probar la 2 (bajar con apt); si falla, la 3 (reflasheo).
 
+## Resultado (2026-10-16): resuelto con la opción 2
+
+Se bajó con `scripts/jetson_bajar_l4t_39.2.0.sh` (simulación sin `Remv`, luego `--aplicar`,
+apagado completo). Antes hubo que corregir el reloj de la Jetson (`timedatectl set-ntp true`):
+con la hora atrasada apt rechaza las listas de paquetes ("not valid yet").
+
+Verificación después del arranque:
+- `/etc/nv_tegra_release`: `R39 (release), REVISION: 2.0`.
+- `nvarguscamerasrc sensor-id=0` y `sensor-id=1`: 60 cuadros cada uno a 1920×1080, sin errores.
+- `journalctl -u nvargus-daemon | grep -c CRC` → `0`.
+
+Conclusión: la causa era el driver de la ZED Link Duo (hecho para L4T 39.2.0) sobre L4T
+39.2.1. Los paquetes `nvidia-l4t-*` quedan bloqueados con `apt-mark hold`; no quitar el
+bloqueo hasta que Stereolabs publique un driver para la versión nueva.
+
 ---
 
 ## Opción 2 paso a paso: bajar con apt
