@@ -34,19 +34,37 @@ diferencia entre 39.2.0 y 39.2.1 en esa capa produce justo errores de CRC con un
 
 1. **Preguntar a Stereolabs** si hay paquete para L4T 39.2.1 (o si 39.2.0 es compatible).
    Sin costo, pero depende de su tiempo de respuesta. → Mensaje listo abajo.
-2. **Reflashear la Jetson a JetPack 7.2.0 (L4T 39.2.0)**, la versión exacta del driver.
+2. **Bajar a L4T 39.2.0 con apt, sin reflashear** (`scripts/jetson_bajar_l4t_39.2.0.sh`).
+   El repo de NVIDIA (`jetson/som` y `jetson/common`, rama r39.2) conserva los paquetes
+   39.2.0. Todos los `nvidia-l4t-*` dependen de `nvidia-l4t-core` con versión exacta, así que
+   se bajan todos juntos, incluido el firmware de arranque. El script primero simula y se
+   detiene si apt quiere quitar algún paquete. Peor caso: no arranca bien → se hace la 3.
+3. **Reflashear la Jetson a JetPack 7.2.0 (L4T 39.2.0)**, la versión exacta del driver.
    Mismo Ubuntu 24.04 y misma familia CUDA 13, así que casi nada más cambia.
-3. Reflashear a JetPack 6.2.x (L4T 36.5.x), que también tiene driver 1.4.4 y es la rama más
-   probada. Solo si la opción 2 sigue dando errores CRC (entonces no era la versión).
-4. Mientras tanto: **webcam USB** con `vision/capture.py --fuente usb` (no depende de nada de esto).
+4. Reflashear a JetPack 6.2.x (L4T 36.5.x), que también tiene driver 1.4.4 y es la rama más
+   probada. Solo si en 39.2.0 siguen los errores CRC (entonces no era la versión).
+5. Mientras tanto: **webcam USB** con `vision/capture.py --fuente usb` (no depende de nada de esto).
 
 ## Decisión
 
-Hacer 1 y 4 hoy, en paralelo. Si en 2–3 días no hay paquete para 39.2.1, hacer la 2.
+Hacer 1 y 5 hoy. Probar la 2 (bajar con apt); si falla, la 3 (reflasheo).
 
 ---
 
-## Opción 2 paso a paso: reflashear a JetPack 7.2.0
+## Opción 2 paso a paso: bajar con apt
+
+```bash
+git pull
+bash scripts/jetson_bajar_l4t_39.2.0.sh             # simula y muestra qué cambiaría
+bash scripts/jetson_bajar_l4t_39.2.0.sh --aplicar   # lo hace (pide escribir SI)
+```
+El script baja los `nvidia-l4t-*` a 39.2.0, los bloquea con `apt-mark hold`, reinstala el
+driver de la ZED Link Duo y explica la verificación. Después: apagado completo, 30 s sin
+corriente, y no desconectar durante el primer arranque (actualiza el firmware de arranque).
+
+---
+
+## Opción 3 paso a paso: reflashear a JetPack 7.2.0
 
 **Antes de borrar nada:**
 1. Respaldar todo lo que no está en git: `data/`, fotos, `~/venvs` (o al menos `pip freeze > reqs.txt`).
