@@ -38,10 +38,10 @@ CALENTAR = 10  # cuadros que se tiran al abrir, para que se ajuste la exposició
 
 # ---------- Cámaras ----------
 class CamaraOpenCV:
-    def __init__(self, fuente):
+    def __init__(self, fuente, error="No se pudo abrir la cámara. Prueba otro --camara (0, 1, 2...)."):
         self.cap = cv2.VideoCapture(*fuente)
         if not self.cap.isOpened():
-            raise RuntimeError("No se pudo abrir la cámara. Prueba otro --camara (0, 1, 2...).")
+            raise RuntimeError(error)
 
     def leer(self):
         ok, img = self.cap.read()
@@ -60,14 +60,19 @@ def camara_usb(indice, w, h):
 
 
 def camara_argus(sensor, w, h):
+    # Sin framerate en los caps: la ZED X solo da los cuadros/s de cada modo
+    # (pedir 30/1 en un modo de 60 da INVALID_SETTINGS).
     tubo = (f"nvarguscamerasrc sensor-id={sensor} ! "
-            f"video/x-raw(memory:NVMM),width={w},height={h},framerate=30/1 ! "
+            f"video/x-raw(memory:NVMM),width={w},height={h} ! "
             "nvvidconv ! video/x-raw,format=BGRx ! videoconvert ! video/x-raw,format=BGR ! "
             "appsink drop=1 max-buffers=1")
     if not re.search(r"GStreamer:\s+YES", cv2.getBuildInformation()):
         print("Aviso: este OpenCV podría no tener GStreamer. En la Jetson usa el de apt "
               "(sudo apt install python3-opencv), no el de pip.")
-    return CamaraOpenCV((tubo, cv2.CAP_GSTREAMER))
+    return CamaraOpenCV((tubo, cv2.CAP_GSTREAMER),
+                        "Argus no entregó imagen. Prueba primero: gst-launch-1.0 nvarguscamerasrc "
+                        f"sensor-id={sensor} num-buffers=60 ! fakesink  (si también falla, apaga y "
+                        "desconecta Jetson y ZED Link 30 s).")
 
 
 class CamaraZED:
