@@ -49,7 +49,7 @@ diferencia entre 39.2.0 y 39.2.1 en esa capa produce justo errores de CRC con un
 
 Hacer 1 y 5 hoy. Probar la 2 (bajar con apt); si falla, la 3 (reflasheo).
 
-## Resultado (2026-10-16): resuelto con la opción 2
+## Resultado (2026-10-16): opción 2 aplicada, resuelto solo en parte
 
 Se bajó con `scripts/jetson_bajar_l4t_39.2.0.sh` (simulación sin `Remv`, luego `--aplicar`,
 apagado completo). Antes hubo que corregir el reloj de la Jetson (`timedatectl set-ntp true`):
@@ -60,8 +60,13 @@ Verificación después del arranque:
 - `nvarguscamerasrc sensor-id=0` y `sensor-id=1`: 60 cuadros cada uno a 1920×1080, sin errores.
 - `journalctl -u nvargus-daemon | grep -c CRC` → `0`.
 
-Conclusión: la causa era el driver de la ZED Link Duo (hecho para L4T 39.2.0) sobre L4T
-39.2.1. Los paquetes `nvidia-l4t-*` quedan bloqueados con `apt-mark hold`; no quitar el
+Pero **ZED Explorer sigue fallando** igual que antes (`Reboot has failed for CAM0`,
+`nvargus-daemon` se cae). GStreamer con un sensor a la vez funciona; el ZED SDK abre los dos
+sensores juntos a 1920×1200, y eso todavía no se ha probado por separado. Pendiente: ver
+`journalctl -u nvargus-daemon` justo después del fallo de ZED Explorer.
+
+Conclusión parcial: la versión de L4T sí causaba los errores CRC con un sensor; falta
+entender por qué falla el ZED SDK. Los paquetes `nvidia-l4t-*` quedan bloqueados con `apt-mark hold`; no quitar el
 bloqueo hasta que Stereolabs publique un driver para la versión nueva.
 
 ---
