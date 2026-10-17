@@ -118,10 +118,46 @@ def coordenada_exif(valor):
     )
 
 
-def crear_exif(gps):
+def crear_exif(gps, instante):
+    import piexif.helper
+
+    fecha_exif = instante.strftime("%Y:%m:%d %H:%M:%S")
+    fecha_iso = instante.isoformat(timespec="microseconds")
+
+    comentario = (
+        f"Proyecto=Dron Sigatoka; "
+        f"Camara=ZED X Mini RIGHT; "
+        f"FechaHora={fecha_iso}; "
+        f"GPS={'VALIDO' if gps is not None else 'SIN_SENAL'}; "
+        f"FuenteGPS=Pixhawk 6C HERE4; "
+        f"AnalisisYOLO=NO_REALIZADO"
+    )
+
+    if gps is not None:
+        comentario += (
+            f"; Latitud={gps['lat']:.7f}"
+            f"; Longitud={gps['lon']:.7f}"
+            f"; Altitud_m={gps['alt']:.2f}"
+            f"; Satelites={gps['satelites']}"
+        )
+
     exif = {
-        "0th": {},
-        "Exif": {},
+        "0th": {
+            piexif.ImageIFD.DateTime: fecha_exif,
+            piexif.ImageIFD.Software: "Dron Sigatoka - Jetson",
+            piexif.ImageIFD.ImageDescription:
+                "ZED X Mini RIGHT; GPS desde Pixhawk HERE4"
+        },
+        "Exif": {
+            piexif.ExifIFD.DateTimeOriginal: fecha_exif,
+            piexif.ExifIFD.DateTimeDigitized: fecha_exif,
+            piexif.ExifIFD.SubSecTimeOriginal:
+                instante.strftime("%f"),
+            piexif.ExifIFD.UserComment:
+                piexif.helper.UserComment.dump(
+                    comentario, encoding="unicode"
+                )
+        },
         "GPS": {},
         "1st": {},
         "thumbnail": None
@@ -130,22 +166,16 @@ def crear_exif(gps):
     if gps is not None:
         exif["GPS"] = {
             piexif.GPSIFD.GPSVersionID: (2, 3, 0, 0),
-
             piexif.GPSIFD.GPSLatitudeRef:
                 b"N" if gps["lat"] >= 0 else b"S",
-
             piexif.GPSIFD.GPSLatitude:
                 coordenada_exif(gps["lat"]),
-
             piexif.GPSIFD.GPSLongitudeRef:
                 b"E" if gps["lon"] >= 0 else b"W",
-
             piexif.GPSIFD.GPSLongitude:
                 coordenada_exif(gps["lon"]),
-
             piexif.GPSIFD.GPSAltitudeRef:
                 0 if gps["alt"] >= 0 else 1,
-
             piexif.GPSIFD.GPSAltitude:
                 racional(abs(gps["alt"]))
         }
@@ -154,24 +184,20 @@ def crear_exif(gps):
 
 
 # GUARDAR FOTOGRAFIA
-def guardar_foto(pantalla, gps):
-    fecha = datetime.now().strftime("%y-%m-%d")
+def guardar_foto(pantalla, gps, instante):
+    from PIL import Image
 
-    numero = 1
+    marca = instante.strftime("%y-%m-%d_%H-%M-%S")
+    ruta = CARPETA / f"{marca}-GPS.jpg"
 
-    while True:
-        nombre = f"{fecha}-GPS_{numero:03d}.jpg"
-        ruta = CARPETA / nombre
+    # Numerar fotos tomadas en el mismo segundo
+    numero = 2
 
-        if not ruta.exists():
-            break
-
+    while ruta.exists():
+        ruta = CARPETA / f"{marca}-GPS_{numero}.jpg"
         numero += 1
 
-    # Guardar imagen con los textos GPS visibles
-    exif = crear_exif(gps)
-
-    from PIL import Image
+    exif = crear_exif(gps, instante)
 
     imagen_rgb = cv2.cvtColor(
         pantalla, cv2.COLOR_BGR2RGB
@@ -179,14 +205,17 @@ def guardar_foto(pantalla, gps):
 
     imagen = Image.fromarray(imagen_rgb)
 
-    imagen.save(
-        str(ruta),
-        format="JPEG",
-        quality=95,
-        exif=exif
-    )
+    # xb impide sobrescribir un archivo existente
+    with open(ruta, "xb") as archivo:
+        imagen.save(
+            archivo,
+            format="JPEG",
+            quality=95,
+            exif=exif
+        )
 
     print("[FOTO]", ruta.name)
+    print("[FECHA]", instante.isoformat())
 
     if gps is None:
         print("[FOTO] Sin coordenadas GPS")
@@ -242,18 +271,26 @@ try:
 
         gps = obtener_gps()
 
+        instante = datetime.now().astimezone()
+        fecha_visible = instante.strftime("%y-%m-%d")
+        hora_visible = instante.strftime("%H:%M:%S")
+
         # Crear copia para mostrar datos en pantalla
         pantalla = frame.copy()
 
         if gps is None:
             textos = [
                 "RIGHT CAMERA",
+                f"FECHA: {fecha_visible}",
+                f"HORA: {hora_visible}",
                 "GPS: SIN SENAL"
             ]
             color = (0, 0, 255)
         else:
             textos = [
                 "RIGHT CAMERA",
+                f"FECHA: {fecha_visible}",
+                f"HORA: {hora_visible}",
                 f"LAT: {gps['lat']:.7f}",
                 f"LON: {gps['lon']:.7f}",
                 f"ALT: {gps['alt']:.1f} m",
@@ -289,7 +326,7 @@ try:
         tecla = cv2.waitKey(1) & 0xFF
 
         if tecla == ord("s"):
-            guardar_foto(pantalla, gps)
+            guardar_foto(pantalla, gps, instante)
 
         elif tecla == ord("q"):
             break
