@@ -107,11 +107,12 @@ Se utilizó NumPy 1.26.4 porque el OpenCV 4.8.0 del sistema no cargaba con NumPy
 
 El script busca el repo en `~/Dron-9no-semestre` (o en la carpeta de arriba de `jetson/`) y
 usa `vision/models/sigatoka_cls_v1.onnx` con el mismo preprocesado que la estación
-(`vision/clasificador.py`). El `.onnx` no está en git: copiarlo del Drive del equipo.
+(`vision/clasificador.py`). El modelo baseline (`sigatoka_cls_v1.onnx`, 5.5 MB) está en el
+repo, así que basta con:
 
 ```bash
 cd ~/Dron-9no-semestre && git pull
-cp /ruta/del/drive/sigatoka_cls_v1.onnx vision/models/
+bash jetson/zed_control.sh reiniciar
 ```
 
 Al arrancar debe imprimir `[MODELO] sigatoka_cls_v1.onnx cargado`. Corre en CPU con

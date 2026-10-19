@@ -59,6 +59,8 @@ runs/
 # Modelos y pesos
 *.pt
 *.onnx
+# Excepción: el modelo baseline se versiona para que la Jetson lo baje con git pull
+!vision/models/sigatoka_cls_v1.onnx
 *.engine
 
 # =========================

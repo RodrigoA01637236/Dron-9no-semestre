@@ -23,8 +23,8 @@ python ui\estacion.py --red     # para que otro equipo del mismo WiFi la abra (e
 ```
 
 Requisitos: el entorno `dron-vision` de la guía del modelo, más `pip install flask`
-(el `.bat` lo instala solo la primera vez), y el modelo `sigatoka_cls_v1.onnx`
-(de tu Drive) copiado en `vision\models\`.
+(el `.bat` lo instala solo la primera vez). El modelo `sigatoka_cls_v1.onnx` ya viene en el
+repo, en `vision\models\` (llega con `git pull`).
 
 ## Borrar imágenes
 
