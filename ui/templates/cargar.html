@@ -6,8 +6,8 @@
   <div class="hoja-cabeza">
     <div>
       <h1 id="titulo">Cargar imágenes</h1>
-      <p>Sube una imagen, varias o una carpeta completa, o usa la cámara. El modelo te dice qué cree que tiene cada una
-        y se guardan con la fecha de hoy para que después las revises.</p>
+      <p>Sube una imagen, varias o una carpeta completa, o usa la cámara (de esta computadora o la del dron). El modelo
+        te dice qué cree que tiene cada una y se guardan con la fecha de hoy para que después las revises.</p>
     </div>
   </div>
 
@@ -30,12 +30,24 @@
           <button class="boton grande" id="btn-camara" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3v11H4Z"/><circle cx="12" cy="13" r="3.5"/></svg>
             Usar cámara</button>
+          <button class="boton grande" id="btn-dron" type="button" aria-expanded="false" aria-controls="dron-form">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5.5" cy="5.5" r="2.5"/><circle cx="18.5" cy="5.5" r="2.5"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/><path d="M8 8l2.5 2.5M16 8l-2.5 2.5M8 16l2.5-2.5M16 16l-2.5-2.5"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/></svg>
+            Cámara del dron</button>
           <input type="file" id="captura-movil" accept="image/*" capture="environment" hidden>
         </div>
+        <form class="dron-form oculto" id="dron-form" autocomplete="off">
+          <label class="campo"><span>Dirección de la Jetson</span>
+            <input type="text" id="dron-dir" placeholder="192.168.1.50" inputmode="url" spellcheck="false"></label>
+          <button class="boton claro" type="submit">Conectar</button>
+          <p class="nota">La imprime <code>zed_right.py</code> al arrancar, en la línea <code>[WEB]</code>. La laptop y la
+            Jetson tienen que estar en la misma red.</p>
+        </form>
       </div>
       <img id="foto" class="oculto" alt="Imagen seleccionada">
       <video id="video" class="oculto" playsinline muted></video>
+      <img id="video-dron" class="oculto" alt="Video en vivo de la cámara del dron">
       <span class="en-vivo oculto" id="en-vivo">En vivo</span>
+      <span class="dron-gps oculto" id="dron-gps"></span>
       <div class="camara-barra oculto" id="camara-barra">
         <button class="boton claro" id="btn-capturar" type="button">Capturar y guardar</button>
         <button class="boton" id="btn-continuo" type="button" aria-pressed="true">Pausar lectura continua</button>
@@ -164,12 +176,13 @@ function resumenLote(fotos) {
 }
 
 // ------------------------------------------------------------- subir
-async function subir(lista) {
+async function subir(lista, { enVivo = false } = {}) {
   // lista: [{ f: File|Blob, ruta: "carpeta/sub/foto.jpg" }]
+  // enVivo: la foto viene del dron y el video sigue abierto.
   lista = lista.filter(x => EXT.test(x.ruta));
   const fotos = lista.filter(x => !/\.json$/i.test(x.ruta)).length;
   if (!fotos) return pintarError("No se encontró ninguna imagen JPG o PNG en lo que elegiste.");
-  detenerCamara();
+  if (!enVivo) detenerCamara();
   const fecha = hoy();
   const prefijo = new Date().toTimeString().slice(0, 8).replaceAll(":", "");  // evita choques de nombres
   const caja = $("progreso-caja"), barra = $("barra"), fase = $("fase");
@@ -195,7 +208,7 @@ async function subir(lista) {
     $("resumen-lote").className = "mensaje bien";
     $("resumen-lote").innerHTML = resumenLote(nuevas);
     await cargarResumen();
-    if (nuevas.length) await seleccionar(nuevas[0].id);
+    if (nuevas.length && !enVivo) await seleccionar(nuevas[0].id);
   } catch (e) {
     fase.textContent = "No se pudo cargar: " + e.message;
   }
@@ -302,10 +315,141 @@ function detenerCamara() {
   clearTimeout(temporizador);
   if (flujo) flujo.getTracks().forEach(t => t.stop());
   flujo = null;
+  detenerDron();
   $("video").classList.add("oculto");
   $("camara-barra").classList.add("oculto");
   $("en-vivo").classList.add("oculto");
 }
+
+// ------------------------------------------------------------- cámara del dron
+// La Jetson (jetson/zed_right.py) manda el video y hace la identificación a bordo;
+// aquí solo se muestra lo que el dron ve y piensa, y se guardan sus fotos.
+let dron = null;   // { base, temporizador, fallas }
+const NOMBRES_DRON = { sana: "Sana", sigatoka: "Sigatoka", otra_condicion: "Otra condición" };
+
+function baseDron(texto) {
+  texto = texto.trim();
+  const u = new URL(/^https?:\/\//i.test(texto) ? texto : `http://${texto}`);
+  if (!u.port) u.port = "8080";
+  return u.origin;
+}
+
+async function pedirDron(ruta, opciones = {}, espera = 4000) {
+  const control = new AbortController();
+  const t = setTimeout(() => control.abort(), espera);
+  try {
+    const r = await fetch(dron.base + ruta, { ...opciones, signal: control.signal, cache: "no-store" });
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      throw new Error(d.error || `El dron respondió ${r.status}`);
+    }
+    return r;
+  } finally { clearTimeout(t); }
+}
+
+async function abrirDron(texto) {
+  let base;
+  try { base = baseDron(texto); } catch (e) { return pintarError("Esa dirección no es válida. Escribe algo como 192.168.1.50"); }
+  try { localStorage.setItem("dron", texto.trim()); } catch (e) {}
+  detenerCamara();
+  dron = { base, temporizador: null, fallas: 0 };
+  $("lectura").innerHTML = `<h2>Conectando con el dron…</h2><p class="suave" style="margin:0">${esc(new URL(base).host)}</p>`;
+  ["probs", "que", "acciones"].forEach(s => $(s).classList.add("oculto"));
+  let est;
+  try { est = await (await pedirDron("/estado")).json(); }
+  catch (e) {
+    dron = null;
+    return pintarError(`No se pudo conectar con la Jetson en ${new URL(base).host}. Revisa que zed_right.py esté corriendo, que la dirección sea la de la línea [WEB] y que la laptop y la Jetson estén en la misma red.`);
+  }
+  seleccion = null; marcarSeleccion();
+  $("soltar").classList.add("oculto");
+  $("foto").classList.add("oculto");
+  const img = $("video-dron");
+  img.src = `${base}/video?t=${Date.now()}`;
+  img.classList.remove("oculto");
+  $("camara-barra").classList.remove("oculto");
+  $("btn-continuo").classList.add("oculto");
+  $("btn-capturar").textContent = "Tomar foto con el dron";
+  $("en-vivo").textContent = "En vivo · dron";
+  $("en-vivo").classList.remove("oculto");
+  $("dron-gps").classList.remove("oculto");
+  $("pie-foto").textContent = `Cámara del dron (${new URL(base).host})`;
+  pintarDron(est);
+  dron.temporizador = setTimeout(cicloDron, 500);
+}
+
+function pintarDron(est) {
+  const p = est.prediccion;
+  if (!est.modelo) {
+    $("lectura").innerHTML = `<h2>El dron no tiene modelo</h2><p class="suave" style="margin:0">El video funciona, pero para identificar
+      copia <code>sigatoka_cls_v1.onnx</code> a <code>vision/models/</code> en la Jetson y reinicia <code>zed_right.py</code>.</p>`;
+    ["probs", "que"].forEach(s => $(s).classList.add("oculto"));
+    $("pie-tiempo").textContent = "";
+  } else if (!p) {
+    $("lectura").innerHTML = `<h2>Esperando lectura del dron…</h2>`;
+    ["probs", "que"].forEach(s => $(s).classList.add("oculto"));
+  } else {
+    pintarLectura({ clase: p.clase, confianza: p.confianza, probs: p.probs, umbral: est.modelo.umbral,
+                    diagnosticable: p.confianza >= est.modelo.umbral });
+    $("pie-tiempo").textContent = `identificada en el dron · ${Math.round(p.ms)} ms por imagen`;
+  }
+  const g = est.gps;
+  $("dron-gps").textContent = g ? `GPS ${g.lat.toFixed(6)}, ${g.lon.toFixed(6)} · ${g.satelites} sat.` : "GPS: sin señal";
+  $("dron-gps").classList.toggle("sin-senal", !g);
+}
+
+async function cicloDron() {
+  if (!dron) return;
+  try {
+    pintarDron(await (await pedirDron("/estado", {}, 2500)).json());
+    dron.fallas = 0;
+  } catch (e) {
+    if (!dron) return;
+    if (++dron.fallas === 3) pintarError("Se perdió la conexión con el dron. Sigo intentando…");
+  }
+  if (dron) dron.temporizador = setTimeout(cicloDron, 500);
+}
+
+async function fotoDron() {
+  const b = $("btn-capturar");
+  b.disabled = true; b.textContent = "Tomando foto…";
+  try {
+    const r = await (await pedirDron("/foto", { method: "POST" }, 8000)).json();
+    const blob = await (await pedirDron(`/fotos/${encodeURIComponent(r.archivo)}`, {}, 15000)).blob();
+    await subir([{ f: blob, ruta: r.archivo }], { enVivo: true });
+  } catch (e) {
+    $("resumen-lote").className = "mensaje error";
+    $("resumen-lote").textContent = "No se pudo guardar la foto del dron: " + e.message;
+  } finally {
+    b.disabled = false;
+    if (dron) b.textContent = "Tomar foto con el dron";
+  }
+}
+
+function detenerDron() {
+  if (!dron) return;
+  clearTimeout(dron.temporizador);
+  dron = null;
+  const img = $("video-dron");
+  img.removeAttribute("src");   // cierra la conexión del video con la Jetson
+  img.classList.add("oculto");
+  $("dron-gps").classList.add("oculto");
+  $("btn-continuo").classList.remove("oculto");
+  $("btn-capturar").textContent = "Capturar y guardar";
+  $("en-vivo").textContent = "En vivo";
+}
+
+$("video-dron").onerror = () => {
+  if (!dron) return;
+  const base = dron.base;
+  setTimeout(() => { if (dron && dron.base === base) $("video-dron").src = `${base}/video?t=${Date.now()}`; }, 2000);
+};
+$("btn-dron").onclick = () => {
+  const f = $("dron-form"), abierto = f.classList.toggle("oculto") === false;
+  $("btn-dron").setAttribute("aria-expanded", String(abierto));
+  if (abierto) { try { $("dron-dir").value ||= localStorage.getItem("dron") || ""; } catch (e) {} $("dron-dir").focus(); }
+};
+$("dron-form").onsubmit = e => { e.preventDefault(); if ($("dron-dir").value.trim()) abrirDron($("dron-dir").value); };
 
 function reiniciar() {
   detenerCamara();
@@ -322,6 +466,7 @@ $("btn-camara").onclick = abrirCamara;
 $("btn-cerrar-camara").onclick = reiniciar;
 $("btn-continuo").onclick = () => { continuo = !continuo; actualizarContinuo(); };
 $("btn-capturar").onclick = async () => {
+  if (dron) return fotoDron();
   const blob = await cuadro(1600);
   const hora = new Date().toTimeString().slice(0, 8).replaceAll(":", "");
   subir([{ f: blob, ruta: `camara_${hora}.jpg` }]);

@@ -325,6 +325,12 @@ pre.registro {
 .soltar-icono { width: 52px; height: 52px; color: var(--texto-3); }
 .camara-barra { position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; display: flex; gap: .5rem; justify-content: center; flex-wrap: wrap; padding: 1rem; background: linear-gradient(transparent, rgba(6, 10, 13, .9)); }
 .en-vivo { position: absolute; z-index: 3; right: 16px; top: 16px; padding: .3rem .6rem; border-radius: 999px; background: var(--rojo); color: #fff; font-size: var(--t-xs); font-weight: 800; }
+.dron-gps { position: absolute; z-index: 3; left: 16px; top: 16px; padding: .3rem .6rem; border-radius: 999px; background: rgba(6, 10, 13, .78); color: var(--verde, #5fd27a); font-size: var(--t-xs); font-weight: 700; font-variant-numeric: tabular-nums; }
+.dron-gps.sin-senal { color: var(--texto-2); }
+@media (max-width: 600px) { .dron-gps { top: 52px; right: 16px; left: auto; } }
+.dron-form { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center; gap: .6rem; width: min(100%, 30rem); text-align: left; }
+.dron-form .campo { flex: 1 1 14rem; }
+.dron-form .nota { flex-basis: 100%; margin: 0; text-align: center; }
 .cargando-lectura { opacity: .45; transition: opacity 150ms ease; }
 
 .historial { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: .75rem; }

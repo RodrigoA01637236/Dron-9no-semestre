@@ -33,6 +33,24 @@ imágenes*). El primer clic cambia la X por **Borrar**; un segundo clic la borra
 confirmas en 3 segundos, vuelve a ser X). También hay un botón *Borrar esta imagen* junto a la
 imagen abierta. Borrar quita la imagen de la estación y del disco: no se puede deshacer.
 
+## Cámara del dron (video e identificación en vivo)
+
+En la Jetson corre `jetson/zed_right.py` (ver `jetson/README.md`): abre la ZED X Mini,
+**identifica a bordo** lo que ve la cámara (hasta 5 veces por segundo, con el mismo modelo
+`sigatoka_cls_v1.onnx`) y publica el video en `http://<ip-de-la-jetson>:8080`.
+
+1. Conecta la laptop a la misma red WiFi que la Jetson (o al hotspot de la Jetson).
+2. En **Cargar**, botón **Cámara del dron**, escribe la IP que imprime la Jetson en la línea
+   `[WEB]` (por ejemplo `192.168.1.50`) y *Conectar*. La estación la recuerda.
+3. Ves el video en vivo, arriba a la izquierda el GPS de la Pixhawk, y a la derecha lo que
+   **el dron** cree que ve, con su seguridad y cuántos milisegundos tardó en identificar.
+4. **Tomar foto con el dron** guarda la foto en la Jetson (1920×1200, con GPS y el
+   diagnóstico en el EXIF) y la trae a la estación como una imagen más de hoy, sin cerrar el
+   video. De ahí sigue el flujo normal: Revisar y Mapa.
+
+Sin laptop también se puede ver desde un celular en la misma red: abre
+`http://<ip-de-la-jetson>:8080` en el navegador.
+
 ## Cómo se lee el resultado
 
 - Cada imagen muestra el diagnóstico, su seguridad y una barra por condición. La línea

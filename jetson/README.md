@@ -7,11 +7,19 @@ Este directorio contiene el script de captura probado en la Jetson Orin Nano del
 - Pixhawk 6C por USB MAVLink: puerto usual `/dev/ttyACM0`.
 - GPS HERE4 por DroneCAN al Pixhawk: únicamente se utiliza cuando `GPS_RAW_INT.fix_type >= 3` y la posición es reciente (menos de 3 s).
 - Ventana con GPS o `GPS: SIN SENAL` y **sin contador FPS**.
-- `S`: toma una fotografía JPEG con texto sobreimpreso y EXIF GPS cuando existe fix válido.
+- `S`: toma una fotografía JPEG con EXIF GPS cuando existe fix válido.
 - `Q`: cierra la aplicación.
+- **Identificación a bordo:** con `vision/models/sigatoka_cls_v1.onnx` presente, un hilo
+  clasifica lo que ve la cámara (hasta 5 veces por segundo) y lo muestra en la ventana
+  (`DIAG: SIGATOKA 87%`, `DIAG: NO SEGURO`...). Sin el modelo, todo lo demás funciona igual.
+- **Página web en el puerto 8080:** video en vivo, GPS, diagnóstico y botón de foto. La
+  estación de tierra la usa desde *Cargar > Cámara del dron*; también abre en un celular.
+- Sin monitor (o con `--sin-ventana`) no abre ventana: se controla desde la página.
 - Directorio configurado en el script: `/home/jetsonnanoorin/Prueba#1`.
 - Nombre: `AA-MM-DD_HH-MM-SS-GPS.jpg`; si varias fotos coinciden en el mismo segundo, sufijos `_2`, `_3`, `_4` y siguientes.
-- Fecha (`FECHA`) y hora (`HORA`) visibles sobre el video y la fotografía JPEG.
+- Fecha (`FECHA`) y hora (`HORA`) visibles sobre el video. La foto se guarda **limpia**
+  (sin texto encima) para que sirva al modelo y al dataset; la fecha, hora, GPS y diagnóstico
+  van en el EXIF. Para volver a guardarla con el texto: `TEXTO_EN_FOTO = True` en el script.
 
 > El texto "GPS" en el nombre no implica que el JPEG contenga coordenadas. Sin fix válido, la foto se guarda sin datos EXIF GPS. La posición corresponde a la última lectura válida reciente, no a un disparo sincronizado por hardware.
 
@@ -24,6 +32,8 @@ Se tomó y verificó una fotografía en la Jetson con nombre `26-10-16_19-33-19-
 - Software: `Dron Sigatoka - Jetson`.
 - Descripción: `ZED X Mini RIGHT; GPS desde Pixhawk HERE4`.
 - Comentario EXIF: `Proyecto=Dron Sigatoka; Camara=ZED X Mini RIGHT; FechaHora=2026-10-16T19:33:19.128640-06:00; GPS=SIN_SENAL; FuenteGPS=Pixhawk 6C HERE4; AnalisisYOLO=NO_REALIZADO`.
+- Con el modelo cargado, `AnalisisYOLO` lleva la clase que vio el dron al tomar la foto, más
+  `ConfianzaYOLO=0.873; ModeloYOLO=sigatoka_cls_v1 a bordo`.
 
 ### Mapeo de información a etiquetas
 
@@ -43,7 +53,7 @@ Se tomó y verificó una fotografía en la Jetson con nombre `26-10-16_19-33-19-
 
 El desplazamiento horario (`-06:00` en la foto probada) está escrito en `UserComment`, **no** en un tag EXIF `OffsetTimeOriginal` independiente. El texto de la pantalla y los metadatos se forman a partir del mismo `instante` del reloj del sistema; el instante corresponde al ciclo de captura del fotograma, no a un disparo sincronizado por hardware.
 
-Un estado `GPS=SIN_SENAL` implica que no se escriben campos de latitud/longitud/altitud EXIF. El GPS válido requiere fix 3D y dato con menos de 3 segundos de antigüedad. La prueba con coordenadas GPS reales sigue pendiente de hacer en exterior. El campo `AnalisisYOLO=NO_REALIZADO` es un marcador; **no** hay todavía análisis ni porcentaje calculado por YOLO.
+Un estado `GPS=SIN_SENAL` implica que no se escriben campos de latitud/longitud/altitud EXIF. El GPS válido requiere fix 3D y dato con menos de 3 segundos de antigüedad. La prueba con coordenadas GPS reales sigue pendiente de hacer en exterior. `AnalisisYOLO=NO_REALIZADO` solo aparece si el modelo no está en la Jetson.
 
 ### Leer los metadatos de la fotografía más reciente
 
@@ -83,11 +93,44 @@ sudo apt install -y python3-venv
 mkdir -p ~/ZED_Pruebas
 python3 -m venv ~/ZED_Pruebas/.venv --system-site-packages
 source ~/ZED_Pruebas/.venv/bin/activate
-python -m pip install pymavlink piexif Pillow "numpy==1.26.4"
-python -c "import numpy, cv2, pyzed.sl, piexif, pymavlink; print('Dependencias OK')"
+python -m pip install pymavlink piexif Pillow onnxruntime "numpy==1.26.4"
+python -c "import numpy, cv2, pyzed.sl, piexif, pymavlink, onnxruntime; print('Dependencias OK')"
 ```
 
 Se utilizó NumPy 1.26.4 porque el OpenCV 4.8.0 del sistema no cargaba con NumPy 2.5.3. Evitar reemplazar a ciegas OpenCV o bibliotecas NVIDIA.
+
+## Modelo para la identificación a bordo
+
+El script busca el repo en `~/Dron-9no-semestre` (o en la carpeta de arriba de `jetson/`) y
+usa `vision/models/sigatoka_cls_v1.onnx` con el mismo preprocesado que la estación
+(`vision/clasificador.py`). El `.onnx` no está en git: copiarlo del Drive del equipo.
+
+```bash
+cd ~/Dron-9no-semestre && git pull
+cp /ruta/del/drive/sigatoka_cls_v1.onnx vision/models/
+```
+
+Al arrancar debe imprimir `[MODELO] sigatoka_cls_v1.onnx cargado`. Corre en CPU con
+onnxruntime; la página muestra cuántos milisegundos tarda cada identificación.
+
+## Página web (video para la estación)
+
+Al arrancar imprime la dirección, por ejemplo:
+
+```
+[WEB] http://192.168.1.50:8080  (en la estación: Cargar > Cámara del dron > 192.168.1.50)
+```
+
+| Ruta | Qué da |
+| --- | --- |
+| `/` | Página sencilla para celular: video, diagnóstico, GPS y botón de foto |
+| `/video` | Video MJPEG (960 px de ancho, ~12 cuadros/s; solo se codifica si alguien lo ve) |
+| `/estado` | JSON con GPS, modelo y la última identificación (`clase`, `confianza`, `probs`, `ms`) |
+| `POST /foto` | Toma una foto como la tecla `S` y responde el nombre del archivo |
+| `/fotos/<nombre>.jpg` | Descarga una foto de la carpeta de fotos |
+
+La laptop y la Jetson deben estar en la misma red. Si no conecta, revisar que el puerto 8080
+no esté bloqueado (`sudo ufw status`; si está activo: `sudo ufw allow 8080/tcp`).
 
 ## Permisos Pixhawk USB
 
@@ -101,7 +144,7 @@ Cerrar sesión y volver a entrar para aplicar el cambio permanentemente; `newgrp
 
 ## Ejecución manual
 
-Copiar `zed_right.py` al directorio `~/ZED_Pruebas/`. Cerrar ZED Studio y otras instancias de `zed_right.py`.
+Copiar `zed_right.py` al directorio `~/ZED_Pruebas/` (o correrlo directo desde el repo). Cerrar ZED Studio y otras instancias de `zed_right.py`.
 
 ```bash
 source ~/ZED_Pruebas/.venv/bin/activate
