@@ -415,7 +415,9 @@ async function fotoDron() {
   b.disabled = true; b.textContent = "Tomando foto…";
   try {
     const r = await (await pedirDron("/foto", { method: "POST" }, 8000)).json();
-    const blob = await (await pedirDron(`/fotos/${encodeURIComponent(r.archivo)}`, {}, 15000)).blob();
+    // La estación usa la copia sin texto encima (el texto confunde al modelo); si no hay, la normal.
+    const ruta = r.url_sin_texto ? `/fotos/sin_texto/${encodeURIComponent(r.archivo)}` : `/fotos/${encodeURIComponent(r.archivo)}`;
+    const blob = await (await pedirDron(ruta, {}, 15000)).blob();
     await subir([{ f: blob, ruta: r.archivo }], { enVivo: true });
   } catch (e) {
     $("resumen-lote").className = "mensaje error";

@@ -4,10 +4,12 @@ Este directorio contiene el script de captura probado en la Jetson Orin Nano del
 
 ## Hardware y comportamiento
 - ZED X Mini a través de ZED Link Duo: imagen **RIGHT** (HD1200, 30 FPS solicitado).
-- Pixhawk 6C por USB MAVLink: puerto usual `/dev/ttyACM0`.
+- Pixhawk 6C por USB MAVLink: puerto usual `/dev/ttyACM0`. Si no existe (por ejemplo, al
+  reconectar el USB aparece como `ttyACM1`), el script la busca en `/dev/serial/by-id/` y
+  `/dev/ttyACM*`, y reintenta cada 3 s sin detener la cámara.
 - GPS HERE4 por DroneCAN al Pixhawk: únicamente se utiliza cuando `GPS_RAW_INT.fix_type >= 3` y la posición es reciente (menos de 3 s).
 - Ventana con GPS o `GPS: SIN SENAL` y **sin contador FPS**.
-- `S`: toma una fotografía JPEG con EXIF GPS cuando existe fix válido.
+- `S`: toma una fotografía JPEG con texto sobreimpreso y EXIF GPS cuando existe fix válido.
 - `Q`: cierra la aplicación.
 - **Identificación a bordo:** con `vision/models/sigatoka_cls_v1.onnx` presente, un hilo
   clasifica lo que ve la cámara (hasta 5 veces por segundo) y lo muestra en la ventana
@@ -17,9 +19,11 @@ Este directorio contiene el script de captura probado en la Jetson Orin Nano del
 - Sin monitor (o con `--sin-ventana`) no abre ventana: se controla desde la página.
 - Directorio configurado en el script: `/home/jetsonnanoorin/Prueba#1`.
 - Nombre: `AA-MM-DD_HH-MM-SS-GPS.jpg`; si varias fotos coinciden en el mismo segundo, sufijos `_2`, `_3`, `_4` y siguientes.
-- Fecha (`FECHA`) y hora (`HORA`) visibles sobre el video. La foto se guarda **limpia**
-  (sin texto encima) para que sirva al modelo y al dataset; la fecha, hora, GPS y diagnóstico
-  van en el EXIF. Para volver a guardarla con el texto: `TEXTO_EN_FOTO = True` en el script.
+- Fecha (`FECHA`), hora (`HORA`), GPS y diagnóstico (`DIAG`) visibles sobre el video y la
+  fotografía JPEG (`TEXTO_EN_FOTO = True`).
+- **Copia sin texto:** cada foto se guarda también, con el mismo nombre y EXIF, en
+  `Prueba#1/sin_texto/`. El texto encima confunde al modelo, así que el dataset, el
+  reentrenamiento y la estación de tierra usan esa copia (`COPIA_SIN_TEXTO = True`).
 
 > El texto "GPS" en el nombre no implica que el JPEG contenga coordenadas. Sin fix válido, la foto se guarda sin datos EXIF GPS. La posición corresponde a la última lectura válida reciente, no a un disparo sincronizado por hardware.
 
@@ -142,24 +146,43 @@ sudo usermod -aG dialout "$USER"
 
 Cerrar sesión y volver a entrar para aplicar el cambio permanentemente; `newgrp dialout` puede servir temporalmente en una terminal nueva.
 
-## Ejecución manual
+## Detener, iniciar y actualizar (zed_control.sh)
 
-Copiar `zed_right.py` al directorio `~/ZED_Pruebas/` (o correrlo directo desde el repo). Cerrar ZED Studio y otras instancias de `zed_right.py`.
+El lanzador vuelve a abrir el programa cada vez que se cierra con error, así que para
+cerrarlo de verdad (por ejemplo, para correrlo a mano o actualizarlo) se usa:
 
 ```bash
+cd ~/Dron-9no-semestre
+bash jetson/zed_control.sh detener    # cierra la cámara y no deja que se reabra (ni al reiniciar)
+bash jetson/zed_control.sh iniciar    # la vuelve a abrir
+bash jetson/zed_control.sh reiniciar  # después de un git pull, para usar la versión nueva
+bash jetson/zed_control.sh estado     # qué corre, la dirección [WEB] y las últimas líneas del log
+bash jetson/zed_control.sh instalar   # una vez: el lanzador pasa a usar jetson/zed_right.py del repo
+```
+
+`detener` crea `~/ZED_Pruebas/PAUSA`; mientras exista, ni el lanzador ni el autostart abren
+la cámara. `iniciar` lo borra. Cerrar la ventana con `Q` también termina sin que se reabra.
+
+## Ejecución manual
+
+Detener primero lo que esté corriendo, para no tener dos programas peleando por la cámara:
+
+```bash
+cd ~/Dron-9no-semestre
+bash jetson/zed_control.sh detener
 source ~/ZED_Pruebas/.venv/bin/activate
-python ~/ZED_Pruebas/zed_right.py
+python jetson/zed_right.py
+# al terminar: bash jetson/zed_control.sh iniciar
 ```
 
 No iniciar una segunda instancia mientras la cámara está ocupada. QGroundControl u otro lector del puerto serial puede interferir con MAVLink.
 
 ## Arranque automático gráfico
 
-El arranque automático usado para la Jetson inicia después de que Ubuntu abre una sesión gráfica. El lanzador de ejemplo `iniciar_zed.sh` está en esta carpeta; espera 30 segundos, bloquea instancias duplicadas y reintenta la cámara tras errores de apertura.
+El arranque automático usado para la Jetson inicia después de que Ubuntu abre una sesión gráfica. El lanzador `iniciar_zed.sh` de esta carpeta espera 30 segundos, bloquea instancias duplicadas, reintenta la cámara tras errores de apertura, respeta el archivo `PAUSA` y corre **la versión del repo** (`~/Dron-9no-semestre/jetson/zed_right.py`), así que basta `git pull` + `reiniciar` para actualizar.
 
 ```bash
-cp jetson/iniciar_zed.sh ~/ZED_Pruebas/iniciar_zed.sh
-chmod +x ~/ZED_Pruebas/iniciar_zed.sh
+bash jetson/zed_control.sh instalar   # copia el lanzador (respalda el anterior)
 mkdir -p ~/.config/autostart
 cat > ~/.config/autostart/zed-right.desktop <<'EOF'
 [Desktop Entry]
@@ -180,8 +203,8 @@ tail -n 80 ~/ZED_Pruebas/zed-right.log
 pgrep -af 'zed_right.py|ZED_Studio'
 ```
 
-Para detener el autostart, quitar `~/.config/autostart/zed-right.desktop`.
+Para pausar el autostart: `bash jetson/zed_control.sh detener`. Para quitarlo del todo, borrar `~/.config/autostart/zed-right.desktop`.
 
 ## Limitaciones por verificar en campo
 
-Las pruebas interiores confirmaron el enlace MAVLink, pero el HERE4 no obtuvo fix GPS (0 satélites). Falta validar coordenadas EXIF reales en exterior. También conviene manejar la asignación dinámica del puerto USB y la sincronización precisa de fotografías con GNSS en una versión posterior.
+Las pruebas interiores confirmaron el enlace MAVLink, pero el HERE4 no obtuvo fix GPS (0 satélites). Falta validar coordenadas EXIF reales en exterior. La búsqueda del puerto USB ya está; falta la sincronización precisa de fotografías con GNSS en una versión posterior.

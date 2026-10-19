@@ -1,4 +1,5 @@
 import cv2
+import glob
 import json
 import os
 import signal
@@ -17,12 +18,13 @@ from pymavlink import mavutil
 
 # CONFIGURACION
 CARPETA = Path("/home/jetsonnanoorin/Prueba#1")
-PUERTO = "/dev/ttyACM0"
+PUERTO = "/dev/ttyACM0"   # si no existe, se busca la Pixhawk en /dev/serial/by-id y /dev/ttyACM*
 PUERTO_WEB = 8080        # video y diagnóstico en http://<ip-de-la-jetson>:8080
 ANCHO_WEB = 960          # ancho del video que se manda por WiFi (más chico = más fluido)
 FPS_WEB = 12
 PAUSA_MODELO = 0.2       # como máximo 5 identificaciones por segundo
-TEXTO_EN_FOTO = False    # True = guardar la foto con FECHA/HORA/GPS dibujados encima
+TEXTO_EN_FOTO = True     # la foto se guarda con FECHA/HORA/GPS/DIAG dibujados encima
+COPIA_SIN_TEXTO = True   # y una copia limpia en <CARPETA>/sin_texto/ para el modelo y el dataset
 # Sin monitor (en el dron) o con --sin-ventana: no abre ventana, solo la página.
 CON_VENTANA = bool(os.environ.get("DISPLAY")) and "--sin-ventana" not in sys.argv
 
@@ -32,7 +34,7 @@ gps_actual = None
 gps_lock = threading.Lock()
 
 # Último cuadro de la cámara (lo comparten la ventana, el modelo y la página)
-ultimo = {"frame": None, "pantalla": None, "instante": None, "n": 0}
+ultimo = {"frame": None, "instante": None, "n": 0, "con_texto": None}
 cuadro_lock = threading.Lock()
 
 prediccion = None
@@ -51,15 +53,31 @@ COLORES = {"sana": (80, 200, 80), "sigatoka": (60, 60, 230), "otra_condicion": (
 
 
 # LEER GPS DEL PIXHAWK
+def buscar_puerto():
+    # El USB de la Pixhawk a veces aparece como ttyACM1 u otro nombre al reconectar
+    if Path(PUERTO).exists():
+        return PUERTO
+
+    for patron in ("/dev/serial/by-id/*PX4*", "/dev/serial/by-id/*Pixhawk*",
+                   "/dev/serial/by-id/*Holybro*", "/dev/ttyACM*"):
+        encontrados = sorted(glob.glob(patron))
+        if encontrados:
+            return encontrados[0]
+
+    return PUERTO
+
+
 def leer_gps():
     global gps_actual
+    ultimo_error = None
 
     while True:
         pixhawk = None
 
         try:
+            puerto = buscar_puerto()
             pixhawk = mavutil.mavlink_connection(
-                PUERTO, baud=115200
+                puerto, baud=115200
             )
 
             hb = pixhawk.wait_heartbeat(timeout=15)
@@ -67,7 +85,8 @@ def leer_gps():
             if hb is None:
                 raise RuntimeError("Sin heartbeat")
 
-            print("[GPS] Pixhawk conectado")
+            print(f"[GPS] Pixhawk conectado en {puerto}")
+            ultimo_error = None
 
             pixhawk.mav.command_long_send(
                 pixhawk.target_system,
@@ -107,7 +126,10 @@ def leer_gps():
                         gps_actual = None
 
         except Exception as e:
-            print("[GPS]", e)
+            # Sin Pixhawk el error se repite cada 3 s: se imprime solo cuando cambia
+            if str(e) != ultimo_error:
+                print("[GPS]", e, "(reintentando cada 3 s)")
+                ultimo_error = str(e)
 
         finally:
             with gps_lock:
@@ -295,18 +317,18 @@ def crear_exif(gps, instante, pred=None):
 
 
 # GUARDAR FOTOGRAFIA
-def guardar_foto(imagen_bgr, gps, instante, pred=None):
+def guardar_foto(frame, pantalla, gps, instante, pred=None):
     from PIL import Image
 
     marca = instante.strftime("%y-%m-%d_%H-%M-%S")
 
     exif = crear_exif(gps, instante, pred)
 
-    imagen_rgb = cv2.cvtColor(
-        imagen_bgr, cv2.COLOR_BGR2RGB
-    )
+    con_texto = TEXTO_EN_FOTO and pantalla is not None
 
-    imagen = Image.fromarray(imagen_rgb)
+    imagen = Image.fromarray(cv2.cvtColor(
+        pantalla if con_texto else frame, cv2.COLOR_BGR2RGB
+    ))
 
     # El candado evita choques si la tecla S y la página toman foto a la vez
     with foto_lock:
@@ -323,6 +345,17 @@ def guardar_foto(imagen_bgr, gps, instante, pred=None):
         with open(ruta, "xb") as archivo:
             imagen.save(
                 archivo,
+                format="JPEG",
+                quality=95,
+                exif=exif
+            )
+
+        # Copia sin texto con el mismo nombre y EXIF: el texto sobreimpreso
+        # confunde al modelo, así que el dataset y la estación usan esta.
+        if con_texto and COPIA_SIN_TEXTO:
+            (CARPETA / "sin_texto").mkdir(exist_ok=True)
+            Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)).save(
+                CARPETA / "sin_texto" / ruta.name,
                 format="JPEG",
                 quality=95,
                 exif=exif
@@ -346,16 +379,17 @@ def guardar_foto(imagen_bgr, gps, instante, pred=None):
 
 
 def tomar_foto():
+    # Con texto: el cuadro, su versión con texto y su hora salen del mismo ciclo
     with cuadro_lock:
-        frame = ultimo["frame"]
-        pantalla = ultimo["pantalla"]
-        instante = ultimo["instante"]
+        if TEXTO_EN_FOTO and ultimo["con_texto"] is not None:
+            frame, pantalla, instante = ultimo["con_texto"]
+        else:
+            frame, pantalla, instante = ultimo["frame"], None, ultimo["instante"]
 
     if frame is None:
         return None
 
-    imagen = pantalla if TEXTO_EN_FOTO and pantalla is not None else frame
-    return guardar_foto(imagen, obtener_gps(), instante, obtener_prediccion())
+    return guardar_foto(frame, pantalla, obtener_gps(), instante, obtener_prediccion())
 
 
 # VIDEO PARA LA PAGINA (MJPEG): solo se codifica si alguien lo está viendo
@@ -475,7 +509,12 @@ def crear_servidor(modelo):
                 self.responder_json(estado_actual(modelo))
             elif ruta.startswith("/fotos/"):
                 nombre = unquote(ruta[len("/fotos/"):])
-                archivo = CARPETA / nombre
+                sub = ""
+
+                if nombre.startswith("sin_texto/"):
+                    sub, nombre = "sin_texto", nombre[len("sin_texto/"):]
+
+                archivo = CARPETA / sub / nombre
 
                 if "/" in nombre or not nombre.endswith(".jpg") or not archivo.is_file():
                     self.responder_json({"ok": False, "error": "No existe esa foto"}, 404)
@@ -498,7 +537,13 @@ def crear_servidor(modelo):
             if ruta is None:
                 self.responder_json({"ok": False, "error": "Todavía no hay imagen de la cámara"}, 503)
             else:
-                self.responder_json({"ok": True, "archivo": ruta.name, "url": f"/fotos/{ruta.name}"})
+                limpia = CARPETA / "sin_texto" / ruta.name
+                self.responder_json({
+                    "ok": True,
+                    "archivo": ruta.name,
+                    "url": f"/fotos/{ruta.name}",
+                    "url_sin_texto": f"/fotos/sin_texto/{ruta.name}" if limpia.is_file() else None
+                })
 
         def enviar_video(self):
             global clientes_video
@@ -711,7 +756,7 @@ try:
         cv2.putText(pantalla, diag, (30, y), cv2.FONT_HERSHEY_SIMPLEX, 1.1, color_diag, 2)
 
         with cuadro_lock:
-            ultimo["pantalla"] = pantalla
+            ultimo["con_texto"] = (frame, pantalla, instante)
 
         if not CON_VENTANA:
             continue
@@ -724,8 +769,7 @@ try:
         tecla = cv2.waitKey(1) & 0xFF
 
         if tecla == ord("s"):
-            imagen = pantalla if TEXTO_EN_FOTO else frame
-            guardar_foto(imagen, gps, instante, pred)
+            guardar_foto(frame, pantalla, gps, instante, pred)
 
         elif tecla == ord("q"):
             break
