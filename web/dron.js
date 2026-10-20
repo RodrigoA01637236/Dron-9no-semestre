@@ -130,6 +130,13 @@ $("btn-desconectar").onclick = () => {
   pintarAviso("Sin lectura", "Te desconectaste del dron.");
 };
 $("btn-foto").onclick = fotoDron;
+// Tecla S: toma la foto igual que la tecla S en la ventana de la Jetson (mismo guardado en el dron).
+document.addEventListener("keydown", e => {
+  if (!dron || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.key.toLowerCase() !== "s") return;
+  if (e.target.closest("input, textarea, select")) return;
+  e.preventDefault();
+  if (!$("btn-foto").disabled) fotoDron();
+});
 
 // ?dron=https://... en el enlace conecta directo. Si la página la sirve la propia Jetson
 // (hotspot, jetson/sitio_local.sh), el dron es esa misma máquina en el puerto 8080.

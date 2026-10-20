@@ -58,6 +58,10 @@ p { margin: 0 0 .75rem; }
 code { font-family: var(--mono); font-size: .85em; background: var(--panel-2); padding: .05em .4em; border-radius: 6px; overflow-wrap: anywhere; }
 pre { margin: .5rem 0 0; padding: .8rem 1rem; overflow-x: auto; background: var(--visor); color: var(--texto-2); font: .8rem/1.55 var(--mono); border-radius: var(--r-s); }
 pre code { background: none; padding: 0; }
+kbd {
+  display: inline-grid; place-items: center; min-width: 1.5rem; height: 1.5rem; padding: 0 .35rem; font-family: var(--mono);
+  border: 1px solid var(--borde-fuerte); border-radius: 6px; color: var(--texto-2); font-size: var(--t-xs); line-height: 1;
+}
 .num, .lectura-valor, td { font-variant-numeric: tabular-nums; }
 .oculto { display: none !important; }
 .fila { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
@@ -201,7 +205,9 @@ ol.instrucciones { margin: 0; padding-left: 1.3rem; color: var(--texto-2); font-
 .soltar h2 { color: #fff; }
 .soltar p { max-width: 38ch; margin: 0 auto; font-size: var(--t-s); }
 .soltar-icono { width: 52px; height: 52px; color: var(--texto-3); }
-.camara-barra { position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; display: flex; gap: .5rem; justify-content: center; flex-wrap: wrap; padding: 1rem; background: linear-gradient(transparent, rgba(6, 10, 13, .9)); }
+.camara-barra { position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; display: flex; gap: .5rem .9rem; align-items: center; justify-content: center; flex-wrap: wrap; padding: 1rem; background: linear-gradient(transparent, rgba(6, 10, 13, .9)); }
+.camara-barra .atajo { color: var(--texto-2); }
+@media (hover: none) { .camara-barra .atajo { display: none; } }
 .en-vivo { position: absolute; z-index: 3; right: 16px; top: 16px; padding: .3rem .6rem; border-radius: 999px; background: var(--rojo); color: #fff; font-size: var(--t-xs); font-weight: 800; }
 .dron-gps { position: absolute; z-index: 3; left: 16px; top: 16px; padding: .3rem .6rem; border-radius: 999px; background: rgba(6, 10, 13, .78); color: #5fd27a; font-size: var(--t-xs); font-weight: 700; font-variant-numeric: tabular-nums; }
 .dron-gps.sin-senal { color: var(--texto-2); }
