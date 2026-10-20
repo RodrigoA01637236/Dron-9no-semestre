@@ -80,3 +80,8 @@ data/raw/
 data/dataset/
 data/estacion/
 data/flights/
+
+# Sitio público: lo arma web/preparar.sh (copias del modelo y la fuente) y Netlify CLI
+web/modelo/
+web/fuentes/
+.netlify

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Identificar una hoja · Dron Sigatoka</title>
+<meta name="description" content="Sube o toma una foto de una hoja de plátano y el modelo del Dron Sigatoka te dice si está sana, tiene Sigatoka u otra condición. Corre en tu navegador.">
+<meta name="theme-color" content="#0f171d">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f171d'/%3E%3Cpath d='M6 12V6h6M20 6h6v6M26 20v6h-6M12 26H6v-6' fill='none' stroke='%23eaf0f4' stroke-width='2.4'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23ff5a6e'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="sitio.css">
+</head>
+<body>
+<header class="barra-sup">
+  <a class="pastilla" href="./" aria-label="Dron Sigatoka, inicio">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 8V3h5M16 3h5v5M21 16v5h-5M8 21H3v-5"/><circle cx="12" cy="12" r="2.5" fill="#ff5a6e" stroke="none"/></svg>
+    Dron Sigatoka</a>
+  <nav class="navegacion" aria-label="Secciones">
+    <a href="./">Proyecto</a>
+    <a href="identificar.html" aria-current="page">Identificar una hoja</a>
+    <a href="dron.html">Dron en vivo</a>
+  </nav>
+</header>
+
+<main>
+  <section class="hoja" aria-labelledby="titulo">
+    <div class="hoja-cabeza">
+      <div>
+        <h1 id="titulo">Identificar una hoja</h1>
+        <p>Sube o toma una foto de una hoja de plátano y el modelo te dice qué cree que tiene, con qué seguridad y qué
+          hacer. Corre en tu navegador: la foto no se sube a ningún lado.</p>
+      </div>
+    </div>
+
+    <div class="mesa">
+      <div class="mesa-foto" id="visor">
+        <div class="soltar" id="soltar">
+          <svg class="soltar-icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 15v4h16v-4"/></svg>
+          <div>
+            <h2>Elige una foto o arrástrala aquí</h2>
+            <p style="margin-top:.5rem">Funciona mejor con la hoja llenando la foto, de cerca y con luz de día.</p>
+          </div>
+          <div class="fila" style="justify-content:center">
+            <label class="boton claro grande">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v14H4Z"/><path d="m4 16 5-5 4 4 3-3 4 4"/></svg>
+              Elegir foto<input type="file" id="archivo" accept="image/*" hidden></label>
+            <label class="boton grande">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3v11H4Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+              Tomar foto<input type="file" id="captura" accept="image/*" capture="environment" hidden></label>
+          </div>
+        </div>
+        <img id="foto" class="oculto" alt="Foto de la hoja">
+      </div>
+
+      <div class="mesa-lectura" aria-live="polite">
+        <div id="lectura" style="display:grid; gap:12px">
+          <h2>Todavía no hay foto</h2>
+          <p class="suave" style="margin:0">Elige o toma una foto y aquí verás qué cree el modelo que tiene la hoja.</p>
+        </div>
+        <div id="probs" class="oculto"></div>
+        <div id="que" class="que-hacer oculto"></div>
+        <label class="boton claro grande oculto" id="btn-otra" style="margin-top:auto">
+          Probar con otra foto<input type="file" id="archivo-otra" accept="image/*" hidden></label>
+      </div>
+    </div>
+    <div class="pie-foto"><span id="pie-foto">Ninguna foto seleccionada</span><span id="pie-tiempo">Cargando el modelo…</span></div>
+
+    <p class="nota" style="margin:24px 0 0; max-width:72ch">Es la versión inicial del modelo: acertó el 91.8 % en fotos
+      públicas de hojas tomadas de cerca, pero todavía no se valida con fotos del dron en campo. Úsalo como apoyo y
+      confirma con un agrónomo. El resultado puede variar unos puntos respecto a la estación de tierra porque el
+      navegador reduce la foto de forma un poco distinta.</p>
+  </section>
+</main>
+
+<footer>
+  Equipo Platanos Machos · MR3002B ·
+  <a href="https://github.com/RodrigoA01637236/Dron-9no-semestre">Código en GitHub</a>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/ort.min.js"></script>
+<script src="sitio.js"></script>
+<script src="identificar.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+# Sitio público del Dron Sigatoka (carpeta web/). Ver web/README.md.
+[build]
+  command = "bash web/preparar.sh"
+  publish = "web"
+
+# El modelo cambia poco y pesa 5.5 MB: que el navegador lo revalide en vez de bajarlo cada vez.
+[[headers]]
+  for = "/modelo/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

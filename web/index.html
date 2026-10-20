@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dron Sigatoka</title>
+<meta name="description" content="Un dron que fotografía plantaciones de plátano y un modelo que identifica la Sigatoka en las hojas. Proyecto del equipo Platanos Machos.">
+<meta name="theme-color" content="#0f171d">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f171d'/%3E%3Cpath d='M6 12V6h6M20 6h6v6M26 20v6h-6M12 26H6v-6' fill='none' stroke='%23eaf0f4' stroke-width='2.4'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23ff5a6e'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="sitio.css">
+</head>
+<body>
+<header class="barra-sup">
+  <a class="pastilla" href="./" aria-label="Dron Sigatoka, inicio">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 8V3h5M16 3h5v5M21 16v5h-5M8 21H3v-5"/><circle cx="12" cy="12" r="2.5" fill="#ff5a6e" stroke="none"/></svg>
+    Dron Sigatoka</a>
+  <nav class="navegacion" aria-label="Secciones">
+    <a href="./" aria-current="page">Proyecto</a>
+    <a href="identificar.html">Identificar una hoja</a>
+    <a href="dron.html">Dron en vivo</a>
+  </nav>
+</header>
+
+<main>
+  <section class="hoja portada" aria-labelledby="titulo">
+    <h1 id="titulo">Encontrar la Sigatoka desde el aire</h1>
+    <p>Un dron fotografía las plantaciones de plátano. Un modelo revisa cada foto y dice si la hoja está sana, tiene
+      Sigatoka u otra condición, y con qué seguridad. Después, en la estación de tierra, un agrónomo confirma los
+      resultados y el mapa muestra por zonas dónde hay que actuar.</p>
+    <div class="fila">
+      <a class="boton primario grande" href="identificar.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3v11H4Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+        Identificar una hoja</a>
+      <a class="boton grande" href="dron.html">Ver el dron en vivo</a>
+    </div>
+  </section>
+
+  <section class="hoja" aria-labelledby="como">
+    <div class="seccion">
+      <h2 id="como">Cómo funciona</h2>
+      <div class="pasos">
+        <div class="tarjeta paso">
+          <span class="circulo">1</span>
+          <h3>Vuela y fotografía</h3>
+          <p>Una cámara ZED X Mini en el dron toma las fotos y una Jetson Orin Nano las guarda. La Pixhawk 6C agrega
+            a cada foto la posición del GPS HERE4.</p>
+        </div>
+        <div class="tarjeta paso">
+          <span class="circulo">2</span>
+          <h3>Identifica a bordo</h3>
+          <p>La Jetson corre el modelo hasta cinco veces por segundo y manda el video y el diagnóstico por WiFi. Si
+            el modelo no está seguro, lo dice en vez de adivinar.</p>
+        </div>
+        <div class="tarjeta paso">
+          <span class="circulo">3</span>
+          <h3>Revisa y arma el mapa</h3>
+          <p>En la estación de tierra el agrónomo revisa primero las fotos dudosas. El mapa agrupa los resultados por
+            zonas, porque el GPS tiene un margen de 2 a 3 metros.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="seccion">
+      <h2>El modelo</h2>
+      <dl class="hechos">
+        <dt>Qué distingue</dt>
+        <dd><span class="leyenda">
+          <span class="ficha"><i class="muestra" style="background:#2e9e44"></i>Sana</span>
+          <span class="ficha"><i class="muestra" style="background:#d7263d"></i>Sigatoka</span>
+          <span class="ficha"><i class="muestra" style="background:#f0a202"></i>Otra condición</span></span></dd>
+        <dt>Acierto en prueba</dt>
+        <dd><b class="num">91.8 %</b> en fotos públicas de hojas tomadas de cerca</dd>
+        <dt>Seguridad mínima</dt>
+        <dd><b class="num">65 %</b>. Por debajo, el resultado es "El modelo no está seguro" y pide otra foto</dd>
+        <dt>Tipo</dt>
+        <dd>Clasificador YOLOv8n-cls en formato ONNX, 5.5 MB, imagen de 384 × 384 px</dd>
+        <dt>Estado</dt>
+        <dd>Versión inicial. Todavía no se valida con fotos tomadas por el dron en campo: úsalo como apoyo y
+          confirma con un agrónomo.</dd>
+      </dl>
+    </div>
+
+    <div class="seccion">
+      <h2>Pruébalo</h2>
+      <div class="pasos">
+        <div class="tarjeta paso">
+          <h3>Identificar una hoja</h3>
+          <p>Sube o toma una foto de una hoja de plátano. El modelo corre en tu navegador: la foto no sale de tu
+            dispositivo.</p>
+          <a class="boton claro" href="identificar.html" style="justify-self:start">Elegir una foto</a>
+        </div>
+        <div class="tarjeta paso">
+          <h3>Dron en vivo</h3>
+          <p>Cuando el dron está encendido y conectado a internet, aquí se ve su cámara y lo que el modelo cree que
+            ve, junto con el GPS.</p>
+          <a class="boton" href="dron.html" style="justify-self:start">Conectar con el dron</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Equipo Platanos Machos · MR3002B ·
+  <a href="https://github.com/RodrigoA01637236/Dron-9no-semestre">Código en GitHub</a>
+</footer>
+</body>
+</html>

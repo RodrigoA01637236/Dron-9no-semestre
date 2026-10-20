@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dron en vivo · Dron Sigatoka</title>
+<meta name="description" content="Video en vivo de la cámara del Dron Sigatoka, con el GPS y el diagnóstico que hace el modelo a bordo.">
+<meta name="theme-color" content="#0f171d">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f171d'/%3E%3Cpath d='M6 12V6h6M20 6h6v6M26 20v6h-6M12 26H6v-6' fill='none' stroke='%23eaf0f4' stroke-width='2.4'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23ff5a6e'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="sitio.css">
+</head>
+<body>
+<header class="barra-sup">
+  <a class="pastilla" href="./" aria-label="Dron Sigatoka, inicio">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 8V3h5M16 3h5v5M21 16v5h-5M8 21H3v-5"/><circle cx="12" cy="12" r="2.5" fill="#ff5a6e" stroke="none"/></svg>
+    Dron Sigatoka</a>
+  <nav class="navegacion" aria-label="Secciones">
+    <a href="./">Proyecto</a>
+    <a href="identificar.html">Identificar una hoja</a>
+    <a href="dron.html" aria-current="page">Dron en vivo</a>
+  </nav>
+</header>
+
+<main>
+  <section class="hoja" aria-labelledby="titulo">
+    <div class="hoja-cabeza">
+      <div>
+        <h1 id="titulo">Dron en vivo</h1>
+        <p>La cámara del dron, su GPS y lo que el modelo cree que ve, mientras la Jetson está encendida. Escribe la
+          dirección pública del dron (empieza con <code>https://</code>).</p>
+      </div>
+    </div>
+
+    <form class="fila" id="form-dron" autocomplete="off" style="align-items:flex-end; margin-bottom:20px">
+      <label class="campo"><span>Dirección del dron</span>
+        <input type="text" id="dron-dir" placeholder="https://ejemplo.trycloudflare.com" inputmode="url" spellcheck="false"></label>
+      <button class="boton claro" type="submit" id="btn-conectar">Conectar</button>
+      <button class="boton oculto" type="button" id="btn-desconectar">Desconectar</button>
+    </form>
+
+    <div class="mesa">
+      <div class="mesa-foto">
+        <div class="soltar" id="espera">
+          <svg class="soltar-icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5.5" cy="5.5" r="2.5"/><circle cx="18.5" cy="5.5" r="2.5"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/><path d="M8 8l2.5 2.5M16 8l-2.5 2.5M8 16l2.5-2.5M16 16l-2.5-2.5"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/></svg>
+          <div>
+            <h2>Sin conexión con el dron</h2>
+            <p style="margin-top:.5rem">Escribe arriba la dirección que da el túnel de la Jetson y presiona Conectar.</p>
+          </div>
+        </div>
+        <img id="video" class="oculto" alt="Video en vivo de la cámara del dron">
+        <span class="en-vivo oculto" id="en-vivo">En vivo · dron</span>
+        <span class="dron-gps oculto" id="dron-gps"></span>
+        <div class="camara-barra oculto" id="barra">
+          <button class="boton claro" id="btn-foto" type="button">Tomar foto con el dron</button>
+        </div>
+      </div>
+
+      <div class="mesa-lectura" aria-live="polite">
+        <div id="lectura" style="display:grid; gap:12px">
+          <h2>Sin lectura</h2>
+          <p class="suave" style="margin:0">Cuando te conectes, aquí verás lo que el dron cree que ve, actualizado cada
+            segundo.</p>
+        </div>
+        <div id="probs" class="oculto"></div>
+        <div id="que" class="que-hacer oculto"></div>
+        <p class="mensaje" id="msg-foto"></p>
+      </div>
+    </div>
+    <div class="pie-foto"><span id="pie-foto">Sin conexión</span><span id="pie-tiempo"></span></div>
+
+    <div class="seccion" style="margin-top:32px">
+      <details>
+        <summary>Cómo poner al dron en internet</summary>
+        <ol class="instrucciones">
+          <li>La Jetson tiene que estar encendida, con la cámara abierta (<code>zed_right.py</code> corriendo) y con
+            internet.</li>
+          <li>Solo la primera vez, en una terminal de la Jetson, instala el túnel de Cloudflare:
+            <pre><code>wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb
+sudo dpkg -i cloudflared-linux-arm64.deb</code></pre></li>
+          <li>Abre el túnel. No toca la cámara: solo publica la página que ya da la Jetson en el puerto 8080.
+            <pre><code>cloudflared tunnel --url http://localhost:8080</code></pre>
+            Imprime una dirección como <code>https://palabras-al-azar.trycloudflare.com</code>. Escríbela arriba.</li>
+          <li>La dirección cambia cada vez que abres el túnel, y deja de funcionar al cerrar esa terminal. Quien la
+            tenga puede ver el video y tomar fotos, así que compártela solo con el equipo.</li>
+        </ol>
+        <p class="nota" style="margin:.8rem 0 0">¿Estás en la misma red WiFi que la Jetson? Entonces no necesitas el
+          túnel: abre <code>http://&lt;ip-de-la-jetson&gt;:8080</code> directo en el navegador, o usa la estación de
+          tierra.</p>
+      </details>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Equipo Platanos Machos · MR3002B ·
+  <a href="https://github.com/RodrigoA01637236/Dron-9no-semestre">Código en GitHub</a>
+</footer>
+
+<script src="sitio.js"></script>
+<script src="dron.js"></script>
+</body>
+</html>
