@@ -131,7 +131,10 @@ $("btn-desconectar").onclick = () => {
 };
 $("btn-foto").onclick = fotoDron;
 
-// ?dron=https://... en el enlace conecta directo; si no, se recuerda la última dirección.
-const inicial = new URLSearchParams(location.search).get("dron");
+// ?dron=https://... en el enlace conecta directo. Si la página la sirve la propia Jetson
+// (hotspot, jetson/sitio_local.sh), el dron es esa misma máquina en el puerto 8080.
+// Si no, se recuerda la última dirección.
+const enJetson = PRIVADA.test(location.hostname) ? `${location.hostname}:8080` : null;
+const inicial = new URLSearchParams(location.search).get("dron") || enJetson;
 try { $("dron-dir").value = inicial || localStorage.getItem("dron") || ""; } catch (e) { $("dron-dir").value = inicial || ""; }
 if (inicial) conectar(inicial);

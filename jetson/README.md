@@ -137,6 +137,29 @@ Al arrancar imprime la dirección, por ejemplo:
 La laptop y la Jetson deben estar en la misma red. Si no conecta, revisar que el puerto 8080
 no esté bloqueado (`sudo ufw status`; si está activo: `sudo ufw allow 8080/tcp`).
 
+## Página sin internet (hotspot)
+
+En campo no hay internet, así que la página de Netlify no carga, y aunque cargara, una página
+`https://` no puede leer el video `http://` de la Jetson. La Jetson sirve **el mismo sitio**
+(`web/`: Proyecto, Identificar una hoja, Dron en vivo) por su propio WiFi:
+
+```bash
+# 1. Una vez, con internet (Tec-Visitantes): baja onnxruntime-web a web/vendor/
+cd ~/Dron-9no-semestre && git pull && bash web/preparar.sh
+
+# 2. Prender el hotspot (la Jetson deja la red con internet)
+sudo nmcli device wifi hotspot ifname wlP1p1s0 ssid DRON-SIGATOKA password "<clave-del-equipo>"
+
+# 3. Servir el sitio (otra terminal; Ctrl+C lo cierra)
+bash jetson/sitio_local.sh
+```
+
+En el celular o la laptop: conectarse a `DRON-SIGATOKA` y abrir **`http://10.42.0.1:8000`**.
+*Dron en vivo* se conecta solo a la cámara (`10.42.0.1:8080`) e *Identificar una hoja* corre el
+modelo en el navegador, todo sin internet. `sitio_local.sh` es un servidor aparte: no abre ni
+toca la cámara, y `zed_right.py` sigue igual. Para regresar a la red con internet:
+`sudo nmcli connection down Hotspot`.
+
 ## Permisos Pixhawk USB
 
 ```bash

@@ -10,8 +10,13 @@ propio ni la laptop encendida.
 | `dron.html` | Video, GPS y diagnóstico en vivo de la Jetson (`jetson/zed_right.py`) a través de un túnel https |
 
 El estilo sigue [DESIGN.md](../DESIGN.md) (mismos colores, Manrope y componentes que la estación).
-`preparar.sh` copia a `web/` el modelo (`vision/models/`) y la fuente (`ui/static/fuentes/`), así
-que no hay copias en git: Netlify lo corre en cada despliegue (`netlify.toml` en la raíz).
+`preparar.sh` copia a `web/` el modelo (`vision/models/`) y la fuente (`ui/static/fuentes/`), y baja
+onnxruntime-web 1.30.0 a `web/vendor/` (verifica el sha256), así que no hay copias en git y el sitio
+no depende de ningún CDN: Netlify lo corre en cada despliegue (`netlify.toml` en la raíz).
+
+**Sin internet:** la Jetson sirve este mismo sitio por su hotspot con `jetson/sitio_local.sh`
+(`http://10.42.0.1:8000`); ahí *Dron en vivo* se conecta solo a la cámara. Ver `jetson/README.md`,
+sección *Página sin internet*.
 
 ## Probar en la computadora
 
@@ -32,7 +37,8 @@ solo; `netlify.toml` ya tiene el comando y la carpeta.
 - Mismo preprocesado que `vision/clasificador.py`: estirar a 384 × 384, RGB, /255, CHW.
 - El navegador reduce la foto con otro algoritmo que OpenCV; en las pruebas la diferencia fue de
   1 a 2 puntos de probabilidad (`bus.jpg`: 53 % contra 54 % Sigatoka).
-- onnxruntime-web 1.30.0 se baja de jsDelivr (unos MB la primera vez; luego queda en caché).
+- Usa `ort.wasm.min.js` (solo WebAssembly, ~14 MB de `.wasm`, unos 4 MB comprimido); la primera
+  visita lo baja y luego queda en caché.
 
 ## Dron en vivo
 

@@ -1,6 +1,7 @@
 // Identifica una hoja en el navegador con onnxruntime-web: la foto nunca sale del dispositivo.
 // Mismo preprocesado que vision/clasificador.py: estirar a 384x384, RGB, /255, CHW.
-ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/";
+// onnxruntime-web vive en vendor/ (lo baja preparar.sh), así que funciona sin internet.
+ort.env.wasm.wasmPaths = new URL("vendor/", location.href).href;
 ort.env.wasm.numThreads = 1;   // sin aislamiento entre orígenes el navegador no da hilos
 
 let cargando = null;   // promesa del modelo: { sesion, entrada, salida, clases, umbral, lado }
