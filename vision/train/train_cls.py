@@ -30,6 +30,10 @@ def main() -> None:
     ap.add_argument("--erasing", type=float, default=0.4,
                     help="borrado aleatorio; en parches usar 0.1 para no tapar la única lesión del cuadro")
     ap.add_argument("--patience", type=int, default=10)
+    ap.add_argument("--flipud", type=float, default=0.0,
+                    help="volteo vertical; en parches vistos desde arriba usar 0.5 (la hoja no tiene arriba)")
+    ap.add_argument("--time", type=float, default=None,
+                    help="horas máximas de entrenamiento (manda sobre --epochs; ultralytics ajusta el calendario)")
     args = ap.parse_args()
 
     model = YOLO(args.model)
@@ -49,12 +53,13 @@ def main() -> None:
         degrees=10,
         scale=0.5,
         fliplr=0.5,
-        flipud=0.0,
+        flipud=args.flipud,
         hsv_h=0.005,
         hsv_s=0.3,
         hsv_v=0.4,
         project=args.project,
         name=args.name,
+        **({"time": args.time} if args.time else {}),
     )
 
     # Evaluar SIEMPRE en test; las métricas de val no se reportan como finales.

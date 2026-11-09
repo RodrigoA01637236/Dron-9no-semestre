@@ -112,9 +112,12 @@ function pintarLectura(r, foto) {
   $("probs").classList.toggle("oculto", !r.probs);
   $("que").innerHTML = `<b>Qué hacer:</b> ${esc(queHacer(r.clase, r.diagnosticable))}`;
   if (r.n_parches) {
-    const conSintomas = (r.parches || []).filter(p => p.clase !== "sana").length;
+    const conSintomas = (r.parches || []).filter(p => !["sana", "sin_hoja"].includes(p.clase)).length;
+    const hojas = r.hojas || [];
+    const enfermas = hojas.filter(h => !["sana", "sin_hoja"].includes(h.clase)).length;
     $("que").innerHTML += `<p class="nota" style="margin:.5rem 0 0">Revisó ${r.n_parches} trozos de hoja por separado;
-      ${conSintomas ? `${conSintomas} con síntomas (marcados en la foto).` : "ninguno con síntomas."}</p>`;
+      ${conSintomas ? `${conSintomas} con síntomas (marcados en la foto).` : "ninguno con síntomas."}
+      ${hojas.length ? ` Encontró ${hojas.length} ${hojas.length === 1 ? "hoja" : "hojas"}${enfermas ? `, ${enfermas} con síntomas` : ""}.` : ""}</p>`;
   }
   $("que").classList.remove("oculto");
 }
@@ -124,14 +127,21 @@ function pintarLectura(r, foto) {
 let cajasActuales = null;
 function pintarCajas(r) {
   const svg = $("cajas");
-  const lista = (r?.parches || []).filter(p => p.clase !== "sana");
-  cajasActuales = lista.length && r.ancho ? r : null;
+  const lista = (r?.parches || []).filter(p => !["sana", "sin_hoja"].includes(p.clase));
+  const hojas = r?.hojas || [];
+  cajasActuales = (lista.length || hojas.length) && r.ancho ? r : null;
   svg.innerHTML = "";
   if (cajasActuales) {
     svg.setAttribute("viewBox", `0 0 ${r.ancho} ${r.alto}`);
     svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
     const umbral = RESUMEN?.umbral ?? 0.65;
-    svg.innerHTML = lista.map(p => {
+    const letra = Math.round(r.ancho / 55);
+    // Hojas: contorno fino blanco con su número y lectura; parches con síntomas: color de la clase.
+    svg.innerHTML = hojas.map(h => {
+      const c = categoria(h.clase);
+      return `<g class="hoja-caja"><rect x="${h.x}" y="${h.y}" width="${h.w}" height="${h.h}"><title>Hoja ${h.id}: ${esc(c.nombre)} ${pct(h.confianza)}</title></rect>
+        <text x="${h.x + letra * 0.4}" y="${h.y + letra * 1.2}" font-size="${letra}">Hoja ${h.id} · ${esc(c.nombre)}</text></g>`;
+    }).join("") + lista.map(p => {
       const c = categoria(p.clase);
       return `<rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" stroke="${c.color}"
         class="${p.confianza < umbral ? "dudoso" : ""}"><title>${esc(c.nombre)} ${pct(p.confianza)}</title></rect>`;
@@ -173,7 +183,7 @@ async function seleccionar(id) {
       ["probs", "que"].forEach(s => $(s).classList.add("oculto"));
     } else {
       pintarLectura({ clase: f.pred, confianza: f.conf, probs: f.probs, umbral: RESUMEN.umbral, diagnosticable: f.conf >= RESUMEN.umbral,
-                      n_parches: f.n_parches, parches: f.parches }, f);
+                      n_parches: f.n_parches, parches: f.parches, hojas: f.hojas }, f);
       pintarCajas(f);
     }
     $("btn-revisar-esta").href = `/revisar?foto=${id}`;

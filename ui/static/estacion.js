@@ -76,6 +76,7 @@ function titular(clave) {
   if (clave === "sigatoka") return "Esta hoja tiene Sigatoka";
   if (clave === "sana") return "Esta hoja está sana";
   if (clave === "otra_condicion") return "Tiene otra condición";
+  if (clave === "sin_hoja") return "No se ven hojas de plátano";
   return `Parece: ${categoria(clave).nombre}`;
 }
 function queHacer(clave, seguro) {
@@ -83,6 +84,7 @@ function queHacer(clave, seguro) {
   if (clave === "sigatoka") return "Avisa al agrónomo y marca la planta. Quitar las hojas muy dañadas ayuda a frenar el contagio.";
   if (clave === "sana") return "No se ven síntomas en esta hoja. Si sospechas, revisa también el envés y las hojas más jóvenes.";
   if (clave === "otra_condicion") return "Tiene algo distinto a la Sigatoka, como amarillamiento o daño. Guárdala para que el agrónomo la revise.";
+  if (clave === "sin_hoja") return "La foto no muestra hojas de plátano (suelo, cielo u otra planta). Acércate a la planta y toma otra.";
   return "Guárdala para que el agrónomo la revise.";
 }
 

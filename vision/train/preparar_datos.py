@@ -2,7 +2,9 @@
 
 Qué hace:
 1. Lee las fuentes de vision/train/fuentes_v2.json (las que no estén descargadas se saltan).
-2. Pone la clase según el nombre de la carpeta ('mapa' o 'palabras' del JSON).
+2. Pone la clase según el nombre de la carpeta ('mapa' o 'palabras' del JSON). Una fuente
+   con 'clase_fija' (p. ej. fotos de otras plantas o de escenas sin plátano) va completa a
+   esa clase ("sin_hoja"); 'max_imagenes' toma una muestra fija de las fuentes grandes.
 3. Quita duplicados exactos (md5) y agrupa los casi duplicados (dHash de 256 bits con
    giros y espejos): un grupo entero va al mismo split, así una foto y su copia girada no
    quedan una en train y otra en test. Si un grupo trae clases distintas, se deja fuera y
@@ -108,7 +110,8 @@ def clase_de(rel: Path, fuente: dict, cfg: dict) -> str | None:
 
 
 def recolectar_carpetas(fuente: dict, cfg: dict, raiz: Path, avisos: Counter) -> list[dict]:
-    excluir = [normal(e) for e in cfg.get("excluir", [])]
+    excluir = [normal(e) for e in cfg.get("excluir", [])] + [normal(e) for e in fuente.get("excluir", [])]
+    fija = fuente.get("clase_fija")
     items = []
     for ruta in sorted(raiz.rglob("*")):
         if ruta.suffix.lower() not in IMG_EXTS or not ruta.is_file():
@@ -117,7 +120,7 @@ def recolectar_carpetas(fuente: dict, cfg: dict, raiz: Path, avisos: Counter) ->
         if any(e in normal(p) for p in rel.parts[:-1] for e in excluir):
             avisos[f"{fuente['nombre']}: excluida ({rel.parts[0]})"] += 1
             continue
-        clase = clase_de(rel, fuente, cfg)
+        clase = fija or clase_de(rel, fuente, cfg)
         if clase is None:
             avisos[f"{fuente['nombre']}: carpeta sin clase '{rel.parent}' (agrégala a 'mapa')"] += 1
             continue
@@ -183,6 +186,9 @@ def main() -> None:
             continue
         nuevos = recolectar_yolo(f, raiz, avisos) if f.get("formato") == "yolo" else \
             recolectar_carpetas(f, cfg, raiz, avisos)
+        tope = int(f.get("max_imagenes") or 0)
+        if tope and len(nuevos) > tope:
+            nuevos = random.Random(args.seed).sample(nuevos, tope)
         conteo = Counter(i["clase"] for i in nuevos)
         print(f"  {f['nombre']:14s} {len(nuevos):6d} imágenes  {dict(sorted(conteo.items()))}  [{f['uso']}]")
         items += nuevos

@@ -226,7 +226,7 @@ def api_foto(fid):
         pred = clf.predecir(carpeta_vuelo(f["vuelo"]) / f["archivo"])
         d["probs"] = pred["probs"] if pred else None
         # Con un modelo por parches: los cuadros de hoja para dibujarlos sobre la foto.
-        for k in ("modo", "parches", "n_parches", "fraccion", "ancho", "alto"):
+        for k in ("modo", "parches", "hojas", "n_parches", "fraccion", "ancho", "alto"):
             if pred and k in pred:
                 d[k] = pred[k]
     return jsonify(foto=d)
