@@ -2,6 +2,8 @@
 
 Uso (desde la raíz del repo, con el venv activo):
     python vision/train/train_cls.py --data data/dataset --epochs 50 --imgsz 384 --batch 32
+    # modelo por parches (v2), ver vision/GUIA-PARCHES.md paso 4:
+    python vision/train/train_cls.py --data data/parches_v2 --model yolo11n-cls.pt --epochs 60 --erasing 0.1 --name parches_v2
 
 Sin GPU: --batch 16 --workers 2 (y deja la corrida de noche).
 Al terminar: registra la corrida en vision/train/experiments.md y respalda
@@ -18,13 +20,16 @@ from ultralytics import YOLO
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--data", required=True, help="carpeta dataset/ con train/ val/ test/")
-    ap.add_argument("--model", default="yolov8n-cls.pt", help="pesos base (ImageNet)")
+    ap.add_argument("--model", default="yolov8n-cls.pt", help="pesos base (ImageNet): yolov8n-cls.pt o yolo11n-cls.pt")
     ap.add_argument("--epochs", type=int, default=50)
     ap.add_argument("--imgsz", type=int, default=384)
     ap.add_argument("--batch", type=int, default=32)
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--project", default=None, help="carpeta donde guardar la corrida (default: runs/classify)")
     ap.add_argument("--name", default=None, help="nombre de la corrida (default: train, train2, ...)")
+    ap.add_argument("--erasing", type=float, default=0.4,
+                    help="borrado aleatorio; en parches usar 0.1 para no tapar la única lesión del cuadro")
+    ap.add_argument("--patience", type=int, default=10)
     args = ap.parse_args()
 
     model = YOLO(args.model)
@@ -38,7 +43,8 @@ def main() -> None:
         imgsz=args.imgsz,
         batch=args.batch,
         workers=args.workers,
-        patience=10,
+        patience=args.patience,
+        erasing=args.erasing,
         augment=True,
         degrees=10,
         scale=0.5,
@@ -57,7 +63,8 @@ def main() -> None:
     print("Matriz de confusión y curvas en runs/classify/<run>/")
 
     # Exportar el paquete modelo: entrada del pipeline de la Jetson (doc 07).
-    onnx_path = model.export(format="onnx", imgsz=args.imgsz, opset=17)
+    # dynamic=True: lote libre, para clasificar todos los parches de una foto de una vez.
+    onnx_path = model.export(format="onnx", imgsz=args.imgsz, opset=17, dynamic=True)
     print(f"ONNX exportado: {onnx_path}")
 
     # Orden EXACTO de clases para el campo "classes" del JSON de metadata

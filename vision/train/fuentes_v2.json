@@ -1,0 +1,77 @@
+{
+  "_nota": "Fuentes del dataset v2. Una fuente cuya carpeta no existe se salta con aviso, así que se pueden ir agregando. 'uso': 'entrenar' entra al reparto train/val/test; 'externo' va completo a test_<nombre> (nunca se entrena con ella). 'mapa' manda sobre 'palabras'. Las carpetas cuyo nombre contiene algo de 'excluir' se saltan (copias aumentadas). Registrar cada fuente en data/README.md con licencia y fecha.",
+  "clases": ["otra_condicion", "sana", "sigatoka"],
+  "palabras": {
+    "sana": ["healthy", "sana", "normal", "fresh"],
+    "sigatoka": ["sigatoka", "mycosphaerella", "pseudocercospora"],
+    "otra_condicion": ["cordana", "pestalo", "panama", "fusarium", "xanthomonas", "bacterial", "bunchy",
+                       "skipper", "insect", "chewing", "deficien", "moko", "speckle", "wilt", "virus", "mosaic"]
+  },
+  "excluir": ["augment", "aumentad"],
+  "fuentes": [
+    {
+      "nombre": "v1_publico",
+      "carpeta": "data/raw/public/banana",
+      "uso": "entrenar",
+      "nota": "El mismo conjunto del modelo v1; su manifiesto conserva el reparto para comparar justo.",
+      "mapa": {
+        "HEALTHY PICTURES": "sana",
+        "SIGATOKA PICTURES": "sigatoka",
+        "CORDANA PICTURES": "otra_condicion",
+        "PESTALO PICTURES": "otra_condicion",
+        "PANAMA DISEASE": "otra_condicion",
+        "BANANA SKIPPER DAMAGE": "otra_condicion",
+        "CHEWING INSECT DAMAGE": "otra_condicion"
+      }
+    },
+    {
+      "nombre": "tanzania",
+      "carpeta": "data/raw/public/tanzania",
+      "uso": "entrenar",
+      "licencia": "CC BY 4.0",
+      "doi": "10.5281/zenodo.7670326"
+    },
+    {
+      "nombre": "bananalsd",
+      "carpeta": "data/raw/public/bananalsd",
+      "uso": "entrenar",
+      "licencia": "CC BY 4.0",
+      "doi": "10.17632/9tb7k297ff.1",
+      "nota": "Solo el conjunto original; el aumentado se salta por 'excluir'."
+    },
+    {
+      "nombre": "hailu",
+      "carpeta": "data/raw/public/hailu",
+      "uso": "entrenar",
+      "doi": "10.17632/rjykr62kdh.1"
+    },
+    {
+      "nombre": "blade",
+      "carpeta": "data/raw/public/blade",
+      "uso": "entrenar",
+      "doi": "10.17632/w7ytz3twjv.2"
+    },
+    {
+      "nombre": "bangladesh",
+      "carpeta": "data/raw/public/bangladesh",
+      "uso": "entrenar",
+      "doi": "10.17632/wzshm7ky49.1"
+    },
+    {
+      "nombre": "colombia_uav",
+      "carpeta": "data/raw/public/colombia_uav",
+      "uso": "externo",
+      "formato": "yolo",
+      "clases_yolo": {"0": "sigatoka"},
+      "licencia": "CC BY 4.0",
+      "doi": "10.5281/zenodo.20945958",
+      "nota": "Fotos de dron con cajas de Sigatoka. Solo prueba: mide qué tanto ve el modelo en imágenes aéreas reales."
+    },
+    {
+      "nombre": "campo",
+      "carpeta": "data/raw/campo_validado",
+      "uso": "externo",
+      "nota": "Fotos propias del dron etiquetadas por el agrónomo, en subcarpetas sana/ sigatoka/ otra_condicion/. Es la prueba que más vale."
+    }
+  ]
+}

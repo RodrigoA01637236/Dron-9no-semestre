@@ -44,6 +44,7 @@
         </form>
       </div>
       <img id="foto" class="oculto" alt="Imagen seleccionada">
+      <svg id="cajas" class="cajas oculto" aria-hidden="true"></svg>
       <video id="video" class="oculto" playsinline muted></video>
       <img id="video-dron" class="oculto" alt="Video en vivo de la cámara del dron">
       <span class="en-vivo oculto" id="en-vivo">En vivo</span>
@@ -107,11 +108,46 @@ function pintarLectura(r, foto) {
     : `<span class="chip-diagnostico"><i class="muestra vacia" style="border-radius:50%"></i>No está seguro</span>
        <div class="veredicto">El modelo no está seguro</div>
        <p class="confianza">Lo más parecido es <b>${esc(c.nombre)}</b> (${pct(r.confianza)}), pero necesita al menos ${pct(r.umbral)} para dar un diagnóstico.</p>`) + humano;
-  $("probs").innerHTML = r.probs ? escala(r.probs, r.umbral) : "";
+  $("probs").innerHTML = r.probs ? escala(r.probs, r.umbral, r.n_parches ? r.clase : null) : "";
   $("probs").classList.toggle("oculto", !r.probs);
   $("que").innerHTML = `<b>Qué hacer:</b> ${esc(queHacer(r.clase, r.diagnosticable))}`;
+  if (r.n_parches) {
+    const conSintomas = (r.parches || []).filter(p => p.clase !== "sana").length;
+    $("que").innerHTML += `<p class="nota" style="margin:.5rem 0 0">Revisó ${r.n_parches} trozos de hoja por separado;
+      ${conSintomas ? `${conSintomas} con síntomas (marcados en la foto).` : "ninguno con síntomas."}</p>`;
+  }
   $("que").classList.remove("oculto");
 }
+
+// Cuadros con síntomas sobre la foto (solo con un modelo por parches).
+// Línea continua: el modelo está seguro; punteada: no alcanza la seguridad mínima.
+let cajasActuales = null;
+function pintarCajas(r) {
+  const svg = $("cajas");
+  const lista = (r?.parches || []).filter(p => p.clase !== "sana");
+  cajasActuales = lista.length && r.ancho ? r : null;
+  svg.innerHTML = "";
+  if (cajasActuales) {
+    svg.setAttribute("viewBox", `0 0 ${r.ancho} ${r.alto}`);
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    const umbral = RESUMEN?.umbral ?? 0.65;
+    svg.innerHTML = lista.map(p => {
+      const c = categoria(p.clase);
+      return `<rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" stroke="${c.color}"
+        class="${p.confianza < umbral ? "dudoso" : ""}"><title>${esc(c.nombre)} ${pct(p.confianza)}</title></rect>`;
+    }).join("");
+  }
+  ajustarCajas();
+}
+function ajustarCajas() {
+  const img = $("foto"), svg = $("cajas");
+  const visible = cajasActuales && !img.classList.contains("oculto") && img.offsetWidth > 0;
+  svg.classList.toggle("oculto", !visible);
+  if (visible) Object.assign(svg.style, { left: `${img.offsetLeft}px`, top: `${img.offsetTop}px`,
+                                          width: `${img.offsetWidth}px`, height: `${img.offsetHeight}px` });
+}
+new ResizeObserver(ajustarCajas).observe($("foto"));
+$("foto").addEventListener("load", ajustarCajas);
 
 function pintarError(msg) {
   $("lectura").innerHTML = `<h2>Sin lectura</h2><p class="mensaje error">${esc(msg)}</p>`;
@@ -123,6 +159,7 @@ async function seleccionar(id) {
   detenerCamara();
   seleccion = id;
   marcarSeleccion();
+  pintarCajas(null);
   $("soltar").classList.add("oculto");
   $("foto").src = `/foto/${id}`;
   $("foto").classList.remove("oculto");
@@ -135,7 +172,9 @@ async function seleccionar(id) {
       $("lectura").innerHTML = `<h2>Sin resultado</h2><p class="suave" style="margin:0">No hay modelo cargado, así que esta imagen quedó sin diagnóstico. Igual la puedes revisar.</p>`;
       ["probs", "que"].forEach(s => $(s).classList.add("oculto"));
     } else {
-      pintarLectura({ clase: f.pred, confianza: f.conf, probs: f.probs, umbral: RESUMEN.umbral, diagnosticable: f.conf >= RESUMEN.umbral }, f);
+      pintarLectura({ clase: f.pred, confianza: f.conf, probs: f.probs, umbral: RESUMEN.umbral, diagnosticable: f.conf >= RESUMEN.umbral,
+                      n_parches: f.n_parches, parches: f.parches }, f);
+      pintarCajas(f);
     }
     $("btn-revisar-esta").href = `/revisar?foto=${id}`;
     $("acciones").classList.remove("oculto");

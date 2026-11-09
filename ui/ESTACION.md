@@ -24,7 +24,10 @@ python ui\estacion.py --red     # para que otro equipo del mismo WiFi la abra (e
 
 Requisitos: el entorno `dron-vision` de la guía del modelo, más `pip install flask`
 (el `.bat` lo instala solo la primera vez). El modelo `sigatoka_cls_v1.onnx` ya viene en el
-repo, en `vision\models\` (llega con `git pull`).
+repo, en `vision\models\` (llega con `git pull`). Un modelo nuevo del repo (por ejemplo
+`sigatoka_cls_v2.onnx`, el que revisa por parches de hoja) se registra solo al abrir la
+estación, **sin activarse**: se activa en la página Modelo. Con él, Cargar dibuja sobre la
+foto los trozos de hoja con síntomas. Ver [vision/GUIA-PARCHES.md](../vision/GUIA-PARCHES.md).
 
 ## Borrar imágenes
 

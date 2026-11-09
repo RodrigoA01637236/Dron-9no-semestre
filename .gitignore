@@ -61,6 +61,7 @@ runs/
 *.onnx
 # Excepción: el modelo baseline se versiona para que la Jetson lo baje con git pull
 !vision/models/sigatoka_cls_v1.onnx
+!vision/models/sigatoka_cls_v2.onnx
 *.engine
 
 # =========================
@@ -78,5 +79,7 @@ Desktop.ini
 # =========================
 data/raw/
 data/dataset/
+data/dataset_v2/
+data/parches_v2/
 data/estacion/
 data/flights/

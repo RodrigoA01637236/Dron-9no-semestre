@@ -312,6 +312,10 @@ pre.registro {
 .mesa { display: flex; flex-wrap: wrap; border-radius: var(--r-l); overflow: hidden; background: var(--panel-2); }
 .mesa-foto { position: relative; flex: 999 1 520px; min-width: 0; min-height: 460px; background: var(--visor); display: grid; place-items: center; }
 .mesa-foto > img, .mesa-foto > video { width: 100%; height: 100%; max-height: 70vh; object-fit: contain; }
+/* Cuadros de hoja con síntomas (modelo por parches), encima de la foto */
+.cajas { position: absolute; pointer-events: none; overflow: visible; }
+.cajas rect { fill: none; stroke-width: 3; vector-effect: non-scaling-stroke; }
+.cajas rect.dudoso { stroke-dasharray: 6 5; stroke-width: 2; }
 .mesa-lectura { flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 18px; padding: 26px; }
 .veredicto { font-size: 2.3rem; font-weight: 800; letter-spacing: -.03em; line-height: 1.05; }
 .confianza { color: var(--texto-2); margin: 0; }

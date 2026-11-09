@@ -87,8 +87,10 @@ function queHacer(clave, seguro) {
 }
 
 // Barras de probabilidad con la línea de la seguridad mínima.
-function escala(probs, umbral = RESUMEN?.umbral ?? 0.65) {
-  const filas = Object.entries(probs).sort((a, b) => b[1] - a[1]);
+// Con un modelo por parches (`veredicto` dado) la clase del veredicto va primero: cada
+// barra dice qué tan seguro está de que eso aparece en algún trozo, y no suman 100 %.
+function escala(probs, umbral = RESUMEN?.umbral ?? 0.65, veredicto = null) {
+  const filas = Object.entries(probs).sort((a, b) => (b[0] === veredicto) - (a[0] === veredicto) || b[1] - a[1]);
   return `<div class="escala">${filas.map(([k, p], i) => {
     const c = categoria(k);
     return `<div class="escala-fila${i === 0 ? " ganadora" : ""}">
@@ -96,7 +98,8 @@ function escala(probs, umbral = RESUMEN?.umbral ?? 0.65) {
       <div class="pista" role="meter" aria-label="${esc(c.nombre)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(p * 100)}">
         <i style="background:${c.color}; transform:scaleX(${p.toFixed(4)})"></i></div></div>`;
   }).join("")}
-    <div class="escala-umbral">La línea blanca marca la seguridad mínima: ${pct(umbral)}.</div></div>`;
+    <div class="escala-umbral">La línea blanca marca la seguridad mínima: ${pct(umbral)}.${veredicto
+      ? " Cada barra mide si eso aparece en algún trozo de la hoja; por eso no suman 100 %." : ""}</div></div>`;
 }
 
 // Las imágenes se agrupan por la fecha en que se cargaron ("2026-10-06").

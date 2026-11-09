@@ -11,9 +11,14 @@ Este directorio contiene el script de captura probado en la Jetson Orin Nano del
 - Ventana con GPS o `GPS: SIN SENAL` y **sin contador FPS**.
 - `S`: toma una fotografía JPEG con texto sobreimpreso y EXIF GPS cuando existe fix válido.
 - `Q`: cierra la aplicación.
-- **Identificación a bordo:** con `vision/models/sigatoka_cls_v1.onnx` presente, un hilo
-  clasifica lo que ve la cámara (hasta 5 veces por segundo) y lo muestra en la ventana
-  (`DIAG: SIGATOKA 87%`, `DIAG: NO SEGURO`...). Sin el modelo, todo lo demás funciona igual.
+- **Identificación a bordo:** con un modelo en `vision/models/` (usa el más nuevo:
+  `sigatoka_cls_v2.onnx`, si no `v1`), un hilo clasifica lo que ve la cámara (hasta 5 veces
+  por segundo, con la foto completa) y lo muestra en la ventana (`DIAG: SIGATOKA 87%`,
+  `DIAG: NO SEGURO`...). Sin el modelo, todo lo demás funciona igual.
+- **Análisis por parches de cada foto:** al tomar una foto, en segundo plano (1–3 s) la revisa
+  por trozos de hoja a resolución completa ([vision/GUIA-PARCHES.md](../vision/GUIA-PARCHES.md)),
+  suma el resultado al EXIF y guarda los cuadros en `Prueba#1/parches/<foto>.json`.
+  Se apaga con `ANALIZAR_FOTOS = False`.
 - **Página web en el puerto 8080:** video en vivo, GPS, diagnóstico y botón de foto. La
   estación de tierra la usa desde *Cargar > Cámara del dron*; también abre en un celular.
 - Sin monitor (o con `--sin-ventana`) no abre ventana: se controla desde la página.
@@ -37,7 +42,9 @@ Se tomó y verificó una fotografía en la Jetson con nombre `26-10-16_19-33-19-
 - Descripción: `ZED X Mini RIGHT; GPS desde Pixhawk HERE4`.
 - Comentario EXIF: `Proyecto=Dron Sigatoka; Camara=ZED X Mini RIGHT; FechaHora=2026-10-16T19:33:19.128640-06:00; GPS=SIN_SENAL; FuenteGPS=Pixhawk 6C HERE4; AnalisisYOLO=NO_REALIZADO`.
 - Con el modelo cargado, `AnalisisYOLO` lleva la clase que vio el dron al tomar la foto, más
-  `ConfianzaYOLO=0.873; ModeloYOLO=sigatoka_cls_v1 a bordo`.
+  `ConfianzaYOLO=0.873; ModeloYOLO=sigatoka_cls_v2 a bordo`.
+- Segundos después, el análisis por parches agrega
+  `AnalisisParches=sigatoka; ConfianzaParches=0.870; ParchesHoja=18; FraccionParches=otra_condicion:0.00,sana:0.83,sigatoka:0.17`.
 
 ### Mapeo de información a etiquetas
 
@@ -106,17 +113,19 @@ Se utilizó NumPy 1.26.4 porque el OpenCV 4.8.0 del sistema no cargaba con NumPy
 ## Modelo para la identificación a bordo
 
 El script busca el repo en `~/Dron-9no-semestre` (o en la carpeta de arriba de `jetson/`) y
-usa `vision/models/sigatoka_cls_v1.onnx` con el mismo preprocesado que la estación
-(`vision/clasificador.py`). El modelo baseline (`sigatoka_cls_v1.onnx`, 5.5 MB) está en el
-repo, así que basta con:
+usa el modelo más nuevo de `vision/models/` (`sigatoka_cls_v2.onnx`, si no
+`sigatoka_cls_v1.onnx`) con el mismo preprocesado que la estación (`vision/clasificador.py`).
+Los modelos están en el repo, así que basta con:
 
 ```bash
 cd ~/Dron-9no-semestre && git pull
 bash jetson/zed_control.sh reiniciar
 ```
 
-Al arrancar debe imprimir `[MODELO] sigatoka_cls_v1.onnx cargado`. Corre en CPU con
-onnxruntime; la página muestra cuántos milisegundos tarda cada identificación.
+Al arrancar debe imprimir `[MODELO] sigatoka_cls_v2.onnx cargado` (o `v1` si el v2 aún no
+existe). Corre en CPU con onnxruntime; la página muestra cuántos milisegundos tarda cada
+identificación, y el log, cuánto tarda el análisis por parches de cada foto (`[PARCHES] ... ms`).
+Para probar con el v1: `SIGATOKA_MODELO=sigatoka_cls_v1.onnx bash jetson/zed_control.sh reiniciar`.
 
 ## Página web (video para la estación)
 
@@ -130,7 +139,7 @@ Al arrancar imprime la dirección, por ejemplo:
 | --- | --- |
 | `/` | Página sencilla para celular: video, diagnóstico, GPS y botón de foto |
 | `/video` | Video MJPEG (960 px de ancho, ~12 cuadros/s; solo se codifica si alguien lo ve) |
-| `/estado` | JSON con GPS, modelo y la última identificación (`clase`, `confianza`, `probs`, `ms`) |
+| `/estado` | JSON con GPS, modelo, la última identificación (`clase`, `confianza`, `probs`, `ms`) y el análisis por parches de la última foto (`analisis_foto`) |
 | `POST /foto` | Toma una foto como la tecla `S` y responde el nombre del archivo |
 | `/fotos/<nombre>.jpg` | Descarga una foto de la carpeta de fotos |
 
