@@ -445,7 +445,7 @@ a { color: inherit; }
         <div class="controles">
           <button class="redondo" type="button" data-galeria aria-label="Elegir una foto guardada"><span data-ico="imagen"></span></button>
           <button class="obturador" type="button" data-tomar aria-label="Revisar una hoja"><i></i></button>
-          <button class="redondo" type="button" id="b-voz" aria-pressed="true" aria-label="Leer el resultado en voz alta"><span data-ico="voz"></span></button>
+          <button class="redondo" type="button" id="b-voz" aria-label="Escuchar en voz alta"><span data-ico="voz"></span></button>
         </div>
 
         <div class="hoja" id="hoja" role="region" aria-label="Resultado" aria-live="polite">
@@ -593,9 +593,16 @@ addEventListener("drop", e => {
   else if (archivos.length) pintarError("Ese archivo no es una foto. Usa una foto JPG o PNG de la hoja.", true);
 });
 
+// La voz solo habla cuando la persona lo pide; un segundo toque la calla.
 const vozBtn = $("b-voz");
-function pintarVoz() { const si = M.vozActiva.get(); vozBtn.setAttribute("aria-pressed", String(si)); vozBtn.innerHTML = M.icono(si ? "voz" : "pausa"); }
-if (M.puedeHablar) { pintarVoz(); vozBtn.addEventListener("click", () => { M.vozActiva.set(!M.vozActiva.get()); if (!M.vozActiva.get()) M.callar(); pintarVoz(); }); }
+function escuchar(texto) {
+  if (speechSynthesis.speaking) { M.callar(); return; }
+  M.hablar(texto);
+}
+if (M.puedeHablar) vozBtn.addEventListener("click", e => {
+  e.stopPropagation();
+  escuchar(ultimo ? M.lectura(ultimo.r).voz : "Toca el botón redondo para tomar la foto de una hoja de plátano. Que la hoja llene el cuadro.");
+});
 else vozBtn.style.visibility = "hidden";
 
 // ------------------------------------------------ revisar una hoja
@@ -642,7 +649,6 @@ async function revisar(archivo) {
     pintarResultado(r);
     if (!tactil.matches && !L_sinHoja(r)) prepararCopia();
     if (!grande) abrirHoja();
-    if (M.vozActiva.get() && (grande ? contenido === "hoja" : true)) M.hablar(M.lectura(r).voz);
   } catch (e) {
     if (yo !== turno) return;
     pintarError(e.message || "No se pudo revisar la foto.");
@@ -757,7 +763,7 @@ async function mandar(estado) {
   const b = e.target.closest("button");
   if (!b) return;
   const estado = $(id).querySelector("[data-estado]");
-  if (b.matches("[data-escuchar]") && ultimo) M.hablar(M.lectura(ultimo.r).voz);
+  if (b.matches("[data-escuchar]") && ultimo) escuchar(M.lectura(ultimo.r).voz);
   if (b.matches("[data-enviar]") && ultimo) mandar(estado);
   if (b.matches("[data-descargar]") && ultimo) {
     try { descargar(await fotoLista()); decir(estado, M.icono("bajar") + "<span>La foto con el resultado quedó en Descargas.</span>"); }

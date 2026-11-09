@@ -361,10 +361,6 @@ const Motor = (() => {
     return true;
   }
   const callar = () => { if (puedeHablar) speechSynthesis.cancel(); };
-  const vozActiva = {
-    get() { try { return localStorage.getItem("voz") !== "no"; } catch (e) { return true; } },
-    set(si) { try { localStorage.setItem("voz", si ? "si" : "no"); } catch (e) {} },
-  };
 
   // ------------------------------------------------------------------ compartir con el técnico
   function mensaje(r) {
@@ -682,5 +678,5 @@ const Motor = (() => {
   }
 
   return { CAT, cat, GRIS, LECTURAS, esc, plural, pct, icono, qr, SITIO, modelo, modeloListo, diagnosticar, lectura, precargar,
-           hablar, callar, puedeHablar, vozActiva, mensaje, cabeza, entrenarCabeza, aciertos, aplicarCabeza, compartir, fotoConResultado, leerGeojson, ejemplo, crearMapa, resumen, zonas, cuantas, dron };
+           hablar, callar, puedeHablar, mensaje, cabeza, entrenarCabeza, aciertos, aplicarCabeza, compartir, fotoConResultado, leerGeojson, ejemplo, crearMapa, resumen, zonas, cuantas, dron };
 })();
