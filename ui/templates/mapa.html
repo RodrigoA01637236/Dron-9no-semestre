@@ -104,12 +104,13 @@ function cuantas(clave, n) {
   return `${n} con ${clave === "otra_condicion" ? "otra condición" : nombre}`;
 }
 
-// Mensaje del panel para la vista por condición.
+// Mensaje del panel para la vista de fotos.
 function mensajePuntos() {
   return "Cada punto es una foto: tócalo para ver su diagnóstico. Los grises son fotos donde el modelo no está seguro; " +
     "los de borde blanco ya los revisó alguien del equipo.";
 }
 
+// Mensaje del panel para la vista por condición.
 function mensajeCondicion() {
   const zonas = Mapa.zonasCondicion();
   if (!zonas.length) return Mapa.op.ocultas.size
