@@ -39,30 +39,55 @@ Debe imprimir `True NVIDIA GeForce RTX 4060 Laptop GPU`. Si dice `False`, sigue
 "Habilitar la GPU NVIDIA" en [GUIA-MODELO.md](GUIA-MODELO.md) antes de seguir: en CPU
 la noche no alcanza.
 
-Espacio en disco: ~40 GB libres (fotos + parches). Energía: conectada a la corriente y con
+Espacio en disco: ~50 GB libres (fotos + parches). Energía: conectada a la corriente y con
 la suspensión desactivada (Configuración → Sistema → Energía → "Nunca").
 
 ---
 
 ## 1. Descargar los datasets (1–3 h, casi todo esperar) `[PC]`
 
-| Dataset | Enlace | Carpeta en `data\raw\public\` | Clases |
+Primero instala 7-Zip (algunos datasets vienen en `.rar`):
+```powershell
+winget install 7zip.7zip
+```
+
+Luego el descargador baja, descomprime y acomoda todo en `data\raw\public\` (se reanuda si
+se corta: vuelve a correr el mismo comando):
+```powershell
+python vision\train\descargar_datos.py --lista     # qué hay y cuánto pesa
+python vision\train\descargar_datos.py             # todo lo recomendado (~35 GB)
+```
+Al final te pide bajar a mano **DeepWeeds** (está en Google Drive): abre el enlace que
+imprime, descarga `images.zip` y descomprímelo en `data\raw\public\deepweeds\`.
+
+Fuentes (verificadas el 2026-11-09; todas en [train/fuentes_v2.json](train/fuentes_v2.json)):
+
+| Fuente | Licencia | Fotos | Qué aporta |
 |---|---|---|---|
-| El del v1 | ya lo tienes | `banana` | sana, sigatoka, otra |
-| Tanzania (Mduma et al.), CC BY 4.0 | https://doi.org/10.5281/zenodo.7670326 | `tanzania` | sana, sigatoka, otra (Fusarium) |
-| BananaLSD, CC BY 4.0 | https://doi.org/10.17632/9tb7k297ff.1 | `bananalsd` | sana, sigatoka, otra (solo el conjunto original) |
-| Banana Leaf Disease Images (Hailu) | https://doi.org/10.17632/rjykr62kdh.1 | `hailu` | sana, sigatoka, otra |
-| BLADE | https://doi.org/10.17632/w7ytz3twjv.2 | `blade` | varias |
-| Banana Leaf Disease Dataset of Bangladesh | https://doi.org/10.17632/wzshm7ky49.1 | `bangladesh` | varias |
-| Dron con Sigatoka, Colombia (solo prueba) | https://doi.org/10.5281/zenodo.20945958 | `colombia_uav` | sigatoka (cajas) |
+| El del v1 (`banana`, ya lo tienes) | — | 11,228 | base; conserva el reparto del v1 |
+| **NM-AIST Tanzania** (Harvard Dataverse, doi:10.7910/DVN/LQUWXW) | CC0 | 16,092 | campo, 1024x768: sana, Sigatoka negra, Fusarium |
+| **Perú, San Martín** (Mendeley 10.17632/hzttvh774g.3) | CC BY 4.0 | 2,354 | campo latinoamericano, alta resolución: Sigatoka, Cordana, sana |
+| BananaLSD (10.17632/9tb7k297ff.1) | CC BY 4.0 | 937 | Bangladesh: Cordana, Pestalotiopsis, Sigatoka, sana |
+| Banana Disease Recognition (10.17632/79w2n6b4kf.1) | CC BY 4.0 | 408 | Sigatoka negra y amarilla, Moko, mosaico de bráctea, insecto, Panamá |
+| Azam et al. (10.17632/5nfjzntwd8.3) | CC BY 4.0 | 2,375 | hojas + frutos (los frutos van a "sin hojas") |
+| Bangladesh 2 (10.17632/wfzpdmc5vx.1) | CC BY 4.0 | 424 | Cordana, Pestalotiopsis, Sigatoka, sana |
+| Hailu, Etiopía (10.17632/rjykr62kdh.1) | CC BY 4.0 | 1,289 | la única con Xanthomonas (fotos muy chicas) |
+| BLADE, India (10.17632/w7ytz3twjv.2) | CC BY 4.0 | 1,218 | texturas de lesión; solo para train |
+| Deficiencias de nutrientes (10.17632/7vpdrbdkd4.2) | CC BY 4.0 | hasta 3,000 | deficiencias (otra condición) |
+| **Dron, Colombia DS-v2** (Zenodo 10.5281/zenodo.20945958) | CC BY 4.0 | hasta 3,000 | **solo prueba**: fotos aéreas reales con Sigatoka |
+| *Sin hojas:* DeepWeeds (manual), PlantDoc, iBean, café de Perú (10.17632/mfpxg4y65r.2), COCO val2017 | CC BY 4.0 / MIT / Flickr | ~11,000 | maleza, otros cultivos, frijol, café, escenas; COCO sin las fotos con plátano |
+| *Opcional:* Tanzania Zenodo (10.5281/zenodo.7670326) | CC BY 4.0 | 11,767 | más del mismo laboratorio, resolución completa; **34 GB**: `--con-grandes` |
 
-(Lista provisional: se está verificando una lista más amplia, con fuentes para "sin hojas de plátano".)
+Se descartaron: el dataset de Bangladesh 10.17632/wzshm7ky49.1 (lo retiraron sus autores),
+PSFD-Musa y el "2026" (mezclan copias aumentadas o fotos de internet) y los de Filipinas
+(acceso restringido).
 
-- Cada uno se descomprime en su carpeta de `data\raw\public\`. No importa cuántas
-  subcarpetas traiga; el script reconoce las clases por el nombre de la carpeta.
-- Anota cada fuente en [data/README.md](../data/README.md) (enlace, licencia, fecha).
-- No hace falta tener todas: las que falten se saltan. Las de "sin hojas" son importantes
-  para la categoría nueva; sin ellas solo se aprende de suelo y cielo.
+- **Espacio:** ~50 GB libres (con Tanzania Zenodo, ~120 GB). Los comprimidos se borran
+  al terminar cada fuente.
+- Anota las fuentes en [data/README.md](../data/README.md) (enlace, licencia, fecha).
+- **Tus propias fotos para entrenar** (las mejores para el dron): tomas de la ZED de suelo,
+  caminos, personas y maleza en `data\raw\propias\sin_hoja\`, y hojas que el agrónomo
+  confirmó en `data\raw\propias\sana\`, `...\sigatoka\`, `...\otra_condicion\`.
 
 ---
 
