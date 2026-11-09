@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dron Sigatoka</title>
+<meta name="description" content="Toma una foto de una hoja de plátano y el Dron Sigatoka te dice, en voz alta, si ve Sigatoka y qué hacer.">
+<meta name="theme-color" content="#f4f7f2">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Barlow+Condensed:wght@600;700;800&display=swap">
+<style>
+:root {
+  --fondo: #f4f7f2; --papel: #ffffff; --tinta: #0f2a1c; --tinta-2: #3b5245; --tinta-3: #5d7266;
+  --linea: #d3ddd2; --suave: #e6ede4;
+  --bolsa: #1d4fd7; --bolsa-honda: #1640b3; --bolsa-tenue: #e3eafc;
+  --sana: #2e9e44; --sigatoka: #d7263d; --otra: #f0a202; --gris: #7d8b96;
+  --margen: clamp(16px, 4vw, 48px);
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --texto: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --salida: cubic-bezier(.23, 1, .32, 1);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+body { margin: 0; background: var(--fondo); color: var(--tinta); font: 400 1.0625rem/1.55 var(--texto); -webkit-font-smoothing: antialiased; }
+::selection { background: var(--bolsa); color: #fff; }
+a { color: var(--bolsa); text-underline-offset: 3px; }
+:focus-visible { outline: 3px solid var(--bolsa); outline-offset: 3px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 800; line-height: .98; letter-spacing: -.005em; margin: 0; text-wrap: balance; }
+p { margin: 0; text-wrap: pretty; }
+.oculto { display: none !important; }
+.num { font-variant-numeric: tabular-nums; }
+.ico { width: 1.25em; height: 1.25em; flex: none; }
+
+/* ------------------------------------------------ barra */
+.barra { position: sticky; top: 0; z-index: 900; display: flex; align-items: center; gap: 24px; padding: 12px var(--margen);
+  background: color-mix(in srgb, var(--fondo) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--linea); }
+.marca { display: inline-flex; align-items: center; gap: 10px; color: var(--tinta); text-decoration: none; font: 800 1.55rem/1 var(--display); }
+.marca svg { width: 34px; height: 34px; color: var(--sigatoka); }
+.anclas { display: flex; gap: 4px; margin-left: auto; }
+.anclas a { padding: 8px 12px; border-radius: 8px; color: var(--tinta-2); font: 700 1.15rem/1 var(--display); text-decoration: none; }
+@media (hover: hover) and (pointer: fine) { .anclas a:hover { background: var(--suave); color: var(--tinta); } }
+
+/* ------------------------------------------------ botones */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px; padding: 0 22px;
+  border-radius: 12px; border: 2px solid transparent; font: 700 1.3rem/1 var(--display); letter-spacing: .01em; cursor: pointer;
+  text-decoration: none; transition: transform 160ms var(--salida), background-color 150ms ease, border-color 150ms ease; }
+.btn:active { transform: scale(.97); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn-bolsa { background: var(--bolsa); color: #fff; }
+.btn-linea { background: transparent; color: var(--tinta); border-color: var(--tinta); }
+.btn-grande { min-height: 68px; font-size: 1.65rem; padding: 0 28px; border-radius: 16px; }
+.btn-grande .ico { width: 30px; height: 30px; }
+@media (hover: hover) and (pointer: fine) {
+  .btn-bolsa:hover { background: var(--bolsa-honda); }
+  .btn-linea:hover { background: var(--suave); }
+}
+
+/* ------------------------------------------------ la cinta (la unidad de todo) */
+.cinta { position: relative; display: flex; align-items: center; gap: 14px; min-height: 76px; padding: 10px 46px 10px 18px;
+  background: var(--c); color: var(--c-texto, #fff);
+  background-image: linear-gradient(180deg, rgba(255,255,255,.22) 0, rgba(255,255,255,0) 38%, rgba(0,0,0,.08) 100%);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 26px) 50%, 100% 100%, 0 100%); }
+.cinta.rayada { background-image: repeating-linear-gradient(-45deg, rgba(255,255,255,.16) 0 10px, rgba(255,255,255,0) 10px 20px); }
+.moño { width: 58px; height: 58px; flex: none; color: color-mix(in srgb, var(--c) 62%, #000); }
+.cinta-palabra { font: 800 clamp(2.1rem, 6vw, 3.1rem)/1 var(--display); }
+.cinta-pct { margin-left: auto; font: 700 1.6rem/1 var(--display); font-variant-numeric: tabular-nums; opacity: .92; }
+.cinta.nueva { animation: atar 560ms var(--salida) both; }
+.cinta.nueva .moño { animation: moño 420ms 180ms var(--salida) both; }
+@keyframes atar { from { clip-path: polygon(0 0, 0 0, 0 50%, 0 100%, 0 100%); } }
+@keyframes moño { from { transform: scale(.82) rotate(-8deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .cinta.nueva { animation: aparecer 200ms ease both; } .cinta.nueva .moño { animation: none; }
+  html { scroll-behavior: auto; }
+}
+@keyframes aparecer { from { opacity: 0; } }
+
+/* cinta de sección: sale del borde izquierdo y termina en corte de cinta */
+.banda { display: inline-block; margin: 0 0 32px calc(-1 * var(--margen)); padding: 16px 64px 14px var(--margen); max-width: calc(100% + var(--margen));
+  background: var(--tinta); color: #fff; font: 800 clamp(2.2rem, 5.4vw, 3.6rem)/1 var(--display);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 28px) 50%, 100% 100%, 0 100%); }
+
+/* ------------------------------------------------ portada: revisar una hoja */
+main { overflow-x: clip; }
+.seccion { padding: clamp(40px, 7vw, 88px) var(--margen); max-width: 1320px; margin: 0 auto; }
+.portada { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: clamp(28px, 5vw, 64px); align-items: start; padding-top: clamp(28px, 5vw, 64px); }
+.portada h1 { font-size: clamp(3.2rem, 8.4vw, 6rem); line-height: .9; }
+.portada h1 span { color: var(--sigatoka); }
+.entrada { display: grid; gap: 22px; align-content: start; }
+.entrada > p { font-size: 1.2rem; color: var(--tinta-2); max-width: 34ch; }
+.botones { display: grid; gap: 12px; max-width: 30rem; }
+.casilla { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; color: var(--tinta-2); cursor: pointer; width: fit-content; }
+.casilla input { width: 22px; height: 22px; accent-color: var(--bolsa); }
+.expo { display: flex; gap: 18px; align-items: center; margin-top: 8px; padding: 16px; max-width: 30rem; background: var(--papel); border: 1px solid var(--linea); border-radius: 16px; }
+.expo .qr { width: 112px; height: 112px; flex: none; }
+.expo b { display: block; font: 800 1.5rem/1.05 var(--display); margin-bottom: 4px; }
+.expo p { color: var(--tinta-2); font-size: .98rem; }
+
+.marco { position: relative; aspect-ratio: 4 / 3; border-radius: 20px; background: var(--papel); border: 2px dashed var(--linea); overflow: hidden; display: grid; place-items: center; transition: border-color 150ms ease, background-color 150ms ease; }
+.marco.encima { border-color: var(--bolsa); background: var(--bolsa-tenue); }
+.marco img.foto { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.guia { display: grid; justify-items: center; gap: 12px; padding: 24px; text-align: center; color: var(--tinta-2); }
+.guia > svg { width: min(46%, 220px); height: auto; color: var(--sana); }
+.consejos .ico { width: 22px; height: 22px; color: var(--tinta); }
+.guia b { font: 800 1.7rem/1 var(--display); color: var(--tinta); }
+.consejos { display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: center; font-size: .95rem; }
+.consejos span { display: inline-flex; align-items: center; gap: 6px; }
+.esquinas { position: absolute; inset: 14px; pointer-events: none; border: 3px solid var(--tinta);
+  -webkit-mask: conic-gradient(at 34px 34px, transparent 75%, #000 0) 0 0 / calc(100% - 34px) calc(100% - 34px);
+          mask: conic-gradient(at 34px 34px, transparent 75%, #000 0) 0 0 / calc(100% - 34px) calc(100% - 34px); border-radius: 8px; }
+
+.resultado { display: grid; gap: 18px; margin-top: 22px; }
+.medidor { position: relative; height: 16px; border-radius: 8px; background: var(--suave); margin-top: 26px; }
+.medidor i { position: absolute; inset: 0 auto 0 0; border-radius: 8px; background: var(--c); width: var(--v); }
+.medidor.carga { margin-top: 4px; height: 12px; }
+.medidor.carga i { transition: width 300ms linear; }
+.medidor .minimo { position: absolute; top: -8px; bottom: -8px; left: var(--m); width: 3px; margin-left: -1.5px; background: var(--tinta); border-radius: 2px; }
+.medidor .minimo span { position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: .85rem; font-weight: 700; color: var(--tinta-2); }
+.confianza { color: var(--tinta-2); }
+.hacer { display: grid; gap: 10px; padding: 0; margin: 0; list-style: none; }
+.hacer li { display: flex; gap: 14px; align-items: center; padding: 12px 16px; background: var(--papel); border-radius: 14px; border: 1px solid var(--linea); font-size: 1.08rem; }
+.hacer .ico { width: 30px; height: 30px; color: var(--tinta); }
+.hacer-titulo { font-size: 1.9rem; margin-top: 6px; }
+.acciones { display: flex; flex-wrap: wrap; gap: 10px; }
+.estado { display: flex; align-items: center; gap: 14px; color: var(--tinta-2); font-size: 1.05rem; }
+.giro { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--linea); border-top-color: var(--bolsa); animation: girar 700ms linear infinite; flex: none; }
+@keyframes girar { to { transform: rotate(360deg); } }
+.error { color: #a3172a; font-weight: 700; }
+
+/* ------------------------------------------------ lote */
+.lote { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(280px, .9fr); gap: clamp(20px, 3vw, 36px); align-items: start; }
+.marco-mapa { position: relative; border-radius: 20px; overflow: hidden; border: 1px solid var(--linea); background: #e6ece3; }
+.mapa { height: min(64vh, 580px); }
+.mapa.sin-fondo { background: #e9efe6; }
+.mapa-vacio { position: absolute; inset: 0; z-index: 500; display: grid; place-content: center; justify-items: center; gap: 14px; padding: 24px; text-align: center; background: var(--papel); }
+.mapa-vacio svg { width: 64px; height: 64px; color: var(--tinta-3); }
+.mapa-vacio b { font: 800 1.9rem/1 var(--display); }
+.mapa-vacio p { color: var(--tinta-2); max-width: 36ch; }
+.etiqueta-ejemplo { position: absolute; z-index: 600; top: 12px; left: 12px; padding: 6px 12px; border-radius: 999px; background: var(--tinta); color: #fff; font-weight: 700; font-size: .9rem; }
+.panel-lote { display: grid; gap: 20px; }
+.panel-lote h3 { font-size: 2rem; }
+.frase { color: var(--tinta-2); }
+.conteo { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.conteo li { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr) 2.6rem; gap: 10px; align-items: center; font-weight: 700; }
+.conteo .tira { height: 26px; min-width: 30px; width: var(--v); background: var(--c); clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 50%, 100% 100%, 0 100%); }
+.conteo .tira.rayada { background: repeating-linear-gradient(-45deg, var(--gris) 0 6px, #a3adb5 6px 12px); }
+.conteo b { text-align: right; font-variant-numeric: tabular-nums; font-size: 1.15rem; }
+.segmento { display: inline-flex; padding: 4px; gap: 4px; background: var(--suave); border-radius: 12px; }
+.segmento button { min-height: 44px; padding: 0 18px; border: 0; border-radius: 9px; background: transparent; color: var(--tinta-2); font: 700 1.15rem/1 var(--display); cursor: pointer; }
+.segmento button[aria-pressed="true"] { background: var(--papel); color: var(--tinta); box-shadow: 0 1px 2px rgba(15,42,28,.12), 0 2px 8px -2px rgba(15,42,28,.12); }
+.mapa-ficha b { display: flex; align-items: center; gap: 8px; font-family: var(--texto); }
+.mapa-ficha i { width: 12px; height: 12px; border-radius: 3px; }
+.mapa-ficha span { display: block; color: var(--tinta-3); font-size: .85rem; margin-top: 2px; }
+.leaflet-container { font-family: var(--texto); }
+.leaflet-bar a { width: 40px !important; height: 40px !important; line-height: 40px !important; color: var(--tinta) !important; font-size: 20px !important; }
+.leaflet-touch .leaflet-bar { border: 0; box-shadow: 0 2px 10px -2px rgba(15,42,28,.3); border-radius: 12px; overflow: hidden; }
+.leaflet-tooltip, .leaflet-popup-content-wrapper { border-radius: 12px; color: var(--tinta); }
+.leaflet-control-attribution { font-size: 11px; }
+
+/* ------------------------------------------------ dron */
+.dron { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(280px, .9fr); gap: clamp(20px, 3vw, 36px); align-items: start; }
+.visor { position: relative; aspect-ratio: 16 / 9; border-radius: 20px; overflow: hidden; background: #0b1510; display: grid; place-items: center; color: #a9b8ad; }
+.visor img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.visor .espera { display: grid; justify-items: center; gap: 10px; text-align: center; padding: 20px; }
+.visor .espera .ico { width: 54px; height: 54px; }
+.visor .espera b { font: 800 1.7rem/1 var(--display); color: #fff; }
+.en-vivo { position: absolute; top: 14px; left: 14px; padding: 6px 12px; border-radius: 999px; background: var(--sigatoka); color: #fff; font: 700 1.05rem/1 var(--display); }
+.gps { position: absolute; bottom: 14px; left: 14px; padding: 6px 12px; border-radius: 999px; background: rgba(0,0,0,.6); color: #fff; font-size: .9rem; font-variant-numeric: tabular-nums; }
+.panel-dron { display: grid; gap: 16px; }
+.campo { display: grid; gap: 6px; font-weight: 700; }
+.campo input { min-height: 52px; padding: 0 14px; border-radius: 12px; border: 2px solid var(--linea); background: var(--papel); font: 400 1.05rem var(--texto); color: var(--tinta); }
+.campo input:focus { outline: none; border-color: var(--bolsa); }
+.cinta-dron { min-height: 64px; }
+.cinta-dron .cinta-palabra { font-size: 2.1rem; }
+.cinta-dron .moño { width: 46px; height: 46px; }
+.nota { color: var(--tinta-3); font-size: .95rem; }
+details summary { cursor: pointer; font-weight: 700; color: var(--bolsa); }
+details ol { padding-left: 1.2rem; margin: 10px 0 0; display: grid; gap: 8px; color: var(--tinta-2); max-width: 62ch; }
+code { font-family: ui-monospace, Consolas, monospace; font-size: .88em; background: var(--suave); padding: 1px 5px; border-radius: 5px; overflow-wrap: anywhere; }
+
+/* ------------------------------------------------ cómo funciona */
+.camino { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(20px, 4vw, 48px); margin-bottom: 56px; }
+.camino::before { content: ""; position: absolute; top: 38px; left: 6%; right: 6%; height: 10px; background: var(--otra);
+  background-image: linear-gradient(180deg, rgba(255,255,255,.3), rgba(0,0,0,.06)); }
+.paso { position: relative; display: grid; gap: 12px; align-content: start; }
+.paso .disco { width: 86px; height: 86px; border-radius: 50%; background: var(--papel); border: 3px solid var(--tinta); display: grid; place-items: center; }
+.paso .disco .ico { width: 38px; height: 38px; }
+.paso h3 { font-size: 2rem; }
+.paso p { color: var(--tinta-2); max-width: 36ch; }
+.verdad { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(20px, 4vw, 48px); align-items: start; }
+.verdad h3 { font-size: 2.2rem; margin-bottom: 14px; }
+.verdad p { color: var(--tinta-2); max-width: 52ch; }
+.verdad p + p { margin-top: 12px; }
+.verdad p b { color: var(--tinta); }
+.ficha { margin: 0; display: grid; grid-template-columns: auto 1fr; border-top: 1px solid var(--linea); }
+.ficha dt, .ficha dd { margin: 0; padding: 12px 0; border-bottom: 1px solid var(--linea); }
+.ficha dt { font-weight: 700; padding-right: 20px; }
+.ficha dd { color: var(--tinta-2); }
+
+footer { background: var(--tinta); color: #dfe8e1; padding: 28px var(--margen); display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; }
+footer b { font: 800 1.4rem/1 var(--display); color: #fff; }
+footer a { color: #fff; }
+
+@media (max-width: 900px) {
+  .anclas { display: none; }
+  .portada, .lote, .dron, .verdad { grid-template-columns: 1fr; }
+  .expo { display: none; }
+  .camino { grid-template-columns: 1fr; gap: 28px; }
+  .camino::before { top: 0; bottom: 0; left: 38px; right: auto; width: 10px; height: auto; }
+  .paso { grid-template-columns: 86px 1fr; column-gap: 18px; }
+  .paso .disco { grid-row: span 2; }
+  .botones { max-width: none; }
+}
+@media (max-width: 520px) {
+  .cinta { padding-right: 36px; min-height: 68px; }
+  .moño { width: 48px; height: 48px; }
+  .cinta-pct { font-size: 1.35rem; }
+  .conteo li { grid-template-columns: 7.2rem minmax(0, 1fr) 2.2rem; }
+  .btn-grande { font-size: 1.5rem; }
+}
+</style>
+</head>
+<body>
+<header class="barra">
+  <a class="marca" href="#hoja" aria-label="Dron Sigatoka, inicio">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><use href="#moño"/></svg>Dron Sigatoka</a>
+  <nav class="anclas" aria-label="Secciones">
+    <a href="#hoja">Revisar hoja</a><a href="#lote">Mapa del lote</a><a href="#dron">Dron en vivo</a><a href="#proyecto">Cómo funciona</a>
+  </nav>
+</header>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="moño" viewBox="0 0 64 64">
+    <path fill="currentColor" d="M32 31C22 17 6 13 5 24c-1 11 15 13 27 8Zm0 0c10-14 26-18 27-7 1 11-15 13-27 8Z"/>
+    <path fill="currentColor" d="m30 33-11 27 7-3 3 6 5-29Zm4 0 11 27-7-3-3 6-5-29Z"/>
+    <circle cx="32" cy="32" r="6" fill="currentColor"/>
+  </symbol>
+</svg>
+
+<main>
+  <!-- ============================================ revisar una hoja -->
+  <section class="seccion portada" id="hoja" aria-labelledby="t-hoja">
+    <div class="entrada">
+      <h1 id="t-hoja">¿Tu hoja tiene <span>Sigatoka</span>?</h1>
+      <p>Tómale una foto a una hoja de plátano. Te digo en voz alta lo que veo y qué hacer. La foto no sale de tu teléfono.</p>
+      <div class="botones">
+        <button class="btn btn-bolsa btn-grande" id="b-camara" type="button"></button>
+        <button class="btn btn-linea" id="b-galeria" type="button"></button>
+        <label class="casilla"><input type="checkbox" id="voz" checked> Leer el resultado en voz alta</label>
+      </div>
+      <div class="expo">
+        <div id="qr"></div>
+        <div><b>Pruébalo con tu celular</b><p>Escanea el código y toma una foto de una hoja. Funciona en el navegador, sin instalar nada.</p></div>
+      </div>
+      <input type="file" id="in-camara" accept="image/*" capture="environment" hidden>
+      <input type="file" id="in-galeria" accept="image/*" hidden>
+    </div>
+
+    <div>
+      <div class="marco" id="marco">
+        <div class="esquinas" aria-hidden="true"></div>
+        <div class="guia" id="guia">
+          <svg viewBox="0 0 120 80" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true">
+            <path d="M8 62C30 18 78 6 112 14 96 50 52 74 8 62Z"/><path d="M10 61C42 44 74 28 110 15"/>
+            <path d="M30 51 38 33M48 43l6-19M64 35l6-16M80 27l5-12M40 47l-6 14M58 39l-3 15M74 31l-1 13"/>
+          </svg>
+          <b>Que la hoja llene el cuadro</b>
+          <div class="consejos" id="consejos"></div>
+        </div>
+        <img class="foto oculto" id="foto" alt="La hoja que estás revisando">
+      </div>
+      <div id="resultado" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- ============================================ mapa del lote -->
+  <section class="seccion" id="lote" aria-labelledby="t-lote">
+    <h2 class="banda" id="t-lote">El lote, zona por zona</h2>
+    <div class="lote">
+      <div class="marco-mapa">
+        <div class="mapa" id="mapa" aria-label="Mapa del lote"></div>
+        <span class="etiqueta-ejemplo oculto" id="etiqueta-ejemplo">Ejemplo con datos inventados</span>
+        <div class="mapa-vacio" id="mapa-vacio">
+          <span id="ico-mapa"></span>
+          <b>Abre el mapa de tu lote</b>
+          <p>Es el archivo que da la estación de tierra después de un vuelo. Se lee aquí mismo: no se sube a ningún lado.</p>
+        </div>
+      </div>
+      <div class="panel-lote">
+        <div class="acciones">
+          <button class="btn btn-bolsa" id="b-archivo" type="button"></button>
+          <button class="btn btn-linea" id="b-ejemplo" type="button">Ver un ejemplo</button>
+          <input type="file" id="in-mapa" accept=".geojson,.json,application/geo+json,application/json" hidden>
+        </div>
+        <p class="error oculto" id="error-mapa" role="alert"></p>
+        <div class="oculto" id="resumen-lote" style="display:grid; gap:18px">
+          <h3 id="titulo-lote">Así está el lote</h3>
+          <ul class="conteo" id="conteo"></ul>
+          <p class="frase" id="frase"></p>
+          <div class="segmento" role="group" aria-label="Ver el mapa por">
+            <button type="button" data-vista="zonas" aria-pressed="true">Zonas</button>
+            <button type="button" data-vista="fotos" aria-pressed="false">Cada foto</button>
+          </div>
+          <p class="nota">El GPS del dron tiene un margen de 2 a 3 metros, por eso el mapa agrupa por zonas de 20 m y no por planta.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ dron en vivo -->
+  <section class="seccion" id="dron" aria-labelledby="t-dron">
+    <h2 class="banda" id="t-dron">El dron, en vivo</h2>
+    <div class="dron">
+      <div class="visor" id="visor">
+        <div class="espera" id="espera"><span id="ico-dron"></span><b>Sin conexión con el dron</b><span>Escribe la dirección del dron y presiona Conectar.</span></div>
+        <img class="oculto" id="video" alt="Video en vivo de la cámara del dron">
+        <span class="en-vivo oculto" id="en-vivo">En vivo</span>
+        <span class="gps oculto" id="gps"></span>
+      </div>
+      <div class="panel-dron">
+        <form class="campo" id="form-dron" autocomplete="off">
+          <label for="dir-dron">Dirección del dron</label>
+          <input id="dir-dron" type="text" inputmode="url" spellcheck="false" placeholder="https://palabras.trycloudflare.com">
+          <div class="acciones" style="margin-top:6px">
+            <button class="btn btn-bolsa" type="submit" id="b-conectar">Conectar</button>
+            <button class="btn btn-linea oculto" type="button" id="b-desconectar">Desconectar</button>
+          </div>
+        </form>
+        <div id="lectura-dron" aria-live="polite"></div>
+        <button class="btn btn-linea oculto" type="button" id="b-foto-dron"></button>
+        <p class="nota" id="msg-dron"></p>
+        <details>
+          <summary>Cómo poner al dron en internet</summary>
+          <ol>
+            <li>En la Jetson, con la cámara abierta (<code>zed_right.py</code>), corre <code>cloudflared tunnel --url http://localhost:8080</code>.</li>
+            <li>Escribe aquí la dirección <code>https://</code> que imprime. Cambia cada vez y se cierra con la terminal.</li>
+            <li>En la misma WiFi que el dron no hace falta: abre <code>http://&lt;ip-de-la-jetson&gt;:8080</code>.</li>
+          </ol>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ cómo funciona -->
+  <section class="seccion" id="proyecto" aria-labelledby="t-proyecto">
+    <h2 class="banda" id="t-proyecto">Cómo funciona</h2>
+    <div class="camino">
+      <div class="paso"><span class="disco" data-ico="dron"></span><h3>El dron vuela</h3>
+        <p>Una cámara ZED X Mini fotografía las hojas desde arriba. La Pixhawk 6C y el GPS HERE4 le ponen ubicación a cada foto.</p></div>
+      <div class="paso"><span class="disco" data-ico="hoja"></span><h3>Revisa cada hoja</h3>
+        <p>Una Jetson Orin Nano en el dron corre el modelo. Si no está seguro, lo dice en vez de adivinar. Tu celular corre el mismo modelo.</p></div>
+      <div class="paso"><span class="disco" data-ico="mapa"></span><h3>Arma el mapa</h3>
+        <p>En la estación de tierra un agrónomo confirma las fotos dudosas y el mapa marca por zonas dónde actuar primero.</p></div>
+    </div>
+    <div class="verdad">
+      <div>
+        <h3>Qué tan bueno es, sin adornos</h3>
+        <p>Acertó en <b class="num">91.8 %</b> de las fotos de prueba, pero eran fotos públicas de hojas tomadas de cerca. Todavía no lo medimos con fotos del dron en campo.</p>
+        <p>Por eso es una ayuda para revisar más rápido, no un diagnóstico final: <b>confirma siempre con un técnico</b>. Detecta síntomas que ya se ven en la hoja, no la enfermedad antes de que aparezca.</p>
+      </div>
+      <dl class="ficha">
+        <dt>Qué distingue</dt><dd>Hoja sana, Sigatoka u otra condición</dd>
+        <dt>Seguridad mínima</dt><dd><span class="num">65 %</span>. Abajo de eso dice "No estoy seguro"</dd>
+        <dt>Dónde corre</dt><dd>En tu celular y en el dron, sin mandar las fotos a internet</dd>
+        <dt>Mapa</dt><dd>Por zonas de 20 m, porque el GPS tiene 2 a 3 m de margen</dd>
+      </dl>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <b>Dron Sigatoka</b><span>Equipo Platanos Machos · MR3002B · Tec de Monterrey</span>
+  <a href="https://github.com/RodrigoA01637236/Dron-9no-semestre">Código en GitHub</a>
+</footer>
+
+<script src="motor.js"></script>
+<script>
+"use strict";
+const M = Motor;
+const $ = id => document.getElementById(id);
+const moño = '<svg class="moño" viewBox="0 0 64 64" aria-hidden="true"><use href="#moño"/></svg>';
+let ultimo = null, urlFoto = null;
+
+// íconos y textos de botones
+$("b-camara").innerHTML = M.icono("camara") + "Tomar foto de la hoja";
+$("b-galeria").innerHTML = M.icono("imagen") + "Elegir una foto guardada";
+$("b-archivo").innerHTML = M.icono("archivo") + "Abrir archivo de la estación";
+$("b-foto-dron").innerHTML = M.icono("camara") + "Tomar foto con el dron";
+$("ico-mapa").innerHTML = M.icono("mapa");
+$("ico-dron").innerHTML = M.icono("dron");
+$("qr").innerHTML = M.qr();
+$("consejos").innerHTML = `<span>${M.icono("sol")}Sin sombra fuerte</span><span>${M.icono("ojo")}Que no salga borrosa</span>`;
+document.querySelectorAll("[data-ico]").forEach(el => { el.innerHTML = M.icono(el.dataset.ico); });
+$("voz").checked = M.vozActiva.get();
+$("voz").onchange = e => { M.vozActiva.set(e.target.checked); if (!e.target.checked) M.callar(); };
+
+// ------------------------------------------------ revisar una hoja
+$("b-camara").onclick = () => $("in-camara").click();
+$("b-galeria").onclick = () => $("in-galeria").click();
+["in-camara", "in-galeria"].forEach(id => $(id).onchange = e => { revisar(e.target.files[0]); e.target.value = ""; });
+const marco = $("marco");
+marco.addEventListener("dragover", e => { e.preventDefault(); marco.classList.add("encima"); });
+marco.addEventListener("dragleave", () => marco.classList.remove("encima"));
+marco.addEventListener("drop", e => {
+  e.preventDefault(); marco.classList.remove("encima");
+  const f = [...e.dataTransfer.files].find(f => f.type.startsWith("image/"));
+  if (f) revisar(f);
+});
+
+function cinta(L, { nueva = true, clase = "" } = {}) {
+  const texto = L.clave === "otra_condicion" ? "#1d1400" : "#fff";
+  return `<div class="cinta ${clase}${L.clave === "dudoso" ? " rayada" : ""}${nueva ? " nueva" : ""}" style="--c:${L.color}; --c-texto:${texto}">
+    ${moño}<span class="cinta-palabra">${M.esc(L.titulo)}</span>${L.clave === "dudoso" ? "" : `<span class="cinta-pct">${L.porcentaje} %</span>`}</div>`;
+}
+
+async function revisar(archivo) {
+  if (!archivo) return;
+  M.callar();
+  if (urlFoto) URL.revokeObjectURL(urlFoto);
+  urlFoto = URL.createObjectURL(archivo);
+  $("foto").src = urlFoto; $("foto").classList.remove("oculto"); $("guia").classList.add("oculto");
+  $("resultado").innerHTML = M.modeloListo()
+    ? `<div class="resultado"><div class="estado"><span class="giro"></span><span>Revisando la hoja…</span></div></div>`
+    : `<div class="resultado"><div class="estado"><span class="giro"></span><span>Preparando el revisor. Solo la primera vez baja unos 20 MB.</span></div>
+       <div class="medidor carga" style="--c:var(--bolsa); --v:0%" role="progressbar" aria-label="Descarga del modelo" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="carga"><i></i></div></div>`;
+  try {
+    const r = await M.diagnosticar(archivo, v => {
+      const c = $("carga"); if (!c) return;
+      c.style.setProperty("--v", `${Math.round(v * 100)}%`); c.setAttribute("aria-valuenow", Math.round(v * 100));
+    });
+    ultimo = { r, archivo };
+    pintar(r);
+    if ($("voz").checked) M.hablar(M.lectura(r).voz, () => marcarVoz(false)) && marcarVoz(true);
+  } catch (e) {
+    $("resultado").innerHTML = `<div class="resultado"><p class="error">${M.esc(e.message || "No se pudo revisar la foto.")}</p>
+      <div class="acciones"><button class="btn btn-linea" type="button" onclick="otraHoja()">${M.icono("otra")}Probar otra foto</button></div></div>`;
+  }
+  if (matchMedia("(max-width: 900px)").matches) $("resultado").scrollIntoView({ block: "start" });
+}
+
+function pintar(r) {
+  const L = M.lectura(r);
+  $("resultado").innerHTML = `<div class="resultado" style="--c:${L.color}">
+    ${cinta(L)}
+    <div class="medidor" style="--v:${L.porcentaje}%; --m:${L.minimo}%" role="meter" aria-label="Seguridad del modelo" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${L.porcentaje}">
+      <i></i><span class="minimo"><span>mínimo ${L.minimo} %</span></span></div>
+    <p class="confianza">${M.esc(L.confianza)}</p>
+    <h3 class="hacer-titulo">Qué hacer</h3>
+    <ol class="hacer">${L.pasos.map(([ico, t]) => `<li>${M.icono(ico)}<span>${M.esc(t)}</span></li>`).join("")}</ol>
+    <div class="acciones">
+      ${M.puedeHablar ? `<button class="btn btn-linea" type="button" id="b-voz">${M.icono("voz")}Escuchar</button>` : ""}
+      <button class="btn btn-linea" type="button" id="b-compartir">${M.icono("compartir")}Mandar al técnico</button>
+      <button class="btn btn-bolsa" type="button" onclick="otraHoja()">${M.icono("camara")}Revisar otra hoja</button>
+    </div></div>`;
+  if ($("b-voz")) $("b-voz").onclick = () => {
+    if ($("b-voz").dataset.hablando) { M.callar(); marcarVoz(false); }
+    else { M.hablar(L.voz, () => marcarVoz(false)); marcarVoz(true); }
+  };
+  $("b-compartir").onclick = () => M.compartir(ultimo.r, ultimo.archivo);
+}
+
+function marcarVoz(hablando) {
+  const b = $("b-voz"); if (!b) return;
+  if (hablando) b.dataset.hablando = "1"; else delete b.dataset.hablando;
+  b.innerHTML = hablando ? M.icono("pausa") + "Callar" : M.icono("voz") + "Escuchar";
+}
+
+function otraHoja() {
+  M.callar();
+  $("resultado").innerHTML = "";
+  $("foto").classList.add("oculto"); $("guia").classList.remove("oculto");
+  $("hoja").scrollIntoView({ block: "start" });
+  $("in-camara").click();
+}
+
+// ------------------------------------------------ mapa del lote
+let mapa = null, vista = "zonas";
+$("b-archivo").onclick = () => $("in-mapa").click();
+$("in-mapa").onchange = async e => {
+  const f = e.target.files[0]; e.target.value = "";
+  if (!f) return;
+  try { await verLote(M.leerGeojson(await f.text()), false, f.name); $("error-mapa").classList.add("oculto"); }
+  catch (err) { $("error-mapa").textContent = `No pude leer ese archivo (${err.message}). Tiene que ser el .geojson que da la estación en Mapa > Descargar el mapa.`; $("error-mapa").classList.remove("oculto"); }
+};
+$("b-ejemplo").onclick = () => verLote(M.ejemplo(), true);
+document.querySelectorAll(".segmento button").forEach(b => b.onclick = () => {
+  vista = b.dataset.vista;
+  document.querySelectorAll(".segmento button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  mapa?.vista(vista);
+});
+
+async function verLote(fotos, esEjemplo, nombre = "") {
+  $("mapa-vacio").classList.add("oculto");
+  mapa ??= await M.crearMapa($("mapa"));
+  mapa.vista(vista);
+  const res = mapa.mostrar(fotos, { conSatelite: !esEjemplo });
+  $("etiqueta-ejemplo").classList.toggle("oculto", !esEjemplo);
+  $("titulo-lote").textContent = esEjemplo ? "Así se vería tu lote" : "Así está el lote";
+  const filas = ["sigatoka", "otra_condicion", "sana"].filter(k => res.porClase[k]).map(k => [k, res.porClase[k], M.cat(k)]);
+  if (res.dudosas) filas.push(["dudoso", res.dudosas, { nombre: "No está seguro", color: M.GRIS }]);
+  const max = Math.max(...filas.map(f => f[1]), 1);
+  $("conteo").innerHTML = filas.map(([k, n, c]) =>
+    `<li><span>${M.esc(c.nombre)}</span><span class="tira${k === "dudoso" ? " rayada" : ""}" style="--c:${c.color}; --v:${Math.max(8, n / max * 100)}%"></span><b>${n}</b></li>`).join("");
+  $("frase").textContent = `${M.plural(res.total, "foto", "fotos")} con ubicación${nombre ? ` en ${nombre}` : ""}. ${res.frase}`;
+  $("resumen-lote").classList.remove("oculto");
+}
+
+// ------------------------------------------------ dron en vivo
+const dron = M.dron({
+  aviso({ titulo, texto, error, local }) {
+    $("lectura-dron").innerHTML = `<p class="${error ? "error" : "estado"}">${error ? "" : '<span class="giro"></span>'}<span><b>${M.esc(titulo)}</b>${texto ? `<br>${M.esc(texto)}` : ""}</span></p>` +
+      (local ? `<a class="btn btn-linea" href="${M.esc(local)}" target="_blank" rel="noopener" style="margin-top:10px">Abrir ${M.esc(local)}</a>` : "");
+  },
+  conectado({ host, video }) {
+    $("video").src = video;
+    ["video", "en-vivo", "gps", "b-desconectar", "b-foto-dron"].forEach(id => $(id).classList.remove("oculto"));
+    $("espera").classList.add("oculto");
+    $("b-conectar").textContent = "Cambiar";
+    $("msg-dron").textContent = `Conectado a ${host}.`;
+  },
+  estado({ lectura, gps, ms, sinModelo, esperando }) {
+    $("gps").textContent = gps ? `GPS ${gps.lat.toFixed(5)}, ${gps.lon.toFixed(5)} · ${gps.satelites} satélites` : "GPS sin señal";
+    if (sinModelo) { $("lectura-dron").innerHTML = `<p class="nota">El video funciona, pero el dron no tiene el modelo cargado.</p>`; return; }
+    if (esperando || !lectura) { $("lectura-dron").innerHTML = `<p class="estado"><span class="giro"></span>Esperando lo que ve el dron…</p>`; return; }
+    const L = M.lectura(lectura);
+    // se actualiza cada segundo: sin animación
+    $("lectura-dron").innerHTML = cinta(L, { nueva: false, clase: "cinta-dron" }) +
+      `<p class="nota" style="margin-top:10px">${M.esc(L.confianza)}${ms ? ` Revisada en el dron en ${Math.round(ms)} ms.` : ""}</p>`;
+  },
+  desconectado() {
+    $("video").removeAttribute("src");
+    ["video", "en-vivo", "gps", "b-desconectar", "b-foto-dron"].forEach(id => $(id).classList.add("oculto"));
+    $("espera").classList.remove("oculto");
+    $("b-conectar").textContent = "Conectar";
+    $("lectura-dron").innerHTML = ""; $("msg-dron").textContent = "";
+  },
+});
+$("dir-dron").value = dron.sugerida;
+$("form-dron").onsubmit = e => { e.preventDefault(); if ($("dir-dron").value.trim()) dron.conectar($("dir-dron").value); };
+$("b-desconectar").onclick = () => dron.desconectar();
+$("b-foto-dron").onclick = async () => {
+  const b = $("b-foto-dron"); b.disabled = true;
+  try { const f = await dron.foto(); $("msg-dron").innerHTML = `Guardada en el dron: ${M.esc(f.archivo)}. <a href="${M.esc(f.url)}" target="_blank" rel="noopener">Ver la foto</a>`; }
+  catch (e) { $("msg-dron").textContent = "No se pudo tomar la foto: " + e.message; }
+  b.disabled = false;
+};
+$("video").onerror = () => { if (dron.conectado()) setTimeout(() => { if (dron.conectado()) $("video").src = dron.video(); }, 2000); };
+if (dron.inicial) dron.conectar(dron.inicial);
+
+M.precargar();
+</script>
+</body>
+</html>
