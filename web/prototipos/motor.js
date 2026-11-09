@@ -10,7 +10,7 @@ const Motor = (() => {
   const CAT = {
     sana: { nombre: "Sana", color: "#2e9e44" },
     sigatoka: { nombre: "Sigatoka", color: "#d7263d" },
-    otra_condicion: { nombre: "Otra condición", color: "#f0a202" },
+    otra_condicion: { nombre: "Otro problema", color: "#f0a202" },
     sin_hoja: { nombre: "Sin hojas de plátano", color: "#8a94a6" },
   };
   const cat = k => CAT[k] || { nombre: k || "Sin diagnóstico", color: GRIS };
@@ -24,8 +24,8 @@ const Motor = (() => {
     sana: { palabra: "Sana", titulo: "Se ve sana", pasos: [
       ["ojo", "No se ven manchas de Sigatoka en esta hoja."],
       ["hoja", "Revisa también el envés y las hojas más jóvenes."]] },
-    otra_condicion: { palabra: "Otra condición", titulo: "Parece otra condición", pasos: [
-      ["telefono", "Tiene algo distinto a la Sigatoka: pide que un técnico la revise."],
+    otra_condicion: { palabra: "Otro problema", titulo: "Parece otro problema", pasos: [
+      ["telefono", "No parece Sigatoka, pero algo tiene: pide que tu técnico la revise."],
       ["alerta", "Si la planta se marchita o se pone amarilla de golpe, avisa a Sanidad Vegetal (SENASICA)."]] },
     dudoso: { palabra: "No sé", titulo: "No estoy seguro", pasos: [
       ["camara", "Toma otra foto más cerca, con la hoja llenando el cuadro."],
@@ -59,6 +59,7 @@ const Motor = (() => {
     pregunta: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.6.3-1 .8-1 1.5v.7M12 17v.1"/>',
     flecha: '<path d="M5 12h14M13 6l6 6-6 6"/>',
     arriba: '<path d="M12 19V5M6 11l6-6 6 6"/>',
+    bajar: '<path d="M12 4v11M7.5 10.5 12 15l4.5-4.5"/><path d="M5 19.5h14"/>',
   };
   const icono = (nombre, clase = "") =>
     `<svg class="ico ${clase}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS[nombre] || ""}</svg>`;
@@ -192,16 +193,17 @@ const Motor = (() => {
     const sinHoja = !r.seguro && r.calidad?.sinHoja;
     let L = LECTURAS[clave] || { palabra: cat(r.clase).nombre, titulo: `Parece ${cat(r.clase).nombre}`, pasos: LECTURAS.dudoso.pasos.slice(2) };
     if (sinHoja) L = { palabra: "No veo hoja", titulo: "No veo una hoja", pasos: [
-      ["hoja", "Acerca la cámara a una hoja de plátano, que llene el cuadro."], LECTURAS.dudoso.pasos[1]] };
+      ["hoja", "Usa una foto donde una hoja de plátano llene el cuadro."], LECTURAS.dudoso.pasos[1]] };
     const luz = r.calidad?.oscura ? " La foto salió muy oscura." : r.calidad?.quemada ? " La foto salió con demasiada luz." : "";
     const n = Math.round(r.confianza * 100), minimo = Math.round(r.umbral * 100);
-    const confianza = (sinHoja ? "Casi no hay verde en la foto, así que no la diagnostico."
-      : r.seguro ? `El modelo está ${n} % seguro. Necesita al menos ${minimo} % para decirlo.`
-      : `Lo más parecido es ${cat(r.clase).nombre} (${n} %), pero necesita al menos ${minimo} % para decirlo.`) + luz;
-    const voz = (r.seguro ? `${L.titulo}. El modelo está ${n} por ciento seguro. ` : sinHoja ? "No veo una hoja en la foto. " : "No estoy seguro de lo que veo. ") +
+    const confianza = (sinHoja ? "Casi no hay verde en la foto, así que no la reviso."
+      : r.seguro ? `Qué tan seguro: ${n} de 100. Necesita ${minimo} para dar un resultado.`
+      : `Lo más parecido es ${cat(r.clase).nombre.toLowerCase()}, pero solo ${n} de 100: necesita ${minimo} para decirlo.`) + luz;
+    const cerca = r.seguro && n - minimo < 10 ? "Está cerca del límite: que lo confirme tu técnico. " : "";
+    const voz = (r.seguro ? `${L.titulo}. Qué tan seguro: ${n} de 100. ${cerca}` : sinHoja ? "No veo una hoja en la foto. " : "No estoy seguro de lo que veo. ") +
       L.pasos.map(p => p[1]).join(" ");
-    return { clave, ...L, color: r.seguro ? cat(r.clase).color : GRIS, nombre: r.seguro ? cat(r.clase).nombre : "No estoy seguro",
-             porcentaje: n, minimo, confianza, voz };
+    return { clave, ...L, color: r.seguro ? cat(r.clase).color : GRIS, nombre: r.seguro ? cat(r.clase).nombre : "Sin confirmar",
+             porcentaje: n, minimo, confianza, voz, sinHoja: !!sinHoja, cercaDelLimite: !!cerca };
   }
 
   // ------------------------------------------------------------------ voz
@@ -230,10 +232,15 @@ const Motor = (() => {
   };
 
   // ------------------------------------------------------------------ compartir con el técnico
-  async function compartir(r, archivo) {
+  function mensaje(r) {
     const L = lectura(r);
-    const texto = (r.seguro ? `Revisé una hoja de plátano: ${L.titulo.toLowerCase()} (el modelo está ${L.porcentaje} % seguro).`
-      : "Revisé una hoja de plátano y el modelo no está seguro de lo que ve.") + ` ¿La puedes revisar? ${SITIO}`;
+    return (r.seguro ? `Revisé una hoja de plátano con Dron Sigatoka: ${L.titulo.toLowerCase()} (qué tan seguro: ${L.porcentaje} de 100).` +
+        (L.cercaDelLimite ? " Está casi en el límite." : "")
+      : "Revisé una hoja de plátano con Dron Sigatoka y no está seguro de lo que ve.") + ` ¿La puedes revisar? ${SITIO}`;
+  }
+  // En el celular: la hoja de compartir del teléfono, con la foto. Devuelve "compartido", "cancelado" o "whatsapp".
+  async function compartir(r, archivo) {
+    const texto = mensaje(r);
     try {
       if (archivo && navigator.canShare?.({ files: [archivo] })) { await navigator.share({ files: [archivo], text: texto }); return "compartido"; }
       if (navigator.share) { await navigator.share({ text: texto }); return "compartido"; }
@@ -242,6 +249,32 @@ const Motor = (() => {
     }
     window.open("https://wa.me/?text=" + encodeURIComponent(texto), "_blank", "noopener");
     return "whatsapp";
+  }
+
+  // La foto con el resultado escrito abajo, para mandarla al técnico o guardarla. Devuelve un File JPG.
+  async function fotoConResultado(r, archivo) {
+    const L = lectura(r);
+    const img = await createImageBitmap(archivo);
+    const W = Math.min(1280, img.width), H = Math.round(img.height * W / img.width), s = W / 1080, banda = Math.round(214 * s);
+    const c = document.createElement("canvas"); c.width = W; c.height = H + banda;
+    const ctx = c.getContext("2d");
+    ctx.drawImage(img, 0, 0, W, H); img.close();
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, H, W, banda);
+    try { await Promise.all(["600 52px Geist", "400 30px Geist"].map(f => document.fonts.load(f))); } catch (e) {}
+    const letra = (peso, px) => `${peso} ${Math.round(px * s)}px Geist, system-ui, sans-serif`;
+    const color = r.seguro ? L.color : "#0a0a0a";
+    ctx.fillStyle = r.seguro ? L.color : GRIS;
+    ctx.beginPath(); ctx.arc(60 * s, H + 70 * s, 13 * s, 0, 2 * Math.PI); ctx.fill();
+    ctx.fillStyle = color; ctx.font = letra(600, 52); ctx.textBaseline = "alphabetic";
+    ctx.fillText(L.titulo, 92 * s, H + 88 * s);
+    ctx.fillStyle = "#3d3d3d"; ctx.font = letra(400, 30);
+    ctx.fillText(L.sinHoja ? "No veo una hoja en la foto" : `Qué tan seguro: ${L.porcentaje} de 100${L.cercaDelLimite ? " · casi en el límite" : ""}`, 46 * s, H + 140 * s);
+    const hoy = new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
+    ctx.fillStyle = "#8a8a8a"; ctx.font = letra(400, 24);
+    ctx.fillText(`Dron Sigatoka · ${hoy} · ${SITIO.replace("https://", "")}`, 46 * s, H + 184 * s);
+    const blob = await new Promise(ok => c.toBlob(ok, "image/jpeg", .9));
+    const fecha = new Date().toISOString().slice(0, 10);
+    return new File([blob], `hoja-${L.clave === "otra_condicion" ? "otro-problema" : L.clave}-${fecha}.jpg`, { type: "image/jpeg" });
   }
 
   // ------------------------------------------------------------------ mapa del lote
@@ -328,7 +361,7 @@ const Motor = (() => {
   function cuantas(clave, n) {
     if (clave === "sana") return `${n} ${n === 1 ? "sana" : "sanas"}`;
     if (clave === "dudoso") return `${n} sin diagnóstico seguro`;
-    return `${n} con ${clave === "otra_condicion" ? "otra condición" : cat(clave).nombre}`;
+    return `${n} con ${clave === "otra_condicion" ? "otro problema" : cat(clave).nombre}`;
   }
 
   function resumen(fotos, metros) {
@@ -350,7 +383,7 @@ const Motor = (() => {
     const L = await leaflet();
     el.style.isolation = "isolate";   // que las capas de Leaflet no pinten encima de la barra de la página
     const tactil = matchMedia("(pointer: coarse)").matches;
-    const mapa = L.map(el, { zoomControl: false, scrollWheelZoom: false, attributionControl: true, dragging: !tactil, zoomSnap: .25 }).setView([17.99, -92.95], 15);
+    const mapa = L.map(el, { zoomControl: false, attributionControl: true, dragging: !tactil, zoomSnap: .25, scrollWheelZoom: !tactil }).setView([17.99, -92.95], 15);
     if (tactil) {   // un dedo mueve la página, dos dedos mueven el mapa
       const aviso = document.createElement("div");
       aviso.className = "mapa-dos-dedos"; aviso.textContent = "Usa dos dedos para mover el mapa";
@@ -374,8 +407,8 @@ const Motor = (() => {
     let fotos = [], vista = "zonas", metros = 20;
 
     function ficha(f) {
-      const c = f.dudoso ? { nombre: "No está seguro", color: GRIS } : cat(f.clave);
-      const fuente = f.humano ? `Revisada${f.revisor ? " por " + esc(f.revisor) : ""}` : f.conf != null ? `Modelo: ${pct(f.conf)}` : "Sin diagnóstico";
+      const c = f.dudoso ? { nombre: "Sin confirmar", color: GRIS } : cat(f.clave);
+      const fuente = f.humano ? `Revisada${f.revisor ? " por " + esc(f.revisor) : ""}` : f.conf != null ? `Qué tan seguro: ${Math.round(f.conf * 100)} de 100` : "Sin revisar";
       return `<div class="mapa-ficha"><b><i style="background:${c.color}"></i>${esc(c.nombre)}</b><span>${fuente}${f.archivo ? ` · ${esc(f.archivo)}` : ""}</span></div>`;
     }
     function dibujar() {
@@ -395,7 +428,7 @@ const Motor = (() => {
         L.rectangle([[z.i * z.dLat, z.j * z.dLon], [(z.i + 1) * z.dLat, (z.j + 1) * z.dLon]], {
           color: algo ? CAT.sigatoka.color : color, weight: algo ? 2.5 : 1.2, dashArray: algo ? "5 4" : null,
           fillColor: color, fillOpacity: .35 + .35 * Math.min(1, z.n / 4),
-        }).bindTooltip(`<b>${esc(cat(z.dominante).nombre)}</b> · ${plural(z.n, "foto", "fotos")}<br>${detalle}`).addTo(capa);
+        }).bindTooltip(`<b>${esc(cat(z.dominante).nombre)}</b> · ${plural(z.n, "foto", "fotos")} en este cuadro<br>${detalle}`).addTo(capa);
       });
     }
     return {
@@ -470,20 +503,20 @@ const Motor = (() => {
     async function conectar(texto) {
       let dir;
       try { dir = leerDireccion(texto); }
-      catch (e) { return avisar.aviso?.({ titulo: "Esa dirección no es válida", texto: "Escribe la que imprimió el túnel, algo como https://palabras.trycloudflare.com", error: true }); }
+      catch (e) { return avisar.aviso?.({ titulo: "Ese enlace no se ve bien", texto: "Cópialo completo del mensaje que te mandaron; empieza con https://", error: true }); }
       desconectar();
-      if (dir.local) return avisar.aviso?.({ titulo: "Esa dirección es de la red local",
-        texto: "Esta página es pública y el navegador no la deja leer la red local. En la misma WiFi que el dron, abre su página directo.", local: dir.local });
+      if (dir.local) return avisar.aviso?.({ titulo: "Ese enlace solo funciona en la WiFi del dron",
+        texto: "Conéctate a esa WiFi y abre el enlace directo, o pide el enlace que empieza con https://", local: dir.local, error: true });
       try { localStorage.setItem("dron", texto.trim()); } catch (e) {}
       d = { base: dir.base, temporizador: null, fallas: 0 };
       const host = new URL(dir.base).host;
-      avisar.aviso?.({ titulo: "Conectando con el dron…", texto: host });
+      avisar.aviso?.({ titulo: "Conectando con el dron…" });
       let est;
       try { est = await (await pedir("/estado")).json(); }
       catch (e) {
         d = null;
-        return avisar.aviso?.({ titulo: "No se pudo conectar", error: true,
-          texto: `No contestó ${host}. Revisa que el dron esté encendido, con la cámara abierta y el túnel corriendo.` });
+        return avisar.aviso?.({ titulo: "El dron no contestó", error: true,
+          texto: "Pide a quien lo vuela que revise que esté encendido y que te mande el enlace otra vez." });
       }
       avisar.conectado?.({ host, video: `${dir.base}/video?t=${Date.now()}` });
       estado(est);
@@ -502,15 +535,17 @@ const Motor = (() => {
              inicial, sugerida: inicial || guardada };
   }
 
-  // Precarga el modelo cuando la página ya está quieta, para que la primera foto no espere tanto.
-  // Con datos limitados (ahorro de datos o red 2G/3G) espera a que la persona tome la primera foto.
+  // Precarga el modelo (unos 20 MB) cuando la página ya está quieta, para que la primera foto no espere.
+  // En la computadora siempre; en el celular solo con WiFi, para no gastar sus datos: ahí empieza a
+  // bajar cuando la persona toca para tomar la primera foto.
   function precargar() {
     const red = navigator.connection;
     if (red && (red.saveData || /(^|-)(2g|3g)$/.test(red.effectiveType || ""))) return;
+    if (!matchMedia("(pointer: fine)").matches && !/^(wifi|ethernet)$/.test(red?.type || "")) return;
     const ir = () => modelo().catch(() => {});
     if ("requestIdleCallback" in window) requestIdleCallback(ir, { timeout: 2500 }); else setTimeout(ir, 1200);
   }
 
   return { CAT, cat, GRIS, LECTURAS, esc, plural, pct, icono, qr, SITIO, modelo, modeloListo, diagnosticar, lectura, precargar,
-           hablar, callar, puedeHablar, vozActiva, compartir, leerGeojson, ejemplo, crearMapa, resumen, zonas, cuantas, dron };
+           hablar, callar, puedeHablar, vozActiva, mensaje, compartir, fotoConResultado, leerGeojson, ejemplo, crearMapa, resumen, zonas, cuantas, dron };
 })();
