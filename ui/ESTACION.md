@@ -8,7 +8,7 @@ Tiene cuatro pestañas en la barra de la izquierda (abajo, en el celular):
 | **Cargar** (la principal) | Subir una imagen, varias, o arrastrar una carpeta completa (con subcarpetas), o usar la cámara en vivo. El modelo dice al momento qué cree que tiene cada imagen (sana, Sigatoka u otra condición), con qué seguridad y qué hacer. Todo se guarda con la fecha de hoy. |
 | **Revisar** | Elige la fecha arriba. *Una por una*: salen primero las imágenes en las que el modelo tiene más dudas y una persona confirma o corrige. *Todas las imágenes*: todas las de esa fecha, de la más dudosa a la más segura. |
 | **Modelo** | Reentrenar con lo revisado (modelo de foto completa, por parches de hoja, o los dos), comparar contra el modelo actual y activar el nuevo solo si mejora. |
-| **Mapa** | Opcional por ahora: muestra en el mapa las imágenes que traen ubicación (GPS). |
+| **Mapa** | Las imágenes con ubicación (GPS) sobre el lote. *Condiciones*: cada zona (10–100 m) toma el color de lo que más hay en ella (Sigatoka, sana, otra condición) y un borde rojo punteado avisa si hay algo de Sigatoka; al pasar el cursor dice cuántas fotos de cada una. *Resaltar una*: % de fotos con una condición por zona. *Fotos*: cada foto como punto. En la leyenda se prende o apaga cada condición. Se descarga para Google Earth. |
 
 ## Cómo abrirla
 

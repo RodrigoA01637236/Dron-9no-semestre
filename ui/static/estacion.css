@@ -177,6 +177,7 @@ input[type=checkbox] { accent-color: var(--acento); width: 1.05rem; height: 1.05
   transition: background-color 150ms ease, color 150ms ease;
 }
 .segmentos input:checked + span { background: var(--claro); color: var(--sobre-claro); }
+.panel-resumen .segmentos span { white-space: nowrap; padding: .45rem .75rem; }
 .segmentos input:focus-visible + span { outline: 2px solid var(--acento); outline-offset: 1px; }
 
 /* ---------------------------------------------------------------- diagnóstico */
@@ -238,6 +239,14 @@ pre.registro {
 .leyenda-mapa span { display: inline-flex; gap: 6px; align-items: center; }
 .leyenda-mapa i { width: 10px; height: 10px; border-radius: 2px; }
 .leyenda-mapa i.punto { border-radius: 50%; }
+.leyenda-mapa .chip-capa {
+  display: inline-flex; gap: 6px; align-items: center; padding: 3px 9px; border-radius: 999px;
+  border: 1px solid var(--borde); background: transparent; color: var(--texto-2); font: inherit; cursor: pointer;
+  transition: opacity 150ms ease, background-color 150ms ease;
+}
+.leyenda-mapa .chip-capa:hover { background: var(--panel-2); }
+.leyenda-mapa .chip-capa[aria-pressed="false"] { opacity: .45; text-decoration: line-through; }
+.leyenda-mapa .chip-capa:focus-visible { outline: 2px solid var(--acento); outline-offset: 1px; }
 .leyenda-mapa .lectura-pos { color: var(--texto-3); font-variant-numeric: tabular-nums; padding-left: 12px; border-left: 1px solid var(--borde); }
 
 .panel-resumen {

@@ -15,7 +15,7 @@
     <ol class="pasos-inicio">
       <li><span><b>Carga imágenes</b>Fotos de celular o del dron con la ubicación activada.</span></li>
       <li><span><b>Revisa lo que vio el modelo</b>Una persona confirma o corrige cada foto.</span></li>
-      <li><span><b>Mira aquí el mapa del lote</b>Las zonas en rojo son las que más Sigatoka tienen.</span></li>
+      <li><span><b>Mira aquí el mapa del lote</b>Cada zona toma el color de lo que más se ve en ella: Sigatoka, sana u otra condición.</span></li>
     </ol>
     <a class="boton claro grande ancho" href="/">Cargar imágenes</a>
   </div>
@@ -33,13 +33,14 @@
     <div class="que-hacer" id="msg-zonas"></div>
     <div style="display:grid; gap:10px">
       <div class="segmentos" role="radiogroup" aria-label="Vista del mapa">
-        <label><input type="radio" name="vista" value="zonas" checked><span>Zonas</span></label>
+        <label><input type="radio" name="vista" value="condicion" checked><span>Condiciones</span></label>
+        <label><input type="radio" name="vista" value="zonas"><span>Resaltar una</span></label>
         <label><input type="radio" name="vista" value="puntos"><span>Fotos</span></label>
       </div>
       <details class="mas-opciones">
         <summary>Más opciones</summary>
         <div class="fila" style="margin-top:.7rem; align-items:flex-end">
-          <label class="campo" style="flex:1 1 9rem"><span>Condición a resaltar</span><select id="objetivo"></select></label>
+          <label class="campo" style="flex:1 1 9rem" id="caja-objetivo"><span>Condición a resaltar</span><select id="objetivo"></select></label>
           <label class="campo" id="caja-zona"><span>Tamaño de zona</span>
             <select id="tam-zona"><option value="10">10 m</option><option value="20" selected>20 m</option>
               <option value="50">50 m</option><option value="100">100 m</option></select></label>
@@ -60,13 +61,59 @@
 <script>
 const $ = id => document.getElementById(id);
 
+// Botón de la leyenda que prende o apaga una condición en el mapa.
+function chipCapa(clave, nombre, muestra) {
+  const prendida = !Mapa.op.ocultas.has(clave);
+  return `<button type="button" class="chip-capa" data-clave="${esc(clave)}" aria-pressed="${prendida}"
+    title="${prendida ? "Ocultar" : "Mostrar"} ${esc(nombre)}">${muestra}${esc(nombre)}</button>`;
+}
+
 function leyenda() {
-  const nombre = esc(categoria(Mapa.op.objetivo).nombre);
-  $("leyenda").innerHTML = (Mapa.op.vista === "zonas"
-    ? `<span><i style="background:#5fd27a"></i>Sin ${nombre}</span><span><i style="background:#ffc04d"></i>Hasta 25 %</span><span><i style="background:#ff5a6e"></i>Más de 25 %</span>`
-    : RESUMEN.categorias.map(c => `<span><i class="punto" style="background:${c.color}"></i>${esc(c.nombre)}</span>`).join("") +
-      `<span><i class="punto" style="background:${GRIS}"></i>No está seguro</span><span><i class="punto" style="border:2px solid #eaf0f4"></i>Revisada</span>`) +
-    `<span class="lectura-pos" id="lectura-pos">Mueve el cursor sobre el mapa</span>`;
+  const op = Mapa.op, nombre = esc(categoria(op.objetivo).nombre);
+  const cats = RESUMEN.categorias;
+  let html;
+  if (op.vista === "zonas") {
+    html = `<span><i style="background:#5fd27a"></i>Sin ${nombre}</span><span><i style="background:#ffc04d"></i>Hasta 25 %</span><span><i style="background:#ff5a6e"></i>Más de 25 %</span>`;
+  } else if (op.vista === "condicion") {
+    html = cats.filter(c => !Mapa.NO_DIAGNOSTICA.has(c.clave))
+      .map(c => chipCapa(c.clave, c.nombre, `<i style="background:${c.color}"></i>`)).join("") +
+      (cats.some(c => c.clave === "sigatoka")
+        ? `<span><i style="border:2px dashed ${categoria("sigatoka").color}; background:none"></i>Hay algo de Sigatoka</span>` : "");
+  } else {
+    html = cats.map(c => chipCapa(c.clave, c.nombre, `<i class="punto" style="background:${c.color}"></i>`)).join("") +
+      chipCapa("dudoso", "No está seguro", `<i class="punto" style="background:${GRIS}"></i>`) +
+      `<span><i class="punto" style="border:2px solid #eaf0f4"></i>Revisada</span>`;
+  }
+  $("leyenda").innerHTML = html + `<span class="lectura-pos" id="lectura-pos">Mueve el cursor sobre el mapa</span>`;
+  $("leyenda").querySelectorAll(".chip-capa").forEach(b => b.onclick = () => {
+    const k = b.dataset.clave;
+    op.ocultas.has(k) ? op.ocultas.delete(k) : op.ocultas.add(k);
+    Mapa.dibujar(); leyenda(); resumen($("vuelo").value);
+  });
+  $("caja-objetivo").classList.toggle("oculto", op.vista !== "zonas");
+  $("caja-zona").classList.toggle("oculto", op.vista === "puntos");
+}
+
+// "38 sanas", "10 con Sigatoka", "4 sin hojas de plátano".
+function cuantas(clave, n) {
+  const nombre = categoria(clave).nombre;
+  if (clave === "sana") return `${n} ${n === 1 ? "sana" : "sanas"}`;
+  if (/^sin /i.test(nombre)) return `${n} ${nombre.charAt(0).toLowerCase()}${nombre.slice(1)}`;
+  return `${n} con ${clave === "otra_condicion" ? "otra condición" : nombre}`;
+}
+
+// Mensaje del panel para la vista por condición.
+function mensajeCondicion() {
+  const zonas = Mapa.zonasCondicion();
+  if (!zonas.length) return Mapa.op.ocultas.size
+    ? "No queda ninguna zona a la vista: prende alguna condición en la leyenda."
+    : "Todavía no hay fotos con diagnóstico seguro y ubicación.";
+  const por = {};
+  zonas.forEach(z => { por[z.dominante] = (por[z.dominante] || 0) + 1; });
+  const conSig = zonas.filter(z => z.cuenta.sigatoka).length;
+  const partes = Object.entries(por).sort((a, b) => b[1] - a[1]).map(([k, n]) => esc(cuantas(k, n)));
+  return `De <b>${plural(zonas.length, "zona", "zonas")}</b> de ${Mapa.op.metros} m con fotos: ${partes.join(", ")}.` +
+    (conSig ? ` <b>${plural(conSig, "zona tiene", "zonas tienen")}</b> al menos una foto con Sigatoka: ahí conviene revisar primero.` : "");
 }
 
 function resumen(vuelo) {
@@ -82,10 +129,11 @@ function resumen(vuelo) {
   const total = Math.max(fotos.length, 1);
   $("barra-reparto").innerHTML = cuenta.map(x => `<i style="width:${x.n / total * 100}%; background:${x.c.color}"></i>`).join("") +
     (dudosas ? `<i style="width:${dudosas / total * 100}%; background:${GRIS}"></i>` : "");
-  $("reparto").innerHTML = cuenta.map(x => `<span><i style="background:${x.c.color}"></i>${x.n} ${esc(x.c.nombre.toLowerCase())}</span>`).join("") +
+  $("reparto").innerHTML = cuenta.map(x => `<span><i style="background:${x.c.color}"></i>${esc(cuantas(x.c.clave, x.n))}</span>`).join("") +
     (dudosas ? `<span><i style="background:${GRIS}"></i>${dudosas} sin diagnóstico seguro</span>` : "");
   const rojas = Mapa.zonas().filter(z => z.pos / z.n > .25).length;
   $("msg-zonas").innerHTML = !fotos.length ? "Este vuelo no tiene fotos con ubicación."
+    : Mapa.op.vista === "condicion" ? mensajeCondicion()
     : rojas ? `<b>${plural(rojas, "zona en rojo tiene", "zonas en rojo tienen")}</b> más de una cuarta parte de fotos con ${esc(nombre)}. Ahí conviene revisar primero.`
     : `Ninguna zona pasa de 25 % de fotos con ${esc(nombre)}.`;
   const pend = v ? v.fotos - v.revisadas : RESUMEN.total_fotos - RESUMEN.total_revisadas;
@@ -130,7 +178,9 @@ async function cargar() {
   $("objetivo").innerHTML = RESUMEN.categorias.map(c => `<option value="${esc(c.clave)}">${esc(c.nombre)}</option>`).join("");
   $("objetivo").value = Mapa.op.objetivo = RESUMEN.categorias.some(c => c.clave === "sigatoka") ? "sigatoka" : RESUMEN.categorias[0]?.clave;
   $("vuelo").onchange = cargar;
-  document.querySelectorAll("input[name=vista]").forEach(r => r.onchange = () => { Mapa.op.vista = r.value; Mapa.dibujar(); leyenda(); });
+  document.querySelectorAll("input[name=vista]").forEach(r => r.onchange = () => {
+    Mapa.op.vista = r.value; Mapa.dibujar(); leyenda(); resumen($("vuelo").value);
+  });
   $("tam-zona").onchange = e => { Mapa.op.metros = +e.target.value; Mapa.dibujar(); resumen($("vuelo").value); };
   $("objetivo").onchange = e => { Mapa.op.objetivo = e.target.value; Mapa.dibujar(); leyenda(); resumen($("vuelo").value); };
   leyenda();
