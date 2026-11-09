@@ -406,7 +406,10 @@ const Motor = (() => {
         if (conSatelite) satelite.addTo(mapa); else satelite.remove();
         el.classList.toggle("sin-fondo", !conSatelite);
         dibujar();
-        mapa.fitBounds(L.latLngBounds(fotos.map(f => [f.lat, f.lon])), { padding: [24, 24], maxZoom: 19 });
+        // Encuadra las zonas completas (no solo los puntos), para que ninguna quede cortada en el borde.
+        const zs = zonas(fotos, metros);
+        const esquinas = zs.length ? zs.flatMap(z => [[z.i * z.dLat, z.j * z.dLon], [(z.i + 1) * z.dLat, (z.j + 1) * z.dLon]]) : fotos.map(f => [f.lat, f.lon]);
+        mapa.fitBounds(L.latLngBounds(esquinas), { padding: [20, 20], maxZoom: 19 });
         return resumen(fotos, metros);
       },
       vista(v) { vista = v; dibujar(); },
