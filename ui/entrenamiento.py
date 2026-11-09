@@ -1,12 +1,21 @@
 """Reentrenamiento desde la estación de tierra.
 
-1. Arma un dataset train/val/test = dataset base público (data/dataset) + las
-   fotos etiquetadas por humanos. Las fotos marcadas como "holdout" (≈20 %)
-   NUNCA entran a train/val: son el examen de campo.
-2. Corre vision/train/train_cls.py en un proceso aparte (el mismo script de
-   siempre), guardando su salida en un log que la página va mostrando.
-3. Al terminar, mide el modelo nuevo y el activo sobre el examen de campo y
-   lo registra como candidato. Activarlo es una decisión humana (botón).
+Dos tipos de modelo, que se pueden entrenar por separado o uno después del otro:
+
+- "foto": el de siempre (como el v1). Clasifica la foto completa reducida a 384 px.
+- "parches": el v2 (vision/GUIA-PARCHES.md). Clasifica trozos de hoja a resolución
+  completa y junta el veredicto de la foto.
+
+Pasos:
+1. Arma un dataset de fotos train/val/test = fotos públicas (data/dataset_v2 si existe,
+   si no data/dataset) + las fotos etiquetadas por humanos. Las fotos marcadas como
+   "holdout" (≈20 %) NUNCA entran a train/val: son el examen de campo.
+2. "foto": corre vision/train/train_cls.py con esas fotos.
+   "parches": corta parches (hacer_parches.py), entrena con ellos (train_cls.py) y calibra
+   umbral y temperatura (calibrar.py). Cada paso es un proceso aparte y su salida va al
+   mismo log, que la página va mostrando.
+3. Al terminar, mide el modelo nuevo y el activo con el examen de campo y lo registra
+   como candidato. Activarlo es una decisión humana (botón).
 """
 import os
 import random
@@ -17,10 +26,11 @@ import threading
 import time
 from pathlib import Path
 
-from datos import (DATASET_BASE, DESCARTAR, ENTRENAMIENTOS, EXT_IMG, RAIZ, ahora,
-                   carpeta_vuelo, conectar, registrar_modelo)
+from datos import (DESCARTAR, ENTRENAMIENTOS, EXT_IMG, MODELO_INICIAL, RAIZ, ahora,
+                   carpeta_vuelo, conectar, dataset_base, registrar_modelo)
 
 MIN_POR_CLASE = 15  # una categoría nueva necesita al menos esto para entrenarse
+TIPOS = {"foto": "Foto completa", "parches": "Por parches de hoja"}
 _LOCK = threading.Lock()
 _ESTADO = {"activo": False}
 
@@ -38,11 +48,12 @@ def _enlazar(origen: Path, destino: Path) -> None:
 
 def resumen_datos(con) -> list[dict]:
     """Imágenes disponibles por categoría: base pública y etiquetas de campo."""
+    base_dir = dataset_base()
     filas = []
     for cat in con.execute("SELECT clave, nombre, color FROM categorias ORDER BY orden"):
         base = 0
         for split in ("train", "val", "test"):
-            d = DATASET_BASE / split / cat["clave"]
+            d = base_dir / split / cat["clave"]
             if d.is_dir():
                 base += sum(1 for p in d.iterdir() if p.suffix.lower() in EXT_IMG)
         n = con.execute("SELECT SUM(holdout=0), SUM(holdout=1) FROM fotos WHERE etiqueta=?",
@@ -56,12 +67,13 @@ def resumen_datos(con) -> list[dict]:
 
 def armar_dataset(con, destino: Path, semilla=42) -> dict:
     rng = random.Random(semilla)
+    base_dir = dataset_base()
     clases = [f["clave"] for f in resumen_datos(con) if f["entrenable"]]
     conteo = {}
     for clase in clases:
         partes = {"train": [], "val": [], "test": []}
         for split in partes:
-            d = DATASET_BASE / split / clase
+            d = base_dir / split / clase
             if d.is_dir():
                 partes[split] += [p for p in sorted(d.iterdir()) if p.suffix.lower() in EXT_IMG]
         campo = [carpeta_vuelo(r["vuelo"]) / r["archivo"] for r in con.execute(
@@ -86,7 +98,8 @@ def armar_dataset(con, destino: Path, semilla=42) -> dict:
 
 
 def examen_de_campo(con, ruta_onnx) -> tuple[float | None, int]:
-    """Exactitud de un modelo sobre las fotos holdout etiquetadas por humanos."""
+    """Exactitud de un modelo sobre las fotos holdout etiquetadas por humanos.
+    Cada modelo predice en su propio modo (foto completa o por parches)."""
     from vision.clasificador import Clasificador
     filas = con.execute("SELECT vuelo, archivo, etiqueta FROM fotos WHERE holdout=1 AND"
                         " etiqueta IS NOT NULL AND etiqueta != ?", (DESCARTAR,)).fetchall()
@@ -118,17 +131,67 @@ def estado() -> dict:
     return e
 
 
-def iniciar(epocas: int) -> tuple[bool, str]:
+def iniciar(epocas: int, tipo: str = "foto") -> tuple[bool, str]:
+    tipos = list(TIPOS) if tipo == "ambos" else [tipo]
+    if any(t not in TIPOS for t in tipos):
+        return False, "Tipo de modelo desconocido."
     with _LOCK:
         if _ESTADO.get("activo"):
             return False, "Ya hay un entrenamiento en curso."
         _ESTADO.clear()
-        _ESTADO.update(activo=True, fase="Preparando el dataset…", t0=time.time())
-    threading.Thread(target=_trabajo, args=(epocas,), daemon=True).start()
+        _ESTADO.update(activo=True, fase="Preparando el dataset…", t0=time.time(), versiones=[])
+    threading.Thread(target=_trabajo, args=(epocas, tipos), daemon=True).start()
     return True, "Entrenamiento iniciado."
 
 
-def _trabajo(epocas: int) -> None:
+def _fase(texto: str, **extra) -> None:
+    with _LOCK:
+        _ESTADO.update(fase=texto, **extra)
+
+
+def _correr(script: str, args: list[str], log: Path) -> None:
+    """Corre un script de vision/train/ en un proceso aparte; su salida se suma al log."""
+    cmd = [sys.executable, str(RAIZ / "vision" / "train" / script), *args]
+    entorno = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUNBUFFERED="1")
+    with open(log, "a", encoding="utf-8") as salida:
+        salida.write(f"\n===== {script} {' '.join(args)}\n")
+        salida.flush()
+        proc = subprocess.run(cmd, cwd=RAIZ, stdout=salida, stderr=subprocess.STDOUT, env=entorno)
+    if proc.returncode != 0:
+        raise RuntimeError(f"{script} falló; revisa el log de abajo.")
+
+
+def _entrenar_foto(carpeta: Path, epocas: int, log: Path, prefijo: str) -> Path:
+    _fase(f"{prefijo}Entrenando el modelo de foto completa… (la computadora debe quedarse encendida)")
+    _correr("train_cls.py", ["--data", str(carpeta / "fotos"), "--epochs", str(epocas),
+                             "--imgsz", "384", "--batch", "32", "--workers", "2",
+                             "--project", str(carpeta), "--name", "foto"], log)
+    return carpeta / "foto" / "weights" / "best.onnx"
+
+
+def _entrenar_parches(carpeta: Path, epocas: int, log: Path, prefijo: str, comparar: Path | None) -> Path:
+    _fase(f"{prefijo}Cortando las fotos en parches de hoja… (unos 20-40 minutos)")
+    args = ["--entrada", str(carpeta / "fotos"), "--salida", str(carpeta / "parches")]
+    if MODELO_INICIAL.exists():
+        args += ["--maestro", str(MODELO_INICIAL)]  # el v1 limpia las etiquetas de los parches
+    _correr("hacer_parches.py", args, log)
+
+    _fase(f"{prefijo}Entrenando el modelo por parches… (la computadora debe quedarse encendida)")
+    _correr("train_cls.py", ["--data", str(carpeta / "parches"), "--model", "yolo11n-cls.pt",
+                             "--epochs", str(epocas), "--imgsz", "384", "--batch", "32", "--workers", "2",
+                             "--erasing", "0.1", "--project", str(carpeta), "--name", "parches"], log)
+
+    _fase(f"{prefijo}Calibrando el umbral y comparando con el modelo en uso…")
+    salida = carpeta / "parches_calibrado" / "modelo_parches.onnx"
+    args = ["--onnx", str(carpeta / "parches" / "weights" / "best.onnx"),
+            "--parches", str(carpeta / "parches"), "--imagenes", str(carpeta / "fotos"),
+            "--salida", str(salida), "--limite", "300"]
+    args += ["--comparar", str(comparar)] if comparar else ["--comparar", ""]
+    _correr("calibrar.py", args, log)
+    return salida
+
+
+def _trabajo(epocas: int, tipos: list[str]) -> None:
     con = conectar()
     sello = time.strftime("%Y%m%d_%H%M%S")
     carpeta = ENTRENAMIENTOS / sello
@@ -136,47 +199,52 @@ def _trabajo(epocas: int) -> None:
                       (ahora(), "en_curso", str(carpeta.relative_to(RAIZ)), epocas))
     ent_id = cur.lastrowid
     con.commit()
+    versiones = []
     try:
-        conteo = armar_dataset(con, carpeta / "dataset")
+        conteo = armar_dataset(con, carpeta / "fotos")
         if len(conteo) < 2:
             raise RuntimeError("Se necesitan al menos 2 categorías con datos para entrenar.")
         log = carpeta / "entrenamiento.log"
-        with _LOCK:
-            _ESTADO.update(fase="Entrenando… (la computadora debe quedarse encendida)",
-                           log=str(log), conteo=conteo)
-        cmd = [sys.executable, str(RAIZ / "vision" / "train" / "train_cls.py"),
-               "--data", str(carpeta / "dataset"), "--epochs", str(epocas),
-               "--imgsz", "384", "--batch", "32", "--workers", "2",
-               "--project", str(carpeta), "--name", "corrida"]
-        entorno = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUNBUFFERED="1")
-        with open(log, "w", encoding="utf-8") as salida:
-            proc = subprocess.run(cmd, cwd=RAIZ, stdout=salida, stderr=subprocess.STDOUT, env=entorno)
-        onnx = carpeta / "corrida" / "weights" / "best.onnx"
-        if proc.returncode != 0 or not onnx.exists():
-            raise RuntimeError("El entrenamiento falló; revisa el log de abajo.")
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text(f"Fotos para entrenar (base: {dataset_base().relative_to(RAIZ)}): {conteo}\n",
+                       encoding="utf-8")
+        _fase("Preparando…", log=str(log), conteo=conteo)
 
-        with _LOCK:
-            _ESTADO.update(fase="Midiendo el modelo nuevo con el examen de campo…")
-        acc_nuevo, n = examen_de_campo(con, onnx)
-        activo = con.execute("SELECT version, ruta FROM modelos WHERE activo=1").fetchone()
-        acc_actual = None
-        if activo:
-            acc_actual, n_actual = examen_de_campo(con, RAIZ / activo["ruta"])
-            con.execute("UPDATE modelos SET acc_campo=?, n_campo=? WHERE version=?",
-                        (acc_actual, n_actual, activo["version"]))
-        version = registrar_modelo(con, onnx, activo=False, acc_campo=acc_nuevo, n_campo=n,
-                                   acc_anterior=acc_actual,
-                                   notas=f"Reentrenado {sello} ({epocas} épocas)")
+        for n, tipo in enumerate(tipos, 1):
+            prefijo = f"{n} de {len(tipos)} · " if len(tipos) > 1 else ""
+            activo = con.execute("SELECT version, ruta FROM modelos WHERE activo=1").fetchone()
+            ruta_activo = RAIZ / activo["ruta"] if activo else None
+            if tipo == "foto":
+                onnx = _entrenar_foto(carpeta, epocas, log, prefijo)
+            else:
+                onnx = _entrenar_parches(carpeta, epocas, log, prefijo, ruta_activo)
+            if not onnx.exists():
+                raise RuntimeError(f"No apareció {onnx.name}; revisa el log de abajo.")
+
+            _fase(f"{prefijo}Midiendo el modelo nuevo con el examen de campo…")
+            acc_nuevo, n_campo = examen_de_campo(con, onnx)
+            acc_actual = None
+            if activo:
+                acc_actual, n_actual = examen_de_campo(con, ruta_activo)
+                con.execute("UPDATE modelos SET acc_campo=?, n_campo=? WHERE version=?",
+                            (acc_actual, n_actual, activo["version"]))
+            version = registrar_modelo(con, onnx, activo=False, acc_campo=acc_nuevo, n_campo=n_campo,
+                                       acc_anterior=acc_actual,
+                                       notas=f"{TIPOS[tipo]}: reentrenado {sello} ({epocas} épocas)")
+            con.commit()
+            versiones.append(version)
+            with _LOCK:
+                _ESTADO["versiones"] = list(versiones)
+
         con.execute("UPDATE entrenamientos SET fin=?, estado='terminado', modelo_version=?,"
-                    " resumen=? WHERE id=?", (ahora(), version, str(conteo), ent_id))
+                    " resumen=? WHERE id=?",
+                    (ahora(), versiones[-1], f"{'+'.join(tipos)}: versiones {versiones}; {conteo}", ent_id))
         con.commit()
-        with _LOCK:
-            _ESTADO.update(activo=False, fase="Terminado", version=version)
+        _fase("Terminado", activo=False, version=versiones[-1])
     except Exception as exc:  # el error se muestra en la página
         con.execute("UPDATE entrenamientos SET fin=?, estado='fallido', resumen=? WHERE id=?",
-                    (ahora(), str(exc), ent_id))
+                    (ahora(), f"{exc} (versiones creadas: {versiones})", ent_id))
         con.commit()
-        with _LOCK:
-            _ESTADO.update(activo=False, fase="Error", error=str(exc))
+        _fase("Error", activo=False, error=str(exc))
     finally:
         con.close()

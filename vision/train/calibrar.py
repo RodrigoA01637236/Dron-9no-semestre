@@ -21,6 +21,7 @@ Ver vision/GUIA-PARCHES.md, paso 5.
 import argparse
 import ast
 import json
+import re
 import shutil
 import sys
 import time
@@ -37,6 +38,13 @@ from vision import parches as P  # noqa: E402
 from vision.clasificador import Clasificador, leer_imagen  # noqa: E402
 
 IMG_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"}
+
+
+def fuente_de(nombre: str) -> str:
+    """'tanzania__x.jpg' -> 'tanzania'. La estación antepone '00012_' al nombre, y las fotos
+    del dron no traen fuente: esas cuentan como 'campo'."""
+    n = re.sub(r"^\d{5}_", "", nombre)
+    return n.split("__")[0] if "__" in n else "campo"
 
 
 def fotos_de(carpeta: Path, clases: list[str], limite: int, rng) -> list[tuple[Path, str]]:
@@ -130,7 +138,8 @@ def analizar_fotos(lista, clf: Clasificador, v1: Clasificador | None, cfg: dict)
         d = {"ruta": ruta, "clase": clase, "cuadros": cs, "pp": pp,
              "completa": clf.probabilidades([img])[0], "alto": img.shape[0], "ancho": img.shape[1]}
         if v1 is not None:
-            d["v1"] = v1.predecir_bgr(img, "imagen")
+            d["v1"] = v1.predecir_bgr(img)  # en su propio modo: v1 = foto completa
+            d["v1_modo"] = v1.modo
         datos.append(d)
         if n % 100 == 0:
             print(f"    {n}/{len(lista)} ({(time.time() - t0) / n:.2f} s/foto)")
@@ -152,7 +161,8 @@ def evaluar(datos, clases, cfg, umbral, umbral_v1) -> dict:
     salida = {"v2_parches": resumen(y, [a for a, _ in v2p], [b for _, b in v2p], umbral, clases),
               "v2_foto_completa": resumen(y, [a for a, _ in v2i], [b for _, b in v2i], umbral, clases)}
     if datos and "v1" in datos[0]:
-        salida["v1_foto_completa"] = resumen(y, [d["v1"]["clase"] for d in datos],
+        nombre = "anterior_por_parches" if datos[0]["v1_modo"] == "parches" else "v1_foto_completa"
+        salida[nombre] = resumen(y, [d["v1"]["clase"] for d in datos],
                                              [d["v1"]["confianza"] for d in datos], umbral_v1, clases)
     return salida
 
@@ -200,7 +210,8 @@ def main() -> None:
     ap.add_argument("--onnx", required=True, help="best.onnx de la corrida (runs/classify/<run>/weights/)")
     ap.add_argument("--parches", default="data/parches_v2", help="para la temperatura (usa val/)")
     ap.add_argument("--imagenes", default="data/dataset_v2", help="fotos completas: val/, test/ y test_*/")
-    ap.add_argument("--comparar", default="vision/models/sigatoka_cls_v1.onnx")
+    ap.add_argument("--comparar", default="vision/models/sigatoka_cls_v1.onnx",
+                    help="modelo contra el que se compara (en su propio modo)")
     ap.add_argument("--salida", default="vision/models/sigatoka_cls_v2.onnx")
     ap.add_argument("--objetivo", type=float, default=0.95,
                     help="exactitud mínima en las fotos que sí diagnostica (val)")
@@ -273,7 +284,7 @@ def main() -> None:
         if carpeta.name == "test":
             por_fuente = defaultdict(list)
             for d in datos:
-                por_fuente[d["ruta"].name.split("__")[0]].append(d)
+                por_fuente[fuente_de(d["ruta"].name)].append(d)
             if len(por_fuente) > 1:
                 for f, ds in sorted(por_fuente.items()):
                     ev[f"fuente {f}"] = evaluar(ds, clases, cfg, umbral, v1.umbral if v1 else 0.65)

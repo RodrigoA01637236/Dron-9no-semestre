@@ -32,15 +32,23 @@
   <div class="tarjeta">
     <div id="form-entrenar">
       <div class="fila" style="align-items:flex-end">
+        <label class="campo"><span>Qué modelo</span>
+          <select id="tipo">
+            <option value="foto">Foto completa (como el v1)</option>
+            <option value="parches">Por parches de hoja (v2)</option>
+            <option value="ambos" selected>Los dos, uno después del otro</option>
+          </select></label>
         <label class="campo"><span>Duración</span>
           <select id="epocas">
-            <option value="10">Prueba rápida (unos 10 minutos)</option>
-            <option value="50" selected>Completo, recomendado (unos 35 minutos)</option>
+            <option value="10">Prueba rápida (10 épocas)</option>
+            <option value="50" selected>Completo, recomendado (50 épocas)</option>
           </select></label>
         <button class="boton claro" id="btn-entrenar" type="button">Reentrenar ahora</button>
       </div>
-      <p class="nota" style="margin:.75rem 0 0">La computadora debe quedarse encendida con esta ventana abierta.
-        Puedes seguir revisando fotos mientras entrena.</p>
+      <p class="nota" id="duracion" style="margin:.75rem 0 0"></p>
+      <p class="nota" style="margin:.4rem 0 0">La computadora debe quedarse encendida con esta ventana abierta.
+        Puedes seguir revisando fotos mientras entrena. Cada modelo terminado aparece abajo como una versión nueva,
+        sin activarse.</p>
       <p class="mensaje error" id="msg-entrenar"></p>
     </div>
     <div id="en-curso" class="oculto">
@@ -91,6 +99,19 @@
 <script>
 let sondeo = null;
 const $ = id => document.getElementById(id);
+const TIPO = { foto: "Foto completa", parches: "Por parches de hoja" };
+
+// Tiempos aproximados con la RTX 4060 de la laptop; sin GPU, varias veces más.
+function duracion() {
+  const rapido = $("epocas").value === "10";
+  const t = { foto: rapido ? "unos 10 minutos" : "unos 35 minutos",
+              parches: rapido ? "alrededor de 1 hora" : "de 2 a 3 horas",
+              ambos: rapido ? "alrededor de 1 hora y cuarto" : "de 2.5 a 3.5 horas" }[$("tipo").value];
+  $("duracion").textContent = `Tarda ${t} con la tarjeta de video de la laptop. El modelo por parches además corta
+    las fotos en trozos de hoja y calibra su umbral antes de terminar.`;
+}
+$("tipo").onchange = $("epocas").onchange = duracion;
+duracion();
 
 function comparacion(m) {
   if (m.acc_campo == null) return `<span class="nota">Sin examen de campo aún</span>`;
@@ -111,6 +132,7 @@ async function cargar() {
     ? `<h2>En uso: versión ${activo.version}</h2>
          <p class="nota" style="margin:.3rem 0 .8rem">Activa desde ${fecha(activo.creado)}.</p>
        <dl class="hechos">
+         <dt>Tipo</dt><dd>${TIPO[activo.tipo]}</dd>
          <dt>Reconoce</dt><dd class="fichas">${JSON.parse(activo.clases).map(c => ficha(categoria(c))).join("")}</dd>
          <dt>Examen de campo</dt><dd>${activo.acc_campo != null ? `<b class="num">${pct(activo.acc_campo)}</b> de aciertos en ${activo.n_campo} fotos revisadas que nunca entrenó` : "Sin examen aún: se crea al revisar fotos"}</dd>
          <dt>Prueba pública</dt><dd><b class="num">${pct(activo.top1_test)}</b> de aciertos con fotos cercanas de internet, no aéreas</dd>
@@ -121,13 +143,16 @@ async function cargar() {
   $("datos").innerHTML = r.datos.map(d => `<tr>
     <td>${ficha(d)}</td><td class="der">${d.base}</td><td class="der">${d.campo}</td><td class="der">${d.examen}</td>
     <td>${d.entrenable ? "Sí" : `<span class="nota">Faltan ${r.min_por_clase - d.base - d.campo - d.examen} fotos</span>`}</td></tr>`).join("");
-  $("nota-datos").textContent = r.dataset_base ? ""
-    : "No se encontró el dataset base (data\\dataset). Se entrenará solo con las fotos revisadas.";
+  $("nota-datos").className = "mensaje" + (r.dataset_base ? "" : " error");
+  $("nota-datos").textContent = !r.dataset_base
+    ? "No se encontró el dataset base (data\\dataset_v2 ni data\\dataset). Se entrenará solo con las fotos revisadas."
+    : r.dataset_v2 ? "Fotos base: data\\dataset_v2 (todas las fuentes públicas, sin duplicados)."
+    : "Fotos base: data\\dataset (las del v1). Para usar más fuentes, arma data\\dataset_v2 (vision/GUIA-PARCHES.md, pasos 1 y 2).";
   $("minimo").textContent = r.min_por_clase;
 
   $("versiones").innerHTML = r.modelos.map(m => {
     const peor = m.acc_campo_anterior != null && m.acc_campo < m.acc_campo_anterior;
-    return `<tr><td><b>v${m.version}</b>${m.activo ? ` <span class="nota">en uso</span>` : ""}</td><td>${fecha(m.creado)}</td>
+    return `<tr><td><b>v${m.version}</b>${m.activo ? ` <span class="nota">en uso</span>` : ""}<br><span class="nota">${TIPO[m.tipo]}</span></td><td>${fecha(m.creado)}</td>
       <td class="der">${JSON.parse(m.clases).length}</td><td>${comparacion(m)}</td><td class="der">${pct(m.top1_test)}</td>
       <td class="der">${m.activo ? "" : `<button class="boton${peor ? "" : " claro"}" type="button" data-v="${m.version}">Usar este modelo</button>`}</td></tr>`;
   }).join("");
@@ -139,8 +164,10 @@ async function cargar() {
   $("form-entrenar").classList.toggle("oculto", corriendo);
   $("en-curso").classList.toggle("oculto", !e.fase);
   if (e.fase) {
-    $("fase").textContent = (corriendo ? "En curso: " : e.error ? "Falló: " : "Terminado: ") + e.fase +
-      (e.error ? `. ${e.error}` : e.version ? `. Se creó la versión v${e.version}; compárala abajo antes de usarla.` : "");
+    $("fase").textContent = (corriendo ? `En curso: ${e.fase}` : e.error ? `Falló: ${e.fase}` : "Terminado") +
+      (e.error ? `. ${e.error}` : "") +
+      ((e.versiones || []).length > 1 ? `. Se crearon las versiones ${e.versiones.map(v => "v" + v).join(" y ")}; compáralas abajo antes de usar una.`
+       : (e.versiones || []).length === 1 ? `. Se creó la versión v${e.versiones[0]}; compárala abajo antes de usarla.` : "");
     $("tiempo").textContent = e.transcurrido_s != null ? `${Math.floor(e.transcurrido_s / 60)} min ${e.transcurrido_s % 60} s` : "";
     $("log").textContent = (e.ultimas || []).join("\n");
   }
@@ -162,7 +189,7 @@ async function activar(v) {
 }
 
 dosPasos($("btn-entrenar"), "Confirmar: empezar a entrenar", async () => {
-  try { await post("/api/entrenamiento", { epocas: +$("epocas").value }); $("msg-entrenar").textContent = ""; }
+  try { await post("/api/entrenamiento", { epocas: +$("epocas").value, tipo: $("tipo").value }); $("msg-entrenar").textContent = ""; }
   catch (e) { $("msg-entrenar").textContent = e.message; }
   await cargar();
 });

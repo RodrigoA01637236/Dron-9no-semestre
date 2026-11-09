@@ -1,9 +1,10 @@
 """Corta data/dataset_v2 en parches de hoja para entrenar el clasificador por parches.
 
-Por cada foto saca cuadros a varias escalas (100 %, 60 % y 40 % del lado corto), se queda
+Por cada foto saca cuadros a varias escalas (100, 60, 40 y 30 % del lado corto), se queda
 con los que tienen hoja (la misma máscara que usa el dron, vision/parches.py) y los guarda
 a 384x384. Las escalas y la degradación (bajar resolución, desenfoque, JPEG) imitan lo que
-ve la cámara del dron a 1.5-3 m, donde un cuadro de 384 px cubre 30-75 cm de hoja.
+ve la cámara del dron a 1.5-3 m, donde un cuadro de 384 px cubre 30-75 cm de hoja. El 30 %
+es el tamaño que usa la inferencia en fotos grandes (lado_min_rel en vision/parches.py).
 
 Etiquetas débiles: un parche hereda la clase de su foto, pero un parche de una hoja con
 Sigatoka puede ser un trozo sano. Con --maestro (el modelo v1) se limpian:
@@ -75,7 +76,7 @@ def main() -> None:
     ap.add_argument("--entrada", default="data/dataset_v2")
     ap.add_argument("--salida", default="data/parches_v2")
     ap.add_argument("--maestro", default=None, help="ONNX para limpiar etiquetas (p. ej. sigatoka_cls_v1.onnx)")
-    ap.add_argument("--escalas", default="1.0,0.6,0.4")
+    ap.add_argument("--escalas", default="1.0,0.6,0.4,0.3")
     ap.add_argument("--por-foto", type=int, default=6, help="máximo de parches por foto (equilibra fotos grandes)")
     ap.add_argument("--min-hoja", type=float, default=0.35)
     ap.add_argument("--degradar", type=float, default=0.4, help="fracción de parches degradados (0 = ninguno)")
@@ -120,7 +121,7 @@ def main() -> None:
 
             for i, (c, rec) in enumerate(zip(cs, recortes)):
                 etiqueta, motivo, p_clase = clase, "", None
-                if probs is not None:
+                if probs is not None and clase in maestro.clases:  # una categoría nueva no tiene maestro
                     pc = dict(zip(maestro.clases, probs[i]))
                     p_clase = pc.get(clase)
                     if c["escala"] < 0.999:

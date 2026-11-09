@@ -323,19 +323,32 @@ def api_procesar():
 def api_entrenamiento_estado():
     with conectar() as con:
         modelos = [dict(r) for r in con.execute("SELECT * FROM modelos ORDER BY version DESC")]
+        for m in modelos:
+            m["tipo"] = _tipo_modelo(RAIZ / m["ruta"])
         historial = [dict(r) for r in con.execute(
             "SELECT id, inicio, fin, estado, epocas, modelo_version FROM entrenamientos ORDER BY id DESC LIMIT 10")]
         datos_cat = entrenamiento.resumen_datos(con)
     return jsonify(estado=entrenamiento.estado(), modelos=modelos, historial=historial,
                    datos=datos_cat, reproceso=dict(_reproceso),
-                   dataset_base=datos.DATASET_BASE.is_dir(),
+                   dataset_base=datos.dataset_base().is_dir(),
+                   dataset_v2=datos.DATASET_V2.is_dir(),
                    min_por_clase=entrenamiento.MIN_POR_CLASE)
+
+
+def _tipo_modelo(ruta_onnx) -> str:
+    """'parches' si el JSON del modelo dice modo_defecto=parches; si no, 'foto'."""
+    try:
+        meta = json.loads(Path(ruta_onnx).with_suffix(".json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return "foto"
+    return "parches" if meta.get("modo_defecto") == "parches" else "foto"
 
 
 @app.post("/api/entrenamiento")
 def api_entrenar():
-    epocas = int(request.get_json(force=True).get("epocas", 50))
-    ok, msg = entrenamiento.iniciar(max(1, min(epocas, 300)))
+    d = request.get_json(force=True)
+    epocas = int(d.get("epocas", 50))
+    ok, msg = entrenamiento.iniciar(max(1, min(epocas, 300)), d.get("tipo", "foto"))
     return jsonify(ok=ok, mensaje=msg), (200 if ok else 409)
 
 
