@@ -4,6 +4,10 @@ Esta guía lleva de los datasets públicos a un modelo `sigatoka_cls_v2` que rev
 por trozos de hoja, y después a la Jetson y a la estación. Sigue a
 [GUIA-MODELO.md](GUIA-MODELO.md), que armó el v1; usa el mismo venv `dron-vision`.
 
+> **Ruta recomendada:** [GUIA-NOCHE.md](GUIA-NOCHE.md) hace los pasos 2 a 5 solos en una
+> noche (~8 h), con más fuentes, la clase "sin hojas de plátano" y una lectura por hoja.
+> Esta guía explica cada paso por separado.
+
 **Dónde se corre cada paso:** `[PC]` laptop con la RTX 4060 (PowerShell, venv activo),
 `[Jetson]` terminal de la Jetson, `[Estación]` laptop con la estación de tierra.
 
@@ -140,7 +144,7 @@ El CSV sí se sube a git.
 ## Paso 3 — Cortar los parches `[PC]`
 
 ```powershell
-python vision\train\hacer_parches.py --maestro vision\models\sigatoka_cls_v1.onnx
+python vision\train\hacer_parches.py --maestro vision\models\sigatoka_cls_v1.onnx --equilibrar
 ```
 
 Qué hace ([train/hacer_parches.py](train/hacer_parches.py)):
@@ -165,11 +169,12 @@ Qué hace ([train/hacer_parches.py](train/hacer_parches.py)):
 ## Paso 4 — Entrenar `[PC]`
 
 ```powershell
-python vision\train\train_cls.py --data data\parches_v2 --model yolo11n-cls.pt --epochs 60 --erasing 0.1 --name parches_v2
+python vision\train\train_cls.py --data data\parches_v2 --model yolo11s-cls.pt --time 3.5 --epochs 300 --patience 15 --batch 64 --flipud 0.5 --erasing 0.1 --name parches_v2
 ```
 
-- `yolo11n-cls.pt` es la versión más nueva del mismo tamaño que el v1. Para comparar, una
-  segunda corrida con `--model yolov8n-cls.pt --name parches_v2_y8`.
+- `yolo11s-cls.pt` es más exacto; `yolo11n-cls.pt` (del tamaño del v1) es unas 3 veces más
+  rápido en la Jetson. `--time 3.5` entrena 3.5 horas y ajusta el calendario solo.
+- `--flipud 0.5`: un parche visto desde arriba no tiene "arriba", así que voltearlo es válido.
 - `--erasing 0.1`: el borrado aleatorio (0.4 por defecto) podría tapar la única lesión del
   parche.
 - Exporta el ONNX con lote libre, para clasificar todos los parches de una foto de una vez.

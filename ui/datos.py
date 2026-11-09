@@ -35,6 +35,7 @@ CATEGORIAS_INICIALES = [
     ("sana", "Sana", "#2e9e44"),
     ("sigatoka", "Sigatoka", "#d7263d"),
     ("otra_condicion", "Otra condición", "#f0a202"),
+    ("sin_hoja", "Sin hojas de plátano", "#8a94a6"),  # suelo, cielo, otras plantas
 ]
 
 ESQUEMA = """
@@ -97,6 +98,14 @@ def inicializar() -> None:
                 "INSERT INTO categorias (clave, nombre, color, orden) VALUES (?, ?, ?, ?)",
                 [(c, n, col, i) for i, (c, n, col) in enumerate(CATEGORIAS_INICIALES)],
             )
+        # Categorías iniciales que falten en una base vieja (p. ej. sin_hoja).
+        existentes = {r[0] for r in con.execute("SELECT clave FROM categorias")}
+        orden = con.execute("SELECT COALESCE(MAX(orden), -1) FROM categorias").fetchone()[0]
+        for clave, nombre, color in CATEGORIAS_INICIALES:
+            if clave not in existentes:
+                orden += 1
+                con.execute("INSERT INTO categorias (clave, nombre, color, orden) VALUES (?, ?, ?, ?)",
+                            (clave, nombre, color, orden))
         # Un entrenamiento "en curso" al arrancar es uno que murió con la app.
         con.execute("UPDATE entrenamientos SET estado='interrumpido' WHERE estado='en_curso'")
         if con.execute("SELECT COUNT(*) FROM modelos").fetchone()[0] == 0 and MODELO_INICIAL.exists():

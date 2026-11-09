@@ -137,7 +137,7 @@ def analizar_fotos(lista, clf: Clasificador, v1: Clasificador | None, cfg: dict)
         pp = clf.probabilidades([P.recortar(img, c) for c in cs], cv2.INTER_AREA) if cs else np.zeros((0, len(clf.clases)))
         d = {"ruta": ruta, "clase": clase, "cuadros": cs, "pp": pp,
              "completa": clf.probabilidades([img])[0], "alto": img.shape[0], "ancho": img.shape[1]}
-        if v1 is not None:
+        if v1 is not None and clase in v1.clases:  # v1 no conoce "sin_hoja": solo donde puede opinar
             d["v1"] = v1.predecir_bgr(img)  # en su propio modo: v1 = foto completa
             d["v1_modo"] = v1.modo
         datos.append(d)
@@ -160,10 +160,16 @@ def evaluar(datos, clases, cfg, umbral, umbral_v1) -> dict:
     v2i = [(clases[int(d["completa"].argmax())], float(d["completa"].max())) for d in datos]
     salida = {"v2_parches": resumen(y, [a for a, _ in v2p], [b for _, b in v2p], umbral, clases),
               "v2_foto_completa": resumen(y, [a for a, _ in v2i], [b for _, b in v2i], umbral, clases)}
-    if datos and "v1" in datos[0]:
-        nombre = "anterior_por_parches" if datos[0]["v1_modo"] == "parches" else "v1_foto_completa"
-        salida[nombre] = resumen(y, [d["v1"]["clase"] for d in datos],
-                                             [d["v1"]["confianza"] for d in datos], umbral_v1, clases)
+    con_v1 = [d for d in datos if "v1" in d]
+    if con_v1:
+        nombre = "anterior_por_parches" if con_v1[0]["v1_modo"] == "parches" else "v1_foto_completa"
+        salida[nombre] = resumen([d["clase"] for d in con_v1], [d["v1"]["clase"] for d in con_v1],
+                                 [d["v1"]["confianza"] for d in con_v1], umbral_v1, clases)
+        if len(con_v1) < len(datos):
+            # Comparación justa: v2 en las mismas fotos que v1 (sin las de "sin_hoja")
+            v = [veredicto(d, clases, cfg, umbral) for d in con_v1]
+            salida["v2_parches_mismas_fotos"] = resumen([d["clase"] for d in con_v1], [a for a, _ in v],
+                                                        [b for _, b in v], umbral, clases)
     return salida
 
 
@@ -216,6 +222,7 @@ def main() -> None:
     ap.add_argument("--objetivo", type=float, default=0.95,
                     help="exactitud mínima en las fotos que sí diagnostica (val)")
     ap.add_argument("--limite", type=int, default=0, help="máximo de fotos por clase y carpeta (0 = todas)")
+    ap.add_argument("--meta", type=float, default=0.90, help="exactitud que se quiere en cada prueba")
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
 
@@ -225,6 +232,11 @@ def main() -> None:
     clf = Clasificador(onnx)
     clases = clf.clases
     cfg = clf.cfg_parches
+    if "sin_hoja" in clases:
+        # El modelo sabe decir "no es hoja de plátano": se revisan todos los cuadros y los
+        # que dice sin_hoja no cuentan para el veredicto.
+        cfg = dict(cfg, ignorar=["sin_hoja"], min_hoja=0.0)
+        clf.cfg_parches = cfg
     print(f"Modelo {onnx} · clases {clases}")
 
     # 1. Temperatura con los parches de val
@@ -245,8 +257,8 @@ def main() -> None:
     clf.temperatura = t
 
     v1 = Clasificador(args.comparar) if args.comparar and Path(args.comparar).exists() else None
-    if v1 is not None and v1.clases != clases:
-        print(f"   AVISO: v1 tiene otras clases {v1.clases}; no se compara.")
+    if v1 is not None and not set(v1.clases) <= set(clases):
+        print(f"   AVISO: el modelo a comparar tiene clases que este no tiene {v1.clases}; no se compara.")
         v1 = None
 
     # 2. Regla de la foto con las fotos de val
@@ -302,6 +314,16 @@ def main() -> None:
                           f" · recall {', '.join(f'{k} {v:.2f}' for k, v in rr['recall'].items())}")
         evals[carpeta.name] = ev
 
+    # Meta de exactitud por prueba (fotos completas, modelo por parches)
+    metas = {}
+    for carpeta, ev in evals.items():
+        r2 = ev["todas"].get("v2_parches", {})
+        if r2.get("n"):
+            metas[carpeta] = {"exactitud": r2["exactitud"], "n": r2["n"], "cumple": r2["exactitud"] >= args.meta}
+    print(f"\nMeta de {args.meta:.0%} de exactitud (modelo por parches, fotos completas):")
+    for carpeta, m in metas.items():
+        print(f"   {carpeta:22s} {m['exactitud']:.1%} en {m['n']} fotos -> {'CUMPLE' if m['cumple'] else 'NO CUMPLE'}")
+
     # 4. Empaquetar
     salida = Path(args.salida)
     salida.parent.mkdir(parents=True, exist_ok=True)
@@ -325,6 +347,7 @@ def main() -> None:
         "pruebas_externas": {k: {m: {"n": r["n"], "exactitud": r["exactitud"], "recall": r["recall"]}
                                  for m, r in v["todas"].items() if r.get("n")} | ({"cajas": v["cajas"]} if "cajas" in v else {})
                              for k, v in evals.items() if k != "test"},
+        "meta": {"exactitud": args.meta, "por_prueba": metas},
         "calibrado": date.today().isoformat(),
         "base": meta.get("dataset"),
         "notas": "Generado por vision/train/calibrar.py. El orden de classes viene del entrenamiento y NO se cambia.",
@@ -337,7 +360,10 @@ def main() -> None:
               f"- En las fotos de val diagnostica {r['cobertura']:.1%} y acierta {r['exactitud_diagnosticadas']:.1%}"
               " de esas; el resto va a revisión humana.",
               "- Métricas sobre fotos completas, no sobre parches. Datasets públicos: no representan el campo"
-              " hasta que se pruebe con test_campo."]
+              " hasta que se pruebe con test_campo.", "",
+              f"**Meta de {args.meta:.0%} de exactitud** (modelo por parches):", ""] + [
+              f"- `{c}`: {m['exactitud']:.1%} en {m['n']} fotos: {'cumple' if m['cumple'] else '**no cumple**'}"
+              for c, m in metas.items()]
     for carpeta, ev in evals.items():
         for nombre, e in ev.items():
             if nombre == "cajas":

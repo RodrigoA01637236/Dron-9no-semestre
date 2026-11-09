@@ -54,8 +54,9 @@ clientes_lock = threading.Lock()
 foto_lock = threading.Lock()
 fotos = {"ultima": None, "total": 0}
 
-NOMBRES = {"sana": "SANA", "sigatoka": "SIGATOKA", "otra_condicion": "OTRA CONDICION"}
-COLORES = {"sana": (80, 200, 80), "sigatoka": (60, 60, 230), "otra_condicion": (60, 200, 230)}
+NOMBRES = {"sana": "SANA", "sigatoka": "SIGATOKA", "otra_condicion": "OTRA CONDICION", "sin_hoja": "SIN HOJA"}
+COLORES = {"sana": (80, 200, 80), "sigatoka": (60, 60, 230), "otra_condicion": (60, 200, 230),
+           "sin_hoja": (170, 160, 150)}
 
 
 # LEER GPS DEL PIXHAWK
@@ -276,6 +277,8 @@ def crear_exif(gps, instante, pred=None, analisis_parches=None):
             f"; AnalisisParches={a['clase']}"
             f"; ConfianzaParches={a['confianza']:.3f}"
             f"; ParchesHoja={a.get('n_parches', 0)}"
+            f"; Hojas={len(a.get('hojas') or [])}"
+            f"; HojasConSintomas={sum(h['clase'] not in ('sana', 'sin_hoja') for h in a.get('hojas') or [])}"
             f"; FraccionParches=" + ",".join(f"{k}:{v:.2f}" for k, v in (a.get("fraccion") or {}).items())
         )
 
@@ -423,7 +426,9 @@ def analizar_foto(ruta, frame, gps, instante, pred):
             return
 
         ms = (time.perf_counter() - inicio) * 1000
-        sintomas = [p for p in r.get("parches", []) if p["clase"] != "sana"]
+        sintomas = [p for p in r.get("parches", []) if p["clase"] not in ("sana", "sin_hoja")]
+        hojas = r.get("hojas") or []
+        hojas_mal = [h for h in hojas if h["clase"] not in ("sana", "sin_hoja")]
 
         # El EXIF de la foto (y de su copia sin texto) suma el resultado por parches
         exif = crear_exif(gps, instante, pred, r)
@@ -440,17 +445,19 @@ def analizar_foto(ruta, frame, gps, instante, pred):
             "archivo": ruta.name, "modelo": nombre_modelo, "clase": r["clase"],
             "confianza": r["confianza"], "probs": r["probs"], "modo": r.get("modo"),
             "fraccion": r.get("fraccion"), "ancho": r.get("ancho"), "alto": r.get("alto"),
-            "parches": r.get("parches", [])
+            "hojas": hojas, "parches": r.get("parches", [])
         }, indent=1), encoding="utf-8")
 
         fotos["analisis"] = {
             "archivo": ruta.name, "clase": r["clase"], "confianza": r["confianza"],
             "n_parches": r.get("n_parches", 0), "n_sintomas": len(sintomas),
+            "n_hojas": len(hojas), "n_hojas_sintomas": len(hojas_mal),
             "fraccion": r.get("fraccion"), "ms": round(ms)
         }
 
     print(f"[PARCHES] {ruta.name}: {r['clase']} {r['confianza']:.0%} · "
-          f"{len(sintomas)}/{r.get('n_parches', 0)} trozos con síntomas · {ms:.0f} ms")
+          f"{len(sintomas)}/{r.get('n_parches', 0)} trozos con síntomas · "
+          f"{len(hojas_mal)}/{len(hojas)} hojas con síntomas · {ms:.0f} ms")
 
 
 def tomar_foto():
@@ -538,13 +545,13 @@ button{font:inherit;font-weight:700;padding:.8rem 1.2rem;border-radius:10px;bord
 <div class="nota" id="analisis"></div>
 <p class="nota">Para revisar y guardar en el mapa, usa la estación de tierra: pestaña Cargar, botón Cámara del dron.</p>
 </main><script>
-const N={sana:"Sana",sigatoka:"Sigatoka",otra_condicion:"Otra condición"};
+const N={sana:"Sana",sigatoka:"Sigatoka",otra_condicion:"Otra condición",sin_hoja:"Sin hojas de plátano"};
 async function estado(){try{const e=await (await fetch("/estado")).json();const p=e.prediccion;
 document.getElementById("diag").textContent=!e.modelo?"Sin modelo en el dron":!p?"Esperando lectura...":
 p.diagnosticable?`${N[p.clase]||p.clase} · ${Math.round(p.confianza*100)} %`:`No está seguro (${N[p.clase]||p.clase} ${Math.round(p.confianza*100)} %)`;
 const a=e.analisis_foto;document.getElementById("analisis").textContent=!a?"":a.pendiente?`Analizando ${a.archivo} por parches...`:
 a.error?`No se pudo analizar ${a.archivo}`:`Última foto (${a.archivo}): ${a.confianza>=e.modelo.umbral?(N[a.clase]||a.clase):"no está seguro"} · `+
-`${a.n_parches} trozos de hoja, ${a.n_sintomas} con síntomas · ${(a.ms/1000).toFixed(1)} s`;
+`${a.n_hojas?`${a.n_hojas} hojas, ${a.n_hojas_sintomas} con síntomas · `:""}${a.n_parches} trozos de hoja, ${a.n_sintomas} con síntomas · ${(a.ms/1000).toFixed(1)} s`;
 document.getElementById("gps").textContent=e.gps?`GPS ${e.gps.lat.toFixed(6)}, ${e.gps.lon.toFixed(6)} · ${e.gps.satelites} satélites`:"GPS: sin señal";
 }catch(x){document.getElementById("diag").textContent="Sin conexión con el dron";}}
 setInterval(estado,500);estado();

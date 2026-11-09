@@ -101,26 +101,47 @@ class Clasificador:
         return r
 
     def predecir_parches(self, img_bgr: np.ndarray) -> dict:
-        """Veredicto por parches de hoja, con la lista de cuadros para dibujarlos."""
+        """Veredicto por parches de hoja, con los cuadros y las hojas para dibujarlos."""
         cfg = self.cfg_parches
         alto, ancho = img_bgr.shape[:2]
-        todos = P.cuadros(img_bgr, cfg)
-        hoja = [c for c in todos if c["hoja"] >= cfg["min_hoja"]]
-        if not hoja:
-            # Nada parece hoja (muy seca, de noche, cielo...): respaldo con la foto completa.
+        mascara = P.mascara_hoja(img_bgr)
+        todos = P.cuadros(img_bgr, cfg, mascara)
+        usar = [c for c in todos if c["hoja"] >= cfg["min_hoja"]]
+        if not usar:
+            # Nada parece vegetación (muy seca, de noche, cielo...): respaldo con la foto completa.
             r = self._resultado(self.probabilidades([img_bgr])[0])
-            r.update(modo="imagen", n_parches=0, n_cuadros=len(todos), parches=[],
+            r.update(modo="imagen", n_parches=0, n_cuadros=len(todos), parches=[], hojas=[],
                      ancho=ancho, alto=alto, aviso="No encontré hoja en la foto; usé la foto completa.")
             return r
 
-        probs = self.probabilidades([P.recortar(img_bgr, c) for c in hoja], cv2.INTER_AREA)
+        probs = self.probabilidades([P.recortar(img_bgr, c) for c in usar], cv2.INTER_AREA)
         r = P.agregar(probs, self.clases, cfg, self.umbral)
+        ignorar = set(cfg.get("ignorar") or [])
         lista = []
-        for c, p in zip(hoja, probs):
+        for c, p in zip(usar, probs):
             i = int(p.argmax())
             lista.append({**c, "clase": self.clases[i], "confianza": round(float(p[i]), 3)})
-        r.update(modo="parches", n_parches=len(hoja), n_cuadros=len(todos), parches=lista,
-                 ancho=ancho, alto=alto)
+
+        # Una lectura por hoja: los parches se reparten entre las hojas que encuentra.
+        hojas = []
+        if cfg.get("separar_hojas") and r.get("n_hoja", 1) > 0:
+            etiquetas, hojas = P.separar_hojas(img_bgr, mascara, cfg)
+            grupos: dict[int, list[int]] = {}
+            for k, c in enumerate(lista):
+                c["id_hoja"] = P.hoja_de_cuadro(c, etiquetas, alto, ancho)
+                if c["id_hoja"] and c["clase"] not in ignorar:
+                    grupos.setdefault(c["id_hoja"], []).append(k)
+            leidas = []
+            for h in hojas:
+                ks = grupos.get(h["id"])
+                if not ks:
+                    continue  # región sin parches de hoja de plátano (maleza, sombra...)
+                rh = P.agregar(probs[ks], self.clases, cfg, self.umbral)
+                leidas.append({**h, "clase": rh["clase"], "confianza": round(rh["confianza"], 3),
+                               "n_parches": len(ks)})
+            hojas = leidas
+        r.update(modo="parches", n_parches=r.get("n_hoja", len(usar)), n_cuadros=len(todos),
+                 parches=lista, hojas=hojas, ancho=ancho, alto=alto)
         return r
 
     def predecir(self, ruta, modo: str | None = None) -> dict | None:

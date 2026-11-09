@@ -171,7 +171,7 @@ def _entrenar_foto(carpeta: Path, epocas: int, log: Path, prefijo: str) -> Path:
 
 def _entrenar_parches(carpeta: Path, epocas: int, log: Path, prefijo: str, comparar: Path | None) -> Path:
     _fase(f"{prefijo}Cortando las fotos en parches de hoja… (unos 20-40 minutos)")
-    args = ["--entrada", str(carpeta / "fotos"), "--salida", str(carpeta / "parches")]
+    args = ["--entrada", str(carpeta / "fotos"), "--salida", str(carpeta / "parches"), "--equilibrar"]
     if MODELO_INICIAL.exists():
         args += ["--maestro", str(MODELO_INICIAL)]  # el v1 limpia las etiquetas de los parches
     _correr("hacer_parches.py", args, log)
@@ -179,7 +179,7 @@ def _entrenar_parches(carpeta: Path, epocas: int, log: Path, prefijo: str, compa
     _fase(f"{prefijo}Entrenando el modelo por parches… (la computadora debe quedarse encendida)")
     _correr("train_cls.py", ["--data", str(carpeta / "parches"), "--model", "yolo11n-cls.pt",
                              "--epochs", str(epocas), "--imgsz", "384", "--batch", "32", "--workers", "2",
-                             "--erasing", "0.1", "--project", str(carpeta), "--name", "parches"], log)
+                             "--erasing", "0.1", "--flipud", "0.5", "--project", str(carpeta), "--name", "parches"], log)
 
     _fase(f"{prefijo}Calibrando el umbral y comparando con el modelo en uso…")
     salida = carpeta / "parches_calibrado" / "modelo_parches.onnx"

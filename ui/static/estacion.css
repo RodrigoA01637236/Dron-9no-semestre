@@ -316,6 +316,8 @@ pre.registro {
 .cajas { position: absolute; pointer-events: none; overflow: visible; }
 .cajas rect { fill: none; stroke-width: 3; vector-effect: non-scaling-stroke; }
 .cajas rect.dudoso { stroke-dasharray: 6 5; stroke-width: 2; }
+.cajas .hoja-caja rect { stroke: rgba(255, 255, 255, .85); stroke-width: 1.5; stroke-dasharray: 2 4; }
+.cajas .hoja-caja text { fill: #fff; font-weight: 700; paint-order: stroke; stroke: rgba(0, 0, 0, .65); stroke-width: 4px; }
 .mesa-lectura { flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 18px; padding: 26px; }
 .veredicto { font-size: 2.3rem; font-weight: 800; letter-spacing: -.03em; line-height: 1.05; }
 .confianza { color: var(--texto-2); margin: 0; }
