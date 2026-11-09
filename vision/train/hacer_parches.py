@@ -12,8 +12,8 @@ movimiento, ruido de sensor, JPEG, sombra o luz desigual, neblina, tono de luz m
 más frío y giros de 90 grados. No se cambia el tono de las lesiones (amarillo/café es la señal).
 
 Clase "sin_hoja" (no se ve hoja de plátano):
-- las fotos de la carpeta sin_hoja (otras plantas, maleza, escenas; ver fuentes_v2.json)
-  dan cuadros al azar, con o sin verde;
+- las fotos de la carpeta sin_hoja (otras plantas, maleza, frutos, escenas; ver
+  fuentes_v2.json) dan cuadros amplios (60-100 %) al azar, con o sin verde;
 - de las fotos 'sana' se toma a veces un cuadro casi sin vegetación (suelo, cielo, fondo).
   Solo de las sanas: de una foto enferma podría ser una hoja seca, que sí es plátano.
 
@@ -108,6 +108,8 @@ def cuadros_de_foto(img: np.ndarray, escalas: list[float], min_hoja: float, masc
     salida = []
     for e in escalas:
         lado = max(32, int(corto * e))
+        if e < 0.999 and lado < 160:
+            continue  # en fotos chicas (224 px) un recorte de 60 px ampliado a 384 no aporta
         cfg = P.config({"lado_px": lado, "lado_min_rel": 0.0, "solape": 0.25, "max_parches": 30})
         for c in P.cuadros(img, cfg, mascara):
             if e >= 0.999:
@@ -148,7 +150,10 @@ def procesar_foto(tarea: tuple) -> tuple[list[dict], Counter, Counter]:
 
     mascara = P.mascara_hoja(img)
     es_sin_hoja = clase == SIN_HOJA
-    cs = cuadros_de_foto(img, _G["escalas"], _G["min_hoja"], mascara, todos=es_sin_hoja)
+    # De las fotos sin_hoja solo recortes amplios (60-100 %): de cerca, la cáscara de un plátano
+    # con manchas o una hoja de otra planta se confunden con una hoja de plátano enferma o sana.
+    escalas = [e for e in _G["escalas"] if e >= 0.6] if es_sin_hoja else _G["escalas"]
+    cs = cuadros_de_foto(img, escalas, _G["min_hoja"], mascara, todos=es_sin_hoja)
     completos = [c for c in cs if c["escala"] >= 0.999]
     resto = [c for c in cs if c["escala"] < 0.999]
     rng.shuffle(resto)
@@ -242,7 +247,8 @@ def main() -> None:
         por_clase = {}
         for d in sorted(p for p in (entrada / split).iterdir() if p.is_dir()) if (entrada / split).is_dir() else []:
             por_clase[d.name] = sorted(p for p in d.rglob("*") if p.suffix.lower() in IMG_EXTS)
-        mayor = max((len(v) for v in por_clase.values()), default=1)
+        # La meta la pone la clase de hoja más grande; sin_hoja tiene su propia cuota fija.
+        mayor = max((len(v) for c, v in por_clase.items() if c != SIN_HOJA), default=1)
         for clase, fotos in por_clase.items():
             cuantos = args.por_foto
             if args.equilibrar and split == "train" and fotos:
@@ -280,6 +286,32 @@ def main() -> None:
 
     if not filas:
         sys.exit("No salió ningún parche. Revisa --entrada.")
+
+    # Segundo equilibrio (solo train): las clases de hoja que quedaron cortas reciben copias
+    # alteradas de sus propios parches hasta ~70 % de la clase más grande (máximo el doble).
+    if args.equilibrar and "train" in splits:
+        rng = random.Random(args.seed + 7)
+        hoja = {c: n for (sp, c), n in conteo.items() if sp == "train" and c != SIN_HOJA}
+        meta = int(0.7 * max(hoja.values(), default=0))
+        for c, n in sorted(hoja.items()):
+            faltan = min(meta - n, n)
+            if faltan <= 0:
+                continue
+            fuentes = sorted((salida / "train" / c).glob("*.jpg"))
+            for k in range(faltan):
+                origen = rng.choice(fuentes)
+                img = leer_imagen(origen)
+                if img is None:
+                    continue
+                img = degradar(img, rng) if rng.random() < 0.7 else img
+                img = np.ascontiguousarray(np.rot90(img, rng.choice([0, 1, 2, 3])))
+                if rng.random() < 0.5:
+                    img = np.ascontiguousarray(img[:, ::-1])
+                ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 92])
+                if ok:
+                    buf.tofile(str(origen.with_name(f"{origen.stem}_eq{k}.jpg")))
+                    conteo[("train", c)] += 1
+            print(f"  equilibrio: {c} {n} -> {n + faltan} parches (copias alteradas)")
     salida.mkdir(parents=True, exist_ok=True)
     with open(salida / "parches.csv", "w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=list(filas[0].keys()))

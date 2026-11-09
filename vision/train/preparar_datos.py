@@ -7,8 +7,9 @@ Qué hace:
    esa clase ("sin_hoja"); 'max_imagenes' toma una muestra fija de las fuentes grandes.
 3. Quita duplicados exactos (md5) y agrupa los casi duplicados (dHash de 256 bits con
    giros y espejos): un grupo entero va al mismo split, así una foto y su copia girada no
-   quedan una en train y otra en test. Si un grupo trae clases distintas, se deja fuera y
-   se anota en data/manifests/v2_conflictos.csv para que alguien lo revise.
+   quedan una en train y otra en test. Una misma foto (mismo md5) con dos etiquetas se
+   deja fuera; fotos parecidas con etiquetas distintas se quedan, cada una con la suya.
+   Las dos cosas se anotan en data/manifests/v2_conflictos.csv para que alguien las revise.
 4. Respeta el reparto del manifiesto v1: lo que fue test en v1 sigue en test, para que la
    comparación v1 contra v2 sea justa (v1 nunca vio esas fotos).
 5. Reparte el resto 70/15/15 por clase. Las fuentes con uso 'externo' van completas a
@@ -114,8 +115,8 @@ def recolectar_carpetas(fuente: dict, cfg: dict, raiz: Path, avisos: Counter) ->
     fija = fuente.get("clase_fija")
     items = []
     for ruta in sorted(raiz.rglob("*")):
-        if ruta.suffix.lower() not in IMG_EXTS or not ruta.is_file():
-            continue
+        if ruta.suffix.lower() not in IMG_EXTS or ruta.name.startswith(".") or not ruta.is_file():
+            continue  # ._foto.jpg y .DS_Store son basura de macOS dentro de los zip
         rel = ruta.relative_to(raiz)
         if any(e in normal(p) for p in rel.parts[:-1] for e in excluir):
             avisos[f"{fuente['nombre']}: excluida ({rel.parts[0]})"] += 1
@@ -134,7 +135,9 @@ def recolectar_yolo(fuente: dict, raiz: Path, avisos: Counter) -> list[dict]:
     mapa = {int(k): v for k, v in fuente.get("clases_yolo", {"0": "sigatoka"}).items()}
     items = []
     for ruta in sorted(raiz.rglob("*")):
-        if ruta.suffix.lower() not in IMG_EXTS or not ruta.is_file():
+        if ruta.suffix.lower() not in IMG_EXTS or ruta.name.startswith(".") or not ruta.is_file():
+            continue
+        if "__macosx" in str(ruta).lower():
             continue
         partes = list(ruta.parts)
         if "images" in partes:
@@ -166,7 +169,9 @@ def main() -> None:
     ap.add_argument("--manifest", default="data/manifests/v2_publico.csv")
     ap.add_argument("--respetar", default="data/manifests/v1_public_baseline.csv",
                     help="manifiesto v1 cuyo reparto se conserva (si existe)")
-    ap.add_argument("--distancia", type=int, default=20, help="bits (de 256) de diferencia para casi duplicado")
+    ap.add_argument("--distancia", type=int, default=12,
+                    help="bits (de 256) de diferencia para casi duplicado. Copias giradas o recomprimidas: 0-2; "
+                         "fotos distintas: 50+; tomas seguidas del mismo objeto: 15-25")
     ap.add_argument("--copiar", action="store_true", help="copiar en vez de enlazar (más espacio)")
     ap.add_argument("--seed", type=int, default=42)
     args = ap.parse_args()
@@ -253,15 +258,30 @@ def main() -> None:
     destino_grupo = {}
     externos_md5 = set()
 
-    for raiz_g, ks in miembros.items():
-        clases = {items[k]["clase"] for k in ks}
-        if len(clases) > 1:
-            conflictos.append(ks)
-            continue
-        clase = clases.pop()
+    mixtos = []
+    for raiz_g, ks in list(miembros.items()):
+        # La misma foto con dos etiquetas: no se sabe cuál es la buena, se quita.
+        etiquetas_md5 = defaultdict(set)
+        for k in ks:
+            etiquetas_md5[items[k]["md5"]].add(items[k]["clase"])
+        malos = [k for k in ks if len(etiquetas_md5[items[k]["md5"]]) > 1]
+        if malos:
+            conflictos.append(malos)
+            ks = [k for k in ks if k not in malos]
+            miembros[raiz_g] = ks
+            if not ks:
+                continue
+        votos_clase = Counter(items[k]["clase"] for k in ks)
+        if len(votos_clase) > 1:
+            mixtos.append(ks)  # fotos parecidas con etiqueta distinta: se quedan, mismo split
+        clase = votos_clase.most_common(1)[0][0]
         usos = {items[k]["uso"] for k in ks}
         if usos == {"externo"}:
             destino_grupo[raiz_g] = "externo"
+            continue
+        if "solo_entrenar" in usos:
+            destino_grupo[raiz_g] = "train"
+            asignado[(clase, "train")] += len(ks)
             continue
         splits = set()
         for k in ks:
@@ -338,21 +358,24 @@ def main() -> None:
         w = csv.DictWriter(fh, fieldnames=list(filas[0].keys()))
         w.writeheader()
         w.writerows(sorted(filas, key=lambda f: (f["split"], f["etiqueta"], f["path"])))
-    if conflictos:
+    if conflictos or mixtos:
         ruta_c = manifest.with_name("v2_conflictos.csv")
         with open(ruta_c, "w", newline="", encoding="utf-8") as fh:
             w = csv.writer(fh)
-            w.writerow(["grupo", "origen", "archivo_original", "etiqueta"])
-            for ks in conflictos:
-                for k in ks:
-                    w.writerow([ks[0], items[k]["fuente"], str(items[k]["rel"]), items[k]["clase"]])
-        print(f"\n{len(conflictos)} grupos con etiquetas contradictorias quedaron fuera: {ruta_c}")
+            w.writerow(["grupo", "accion", "origen", "archivo_original", "etiqueta"])
+            for lista, accion in ((conflictos, "quitada: misma foto con dos etiquetas"),
+                                  (mixtos, "se queda: foto parecida con otra etiqueta")):
+                for ks in lista:
+                    for k in ks:
+                        w.writerow([ks[0], accion, items[k]["fuente"], str(items[k]["rel"]), items[k]["clase"]])
+        print(f"\n{sum(map(len, conflictos))} fotos idénticas con dos etiquetas quedaron fuera; "
+              f"{len(mixtos)} grupos de fotos parecidas tienen etiquetas distintas (se quedan). Ver {ruta_c}")
 
     conteo = Counter((f["split"], f["etiqueta"]) for f in filas if f["path"])
     splits = sorted({s for s, _ in conteo})
     resumen = {"fecha": date.today().isoformat(), "fuentes": args.fuentes,
                "imagenes_leidas": n, "duplicados_quitados": sum(f["duplicado"] for f in filas),
-               "grupos_en_conflicto": len(conflictos),
+               "fotos_en_conflicto": sum(map(len, conflictos)), "grupos_mixtos": len(mixtos),
                "conteo": {s: {c: conteo[(s, c)] for c in cfg["clases"]} for s in splits}}
     (out / "resumen.json").write_text(json.dumps(resumen, indent=2, ensure_ascii=False), encoding="utf-8")
 

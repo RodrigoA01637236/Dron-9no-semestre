@@ -1,19 +1,56 @@
 {
-  "_nota": "Fuentes del dataset v2. Una fuente cuya carpeta no existe se salta con aviso, así que se pueden ir agregando. 'uso': 'entrenar' entra al reparto train/val/test; 'externo' va completo a test_<nombre> (nunca se entrena con ella). 'mapa' manda sobre 'palabras'. Las carpetas cuyo nombre contiene algo de 'excluir' se saltan (copias aumentadas). Registrar cada fuente en data/README.md con licencia y fecha.",
-  "clases": ["otra_condicion", "sana", "sigatoka"],
+  "_nota": "Fuentes del dataset v2, verificadas el 2026-11-09. 'uso': 'entrenar' entra al reparto train/val/test; 'solo_entrenar' va completa a train (sus fotos salen de una misma foto original y contaminarían test); 'externo' va completa a test_<nombre> (nunca se entrena con ella). 'clase_fija' manda toda la fuente a una clase (negativos -> sin_hoja). 'mapa' manda sobre 'palabras'. Carpetas con algo de 'excluir' se saltan. 'descarga' la usa vision/train/descargar_datos.py. Registrar cada fuente en data/README.md.",
+  "clases": [
+    "otra_condicion",
+    "sana",
+    "sigatoka",
+    "sin_hoja"
+  ],
   "palabras": {
-    "sana": ["healthy", "sana", "normal", "fresh"],
-    "sigatoka": ["sigatoka", "mycosphaerella", "pseudocercospora"],
-    "otra_condicion": ["cordana", "pestalo", "panama", "fusarium", "xanthomonas", "bacterial", "bunchy",
-                       "skipper", "insect", "chewing", "deficien", "moko", "speckle", "wilt", "virus", "mosaic"]
+    "sana": [
+      "healthy",
+      "sana",
+      "normal",
+      "fresh"
+    ],
+    "sigatoka": [
+      "sigatoka",
+      "segatoka",
+      "mycosphaerella",
+      "pseudocercospora"
+    ],
+    "otra_condicion": [
+      "cordana",
+      "pestalo",
+      "panama",
+      "fusarium",
+      "xanthomonas",
+      "xamthomonas",
+      "bacterial",
+      "bunchy",
+      "skipper",
+      "insect",
+      "chewing",
+      "deficien",
+      "moko",
+      "speckle",
+      "wilt",
+      "virus",
+      "mosaic",
+      "bract"
+    ]
   },
-  "excluir": ["augment", "aumentad"],
+  "excluir": [
+    "augment",
+    "aumentad",
+    "__macosx"
+  ],
   "fuentes": [
     {
       "nombre": "v1_publico",
       "carpeta": "data/raw/public/banana",
       "uso": "entrenar",
-      "nota": "El mismo conjunto del modelo v1; su manifiesto conserva el reparto para comparar justo.",
+      "nota": "El conjunto del modelo v1; su manifiesto conserva el reparto para comparar justo.",
       "mapa": {
         "HEALTHY PICTURES": "sana",
         "SIGATOKA PICTURES": "sigatoka",
@@ -25,11 +62,37 @@
       }
     },
     {
-      "nombre": "tanzania",
-      "carpeta": "data/raw/public/tanzania",
+      "nombre": "nmaist",
+      "carpeta": "data/raw/public/nmaist",
+      "uso": "entrenar",
+      "licencia": "CC0 1.0",
+      "doi": "10.7910/DVN/LQUWXW",
+      "tamano_gb": 8.3,
+      "nota": "Tanzania 2021, 16,092 fotos de campo 1024x768: HEALTHY, BLACK SIGATOKA, FUSARIUM WILT (incluye fotos del pseudotallo).",
+      "descarga": {
+        "tipo": "dataverse",
+        "archivos": {
+          "7071415": "BLACK SIGATOKA_1.zip",
+          "6078711": "BLACK SIGATOKA_2.zip",
+          "7071416": "FUSARIUM WILT_1.zip",
+          "7077487": "FUSARIUM WILT_2.zip",
+          "7077478": "HEALTHY_1.zip",
+          "7077403": "HEALTHY_2.zip"
+        }
+      }
+    },
+    {
+      "nombre": "peru",
+      "carpeta": "data/raw/public/peru",
       "uso": "entrenar",
       "licencia": "CC BY 4.0",
-      "doi": "10.5281/zenodo.7670326"
+      "doi": "10.17632/hzttvh774g.3",
+      "tamano_gb": 6.9,
+      "nota": "San Martín, Perú: sigatoka 995, cordana 815, sanas 544; fotos de campo de alta resolución.",
+      "descarga": {
+        "tipo": "mendeley",
+        "id": "hzttvh774g"
+      }
     },
     {
       "nombre": "bananalsd",
@@ -37,41 +100,254 @@
       "uso": "entrenar",
       "licencia": "CC BY 4.0",
       "doi": "10.17632/9tb7k297ff.1",
-      "nota": "Solo el conjunto original; el aumentado se salta por 'excluir'."
+      "tamano_gb": 0.03,
+      "nota": "Bangladesh, 224x224. Solo OriginalSet (el aumentado se salta).",
+      "descarga": {
+        "tipo": "mendeley",
+        "id": "9tb7k297ff"
+      }
+    },
+    {
+      "nombre": "bd_reconocimiento",
+      "carpeta": "data/raw/public/bd_reconocimiento",
+      "uso": "entrenar",
+      "licencia": "CC BY 4.0",
+      "doi": "10.17632/79w2n6b4kf.1",
+      "tamano_gb": 0.02,
+      "nota": "Bangladesh, 512x512: Sigatoka negra y amarilla, sana, mosaico de bráctea, insecto, Moko, Panamá. Solo 'Original Images'.",
+      "descarga": {
+        "tipo": "mendeley",
+        "id": "79w2n6b4kf"
+      }
+    },
+    {
+      "nombre": "azam",
+      "carpeta": "data/raw/public/azam",
+      "uso": "entrenar",
+      "licencia": "CC BY 4.0",
+      "doi": "10.17632/5nfjzntwd8.3",
+      "tamano_gb": 0.07,
+      "nota": "Hojas (RAW) y frutos. Los frutos van a sin_hoja: no son hoja.",
+      "mapa": {
+        "Anthracnose": "sin_hoja",
+        "Banana Fruit-Scarring Beetle": "sin_hoja",
+        "Banana Split Peel": "sin_hoja",
+        "Healthy Banana": "sin_hoja"
+      },
+      "descarga": {
+        "tipo": "mendeley",
+        "id": "5nfjzntwd8"
+      }
+    },
+    {
+      "nombre": "bangladesh2",
+      "carpeta": "data/raw/public/bangladesh2",
+      "uso": "entrenar",
+      "licencia": "CC BY 4.0",
+      "doi": "10.17632/wfzpdmc5vx.1",
+      "tamano_gb": 0.03,
+      "nota": "cordana, fresh (sana), pestalotiopsis, sigatoka; 320x427.",
+      "descarga": {
+        "tipo": "mendeley",
+        "id": "wfzpdmc5vx"
+      }
     },
     {
       "nombre": "hailu",
       "carpeta": "data/raw/public/hailu",
       "uso": "entrenar",
-      "doi": "10.17632/rjykr62kdh.1"
+      "licencia": "CC BY 4.0",
+      "doi": "10.17632/rjykr62kdh.1",
+      "tamano_gb": 0.01,
+      "nota": "Etiopía, 150x113 px (solo cuenta la foto completa). Única fuente de Xanthomonas.",
+      "mapa": {
+        "segatoka": "sigatoka",
+        "xamthomonas": "otra_condicion",
+        "healthy": "sana"
+      },
+      "descarga": {
+        "tipo": "mendeley",
+        "id": "rjykr62kdh"
+      }
     },
     {
       "nombre": "blade",
       "carpeta": "data/raw/public/blade",
-      "uso": "entrenar",
-      "doi": "10.17632/w7ytz3twjv.2"
+      "uso": "solo_entrenar",
+      "licencia": "CC BY 4.0",
+      "doi": "10.17632/w7ytz3twjv.2",
+      "tamano_gb": 0.3,
+      "nota": "India, recortes de 512x512 de fotos de campo; recortes de una misma foto caen en clases distintas, por eso solo train.",
+      "descarga": {
+        "tipo": "mendeley",
+        "id": "w7ytz3twjv"
+      }
     },
     {
-      "nombre": "bangladesh",
-      "carpeta": "data/raw/public/bangladesh",
+      "nombre": "nutrientes",
+      "carpeta": "data/raw/public/nutrientes",
       "uso": "entrenar",
-      "doi": "10.17632/wzshm7ky49.1"
+      "licencia": "CC BY 4.0",
+      "doi": "10.17632/7vpdrbdkd4.2",
+      "tamano_gb": 0.4,
+      "max_imagenes": 3000,
+      "nota": "Deficiencias de nutrientes, fondo negro. Sulphur se salta (trae copias de otras clases); 1,538 duplicados exactos se quitan solos.",
+      "excluir": [
+        "sulphur"
+      ],
+      "mapa": {
+        "Boron": "otra_condicion",
+        "Calcium": "otra_condicion",
+        "Iron": "otra_condicion",
+        "Magnesium": "otra_condicion",
+        "Manganese": "otra_condicion",
+        "Potassium": "otra_condicion",
+        "Zinc": "otra_condicion",
+        "Healthy": "sana"
+      },
+      "descarga": {
+        "tipo": "mendeley",
+        "id": "7vpdrbdkd4",
+        "excluir": [
+          "sulphur"
+        ]
+      }
+    },
+    {
+      "nombre": "tanzania_zenodo",
+      "carpeta": "data/raw/public/tanzania",
+      "uso": "entrenar",
+      "licencia": "CC BY 4.0",
+      "doi": "10.5281/zenodo.7670326",
+      "tamano_gb": 34.3,
+      "grande": true,
+      "nota": "Mismo laboratorio que nmaist, colección posterior a resolución completa. Opcional: 34 GB (y otro tanto al descomprimir).",
+      "descarga": {
+        "tipo": "zenodo",
+        "id": "7670326"
+      }
     },
     {
       "nombre": "colombia_uav",
       "carpeta": "data/raw/public/colombia_uav",
       "uso": "externo",
       "formato": "yolo",
-      "clases_yolo": {"0": "sigatoka"},
+      "clases_yolo": {
+        "0": "sigatoka"
+      },
       "licencia": "CC BY 4.0",
       "doi": "10.5281/zenodo.20945958",
-      "nota": "Fotos de dron con cajas de Sigatoka. Solo prueba: mide qué tanto ve el modelo en imágenes aéreas reales."
+      "tamano_gb": 11.7,
+      "max_imagenes": 3000,
+      "nota": "DS-v2: recortes de 1024x1024 de fotos de dron (Colombia, 2025) con cajas de Sigatoka. Solo prueba: no trae hojas sanas confirmadas.",
+      "descarga": {
+        "tipo": "zenodo",
+        "id": "20945958",
+        "archivos": [
+          "ds-v2.rar"
+        ]
+      }
+    },
+    {
+      "nombre": "propias",
+      "carpeta": "data/raw/propias",
+      "uso": "entrenar",
+      "mapa": {
+        "sana": "sana",
+        "sigatoka": "sigatoka",
+        "otra_condicion": "otra_condicion",
+        "sin_hoja": "sin_hoja"
+      },
+      "nota": "Fotos propias para ENTRENAR, en subcarpetas sana/ sigatoka/ otra_condicion/ sin_hoja/: por ejemplo tomas del dron de suelo, caminos, personas y maleza (sin_hoja). Las fotos de examen van a campo_validado, nunca aquí."
     },
     {
       "nombre": "campo",
       "carpeta": "data/raw/campo_validado",
       "uso": "externo",
-      "nota": "Fotos propias del dron etiquetadas por el agrónomo, en subcarpetas sana/ sigatoka/ otra_condicion/. Es la prueba que más vale."
+      "nota": "Fotos propias del dron etiquetadas por el agrónomo, en subcarpetas sana/ sigatoka/ otra_condicion/ sin_hoja/. Es la prueba que más vale.",
+      "mapa": {
+        "sana": "sana",
+        "sigatoka": "sigatoka",
+        "otra_condicion": "otra_condicion",
+        "sin_hoja": "sin_hoja"
+      }
+    },
+    {
+      "nombre": "deepweeds",
+      "carpeta": "data/raw/public/deepweeds",
+      "uso": "entrenar",
+      "clase_fija": "sin_hoja",
+      "licencia": "CC BY 4.0",
+      "tamano_gb": 0.47,
+      "max_imagenes": 4000,
+      "nota": "Maleza y pastizal (Australia), 17,509 fotos de campo.",
+      "descarga": {
+        "tipo": "manual",
+        "url": "https://drive.google.com/file/d/1xnK3B6K6KekDI55vwJ0vnc2IGoDga9cj",
+        "instrucciones": "Abre el enlace, descarga images.zip y descomprímelo en data/raw/public/deepweeds/."
+      }
+    },
+    {
+      "nombre": "plantdoc",
+      "carpeta": "data/raw/public/plantdoc",
+      "uso": "entrenar",
+      "clase_fija": "sin_hoja",
+      "licencia": "CC BY 4.0",
+      "tamano_gb": 0.9,
+      "nota": "Hojas de otros cultivos en fotos reales (maíz, tomate, papa...).",
+      "descarga": {
+        "tipo": "git",
+        "url": "https://github.com/pratikkayal/PlantDoc-Dataset"
+      }
+    },
+    {
+      "nombre": "ibean",
+      "carpeta": "data/raw/public/ibean",
+      "uso": "entrenar",
+      "clase_fija": "sin_hoja",
+      "licencia": "MIT",
+      "tamano_gb": 0.18,
+      "nota": "Hojas de frijol en campo (Uganda).",
+      "descarga": {
+        "tipo": "url",
+        "urls": [
+          "https://huggingface.co/datasets/AI-Lab-Makerere/beans/resolve/main/data/train.zip",
+          "https://huggingface.co/datasets/AI-Lab-Makerere/beans/resolve/main/data/validation.zip",
+          "https://huggingface.co/datasets/AI-Lab-Makerere/beans/resolve/main/data/test.zip"
+        ]
+      }
+    },
+    {
+      "nombre": "cafe_peru",
+      "carpeta": "data/raw/public/cafe_peru",
+      "uso": "entrenar",
+      "clase_fija": "sin_hoja",
+      "licencia": "CC BY 4.0",
+      "doi": "10.17632/mfpxg4y65r.2",
+      "tamano_gb": 3.4,
+      "nota": "Hojas de café de San Martín, Perú (misma región que 'peru'): así el modelo no distingue plátano por el estilo de la foto.",
+      "descarga": {
+        "tipo": "mendeley",
+        "id": "mfpxg4y65r"
+      }
+    },
+    {
+      "nombre": "coco",
+      "carpeta": "data/raw/public/coco",
+      "uso": "entrenar",
+      "clase_fija": "sin_hoja",
+      "licencia": "Anotaciones CC BY 4.0; cada imagen conserva su licencia de Flickr",
+      "tamano_gb": 1.1,
+      "max_imagenes": 2000,
+      "nota": "Escenas comunes (personas, calles, objetos). Se quitan las que tienen plátano o plantas en maceta.",
+      "descarga": {
+        "tipo": "url",
+        "urls": [
+          "http://images.cocodataset.org/zips/val2017.zip",
+          "http://images.cocodataset.org/annotations/annotations_trainval2017.zip"
+        ],
+        "despues": "coco"
+      }
     }
   ]
 }
