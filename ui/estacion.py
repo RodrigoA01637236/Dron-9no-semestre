@@ -225,6 +225,10 @@ def api_foto(fid):
     if clf:
         pred = clf.predecir(carpeta_vuelo(f["vuelo"]) / f["archivo"])
         d["probs"] = pred["probs"] if pred else None
+        # Con un modelo por parches: los cuadros de hoja para dibujarlos sobre la foto.
+        for k in ("modo", "parches", "n_parches", "fraccion", "ancho", "alto"):
+            if pred and k in pred:
+                d[k] = pred[k]
     return jsonify(foto=d)
 
 
@@ -247,8 +251,9 @@ def api_identificar():
     t0 = time.perf_counter()
     pred = clf.predecir_bgr(img)
     ms = (time.perf_counter() - t0) * 1000
-    return jsonify(ok=True, **pred, umbral=clf.umbral, diagnosticable=pred["confianza"] >= clf.umbral,
-                   modelo_version=version, ms=ms, ancho=int(img.shape[1]), alto=int(img.shape[0]))
+    pred.update(umbral=clf.umbral, diagnosticable=pred["confianza"] >= clf.umbral,
+                modelo_version=version, ms=ms, ancho=int(img.shape[1]), alto=int(img.shape[0]))
+    return jsonify(ok=True, **pred)
 
 
 @app.delete("/api/foto/<int:fid>")

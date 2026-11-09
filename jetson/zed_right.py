@@ -23,6 +23,11 @@ PUERTO_WEB = 8080        # video y diagnóstico en http://<ip-de-la-jetson>:8080
 ANCHO_WEB = 960          # ancho del video que se manda por WiFi (más chico = más fluido)
 FPS_WEB = 12
 PAUSA_MODELO = 0.2       # como máximo 5 identificaciones por segundo
+MODO_EN_VIVO = "imagen"  # el video usa la foto completa reducida (rápido)
+ANALIZAR_FOTOS = True    # cada foto se analiza además por parches de hoja, en segundo plano
+# El modelo más nuevo que esté en vision/models; para volver a uno anterior:
+#   SIGATOKA_MODELO=sigatoka_cls_v1.onnx bash jetson/zed_control.sh reiniciar
+MODELOS = ("sigatoka_cls_v2.onnx", "sigatoka_cls_v1.onnx")
 TEXTO_EN_FOTO = True     # la foto se guarda con FECHA/HORA/GPS/DIAG dibujados encima
 COPIA_SIN_TEXTO = True   # y una copia limpia en <CARPETA>/sin_texto/ para el modelo y el dataset
 # Sin monitor (en el dron) o con --sin-ventana: no abre ventana, solo la página.
@@ -39,6 +44,7 @@ cuadro_lock = threading.Lock()
 
 prediccion = None
 pred_lock = threading.Lock()
+nombre_modelo = "sin modelo"
 
 video = {"jpeg": None, "n": 0}
 video_cond = threading.Condition()
@@ -154,7 +160,9 @@ def obtener_gps():
 
 # MODELO DE SIGATOKA (identificación a bordo)
 def cargar_modelo():
-    # El modelo vive en el repo: vision/models/sigatoka_cls_v1.onnx (+ .json)
+    # El modelo vive en el repo: vision/models/sigatoka_cls_v2.onnx o v1 (+ .json)
+    global nombre_modelo
+
     for repo in (Path(__file__).resolve().parent.parent,
                  Path.home() / "Dron-9no-semestre"):
         if (repo / "vision" / "clasificador.py").exists():
@@ -163,10 +171,13 @@ def cargar_modelo():
         print("[MODELO] No encontré el repo Dron-9no-semestre; sigo sin identificar")
         return None
 
-    onnx = repo / "vision" / "models" / "sigatoka_cls_v1.onnx"
+    carpeta = repo / "vision" / "models"
+    elegido = os.environ.get("SIGATOKA_MODELO")
+    candidatos = [elegido] if elegido else list(MODELOS)
+    onnx = next((carpeta / c for c in candidatos if (carpeta / c).exists()), None)
 
-    if not onnx.exists():
-        print(f"[MODELO] Falta {onnx} (copiarlo del Drive); sigo sin identificar")
+    if onnx is None:
+        print(f"[MODELO] No hay {' ni '.join(candidatos)} en {carpeta} (git pull); sigo sin identificar")
         return None
 
     sys.path.insert(0, str(repo))
@@ -178,7 +189,9 @@ def cargar_modelo():
         print("[MODELO] No se pudo cargar:", e)
         return None
 
-    print(f"[MODELO] {onnx.name} cargado; clases {modelo.clases}")
+    nombre_modelo = onnx.stem
+    print(f"[MODELO] {onnx.name} cargado; clases {modelo.clases}; fotos por parches: "
+          f"{'sí' if ANALIZAR_FOTOS else 'no'}")
     return modelo
 
 
@@ -198,7 +211,7 @@ def identificar_continuo(modelo):
         inicio = time.perf_counter()
 
         try:
-            r = modelo.predecir_bgr(frame)
+            r = modelo.predecir_bgr(frame, MODO_EN_VIVO)
         except Exception as e:
             print("[MODELO]", e)
             time.sleep(1)
@@ -242,7 +255,7 @@ def coordenada_exif(valor):
     )
 
 
-def crear_exif(gps, instante, pred=None):
+def crear_exif(gps, instante, pred=None, analisis_parches=None):
     import piexif.helper
 
     fecha_exif = instante.strftime("%Y:%m:%d %H:%M:%S")
@@ -254,7 +267,16 @@ def crear_exif(gps, instante, pred=None):
         analisis = (
             f"AnalisisYOLO={pred['clase']}; "
             f"ConfianzaYOLO={pred['confianza']:.3f}; "
-            f"ModeloYOLO=sigatoka_cls_v1 a bordo"
+            f"ModeloYOLO={nombre_modelo} a bordo"
+        )
+
+    if analisis_parches is not None:
+        a = analisis_parches
+        analisis += (
+            f"; AnalisisParches={a['clase']}"
+            f"; ConfianzaParches={a['confianza']:.3f}"
+            f"; ParchesHoja={a.get('n_parches', 0)}"
+            f"; FraccionParches=" + ",".join(f"{k}:{v:.2f}" for k, v in (a.get("fraccion") or {}).items())
         )
 
     comentario = (
@@ -375,7 +397,60 @@ def guardar_foto(frame, pantalla, gps, instante, pred=None):
     if pred is not None:
         print(f"[FOTO] Modelo: {pred['clase']} {pred['confianza']:.0%}")
 
+    if ANALIZAR_FOTOS and modelo is not None:
+        fotos["analisis"] = {"archivo": ruta.name, "pendiente": True}
+        threading.Thread(target=analizar_foto, args=(ruta, frame, gps, instante, pred),
+                         daemon=True).start()
+
     return ruta
+
+
+# ANALISIS POR PARCHES DE LA FOTO (en segundo plano: tarda ~1-3 s en la Jetson)
+analisis_lock = threading.Lock()
+
+
+def analizar_foto(ruta, frame, gps, instante, pred):
+    import piexif
+
+    with analisis_lock:  # una foto a la vez; si toman varias seguidas, hacen fila
+        inicio = time.perf_counter()
+
+        try:
+            r = modelo.predecir_bgr(frame, "parches")
+        except Exception as e:
+            print("[PARCHES]", e)
+            fotos["analisis"] = {"archivo": ruta.name, "error": str(e)}
+            return
+
+        ms = (time.perf_counter() - inicio) * 1000
+        sintomas = [p for p in r.get("parches", []) if p["clase"] != "sana"]
+
+        # El EXIF de la foto (y de su copia sin texto) suma el resultado por parches
+        exif = crear_exif(gps, instante, pred, r)
+        for archivo in (ruta, CARPETA / "sin_texto" / ruta.name):
+            if archivo.is_file():
+                try:
+                    piexif.insert(exif, str(archivo))
+                except Exception as e:
+                    print("[PARCHES] EXIF:", e)
+
+        # Cuadros en un JSON al lado, por si se quieren dibujar después
+        (CARPETA / "parches").mkdir(exist_ok=True)
+        (CARPETA / "parches" / (ruta.stem + ".json")).write_text(json.dumps({
+            "archivo": ruta.name, "modelo": nombre_modelo, "clase": r["clase"],
+            "confianza": r["confianza"], "probs": r["probs"], "modo": r.get("modo"),
+            "fraccion": r.get("fraccion"), "ancho": r.get("ancho"), "alto": r.get("alto"),
+            "parches": r.get("parches", [])
+        }, indent=1), encoding="utf-8")
+
+        fotos["analisis"] = {
+            "archivo": ruta.name, "clase": r["clase"], "confianza": r["confianza"],
+            "n_parches": r.get("n_parches", 0), "n_sintomas": len(sintomas),
+            "fraccion": r.get("fraccion"), "ms": round(ms)
+        }
+
+    print(f"[PARCHES] {ruta.name}: {r['clase']} {r['confianza']:.0%} · "
+          f"{len(sintomas)}/{r.get('n_parches', 0)} trozos con síntomas · {ms:.0f} ms")
 
 
 def tomar_foto():
@@ -437,10 +512,12 @@ def estado_actual(modelo):
         "modelo": None if modelo is None else {
             "archivo": modelo.ruta.name,
             "clases": modelo.clases,
-            "umbral": modelo.umbral
+            "umbral": modelo.umbral,
+            "fotos_por_parches": ANALIZAR_FOTOS
         },
         "prediccion": obtener_prediccion(),
-        "fotos": dict(fotos)
+        "fotos": {k: v for k, v in fotos.items() if k != "analisis"},
+        "analisis_foto": fotos.get("analisis")
     }
 
 
@@ -458,12 +535,16 @@ button{font:inherit;font-weight:700;padding:.8rem 1.2rem;border-radius:10px;bord
 <div id="diag">Conectando...</div>
 <div class="nota" id="gps"></div>
 <div><button id="foto">Tomar foto</button> <span class="nota" id="msg"></span></div>
+<div class="nota" id="analisis"></div>
 <p class="nota">Para revisar y guardar en el mapa, usa la estación de tierra: pestaña Cargar, botón Cámara del dron.</p>
 </main><script>
 const N={sana:"Sana",sigatoka:"Sigatoka",otra_condicion:"Otra condición"};
 async function estado(){try{const e=await (await fetch("/estado")).json();const p=e.prediccion;
 document.getElementById("diag").textContent=!e.modelo?"Sin modelo en el dron":!p?"Esperando lectura...":
 p.diagnosticable?`${N[p.clase]||p.clase} · ${Math.round(p.confianza*100)} %`:`No está seguro (${N[p.clase]||p.clase} ${Math.round(p.confianza*100)} %)`;
+const a=e.analisis_foto;document.getElementById("analisis").textContent=!a?"":a.pendiente?`Analizando ${a.archivo} por parches...`:
+a.error?`No se pudo analizar ${a.archivo}`:`Última foto (${a.archivo}): ${a.confianza>=e.modelo.umbral?(N[a.clase]||a.clase):"no está seguro"} · `+
+`${a.n_parches} trozos de hoja, ${a.n_sintomas} con síntomas · ${(a.ms/1000).toFixed(1)} s`;
 document.getElementById("gps").textContent=e.gps?`GPS ${e.gps.lat.toFixed(6)}, ${e.gps.lon.toFixed(6)} · ${e.gps.satelites} satélites`:"GPS: sin señal";
 }catch(x){document.getElementById("diag").textContent="Sin conexión con el dron";}}
 setInterval(estado,500);estado();
@@ -780,4 +861,5 @@ except KeyboardInterrupt:
 finally:
     print("Cerrando ZED...")
     zed.close()
-    cv2.destroyAllWindows()
+    if CON_VENTANA:
+        cv2.destroyAllWindows()

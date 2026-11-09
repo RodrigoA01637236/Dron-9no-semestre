@@ -95,6 +95,21 @@ def inicializar() -> None:
         con.execute("UPDATE entrenamientos SET estado='interrumpido' WHERE estado='en_curso'")
         if con.execute("SELECT COUNT(*) FROM modelos").fetchone()[0] == 0 and MODELO_INICIAL.exists():
             registrar_modelo(con, MODELO_INICIAL, activo=True, notas="Modelo baseline (datos públicos)")
+        registrar_modelos_del_repo(con)
+
+
+def registrar_modelos_del_repo(con) -> None:
+    """Modelos nuevos que llegan con git pull (vision/models/sigatoka_cls_v2.onnx, ...):
+    se registran SIN activar; se comparan y se activan desde la página Modelo.
+    Se reconocen por su huella, así un v2 reentrenado entra como versión nueva."""
+    notas = " ".join(r[0] or "" for r in con.execute("SELECT notas FROM modelos"))
+    for onnx in sorted(MODELO_INICIAL.parent.glob("sigatoka_cls_v*.onnx")):
+        if onnx == MODELO_INICIAL or not onnx.with_suffix(".json").exists():
+            continue
+        huella = hashlib.md5(onnx.read_bytes()).hexdigest()[:8]
+        if huella not in notas:
+            registrar_modelo(con, onnx, activo=False,
+                             notas=f"Del repo: {onnx.name} ({huella}). Actívalo aquí para usarlo.")
 
 
 def registrar_modelo(con, ruta_onnx: Path, activo=False, notas="", top1=None,
