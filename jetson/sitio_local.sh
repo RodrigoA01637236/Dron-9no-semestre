@@ -1,5 +1,5 @@
 #!/bin/bash
-# Sirve el sitio web/ (Proyecto, Identificar una hoja, Dron en vivo, Mapa) desde la Jetson, sin internet.
+# Sirve el sitio web/ (revisar una hoja, mapa del lote y dron en vivo, en una sola página) desde la Jetson, sin internet.
 # Con el hotspot DRON-SIGATOKA: http://10.42.0.1:8000  (Dron en vivo se conecta solo al puerto 8080).
 # Es un servidor aparte: no abre ni toca la cámara; zed_right.py sigue igual.
 #   bash jetson/sitio_local.sh            puerto 8000
@@ -8,9 +8,9 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 WEB="$REPO/web"
 PUERTO="${PUERTO:-8000}"
 
-# Modelo, fuente y onnxruntime-web: la primera vez hace falta internet para bajar onnxruntime-web.
+# Modelo, Leaflet y onnxruntime-web: la primera vez hace falta internet para bajar onnxruntime-web.
 if ! bash "$WEB/preparar.sh"; then
-    echo "Aviso: falta onnxruntime-web en web/vendor; Identificar no funcionará hasta correr esto con internet."
+    echo "Aviso: falta onnxruntime-web en web/vendor; revisar una hoja no funcionará hasta correr esto con internet."
 fi
 
 echo "Sitio en http://$(hostname -I | awk '{print $1}'):$PUERTO  (Ctrl+C para cerrar)"

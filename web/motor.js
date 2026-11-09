@@ -1,9 +1,9 @@
-// Motor común de los prototipos de una sola página. Hace lo mismo que identificar.js, mapa.js y
-// dron.js del sitio, pero no toca el DOM: cada variante pinta los resultados a su manera.
+// Motor del sitio (index.html): revisar una hoja con el modelo en el navegador, el mapa del lote y
+// el dron en vivo. No pinta nada: index.html decide cómo se ve.
 // Todo corre en el navegador: la foto y el archivo del mapa nunca salen del dispositivo.
 "use strict";
 const Motor = (() => {
-  const RAIZ = new URL("../", document.currentScript.src).href;   // la carpeta web/
+  const RAIZ = new URL("./", document.currentScript.src).href;   // la carpeta web/
   const SITIO = "https://dron-sigatoka.netlify.app";
   const GRIS = "#7d8b96";
 

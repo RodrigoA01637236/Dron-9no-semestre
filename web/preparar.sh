@@ -1,5 +1,5 @@
 #!/bin/bash
-# Arma el sitio público: copia a web/ el modelo y la fuente, que viven en otras carpetas del repo,
+# Arma el sitio público: copia a web/ el modelo y Leaflet, que viven en otras carpetas del repo,
 # y baja onnxruntime-web a web/vendor/ para que el sitio funcione también sin internet (hotspot).
 # Netlify lo corre en cada despliegue (netlify.toml). En la Jetson se corre una vez con internet.
 #   bash web/preparar.sh && python3 -m http.server 8090 --directory web
@@ -7,11 +7,10 @@ set -e
 RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
 WEB="$RAIZ/web"
 
-mkdir -p "$WEB/modelo" "$WEB/fuentes" "$WEB/vendor/leaflet"
+mkdir -p "$WEB/modelo" "$WEB/vendor/leaflet"
 # Leaflet para el mapa (la misma copia que usa la estación, sin CDN)
 cp -r "$RAIZ/ui/static/leaflet/." "$WEB/vendor/leaflet/"
 cp "$RAIZ/vision/models/sigatoka_cls_v1.onnx" "$RAIZ/vision/models/sigatoka_cls_v1.json" "$WEB/modelo/"
-cp "$RAIZ/ui/static/fuentes/fuentes.css" "$RAIZ/ui/static/fuentes/manrope-0.woff2" "$RAIZ/ui/static/fuentes/LEEME.txt" "$WEB/fuentes/"
 
 # onnxruntime-web 1.30.0, solo WebAssembly. Se verifica el sha256 de cada archivo; si ya están, no se bajan.
 python3 - "$WEB/vendor" <<'PY'
