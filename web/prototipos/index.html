@@ -193,7 +193,9 @@ a { color: inherit; }
 .res-acciones button:active { transform: scale(.96); }
 .res-acciones button.principal { background: var(--text); color: #fff; }
 @media (hover: hover) and (pointer: fine) { .res-acciones button:hover { background: #ececeb; } .res-acciones button.principal:hover { background: #262626; } }
-.res-estado { font-size: 13px; color: var(--text-2); line-height: 1.45; }
+.res-estado { display: flex; gap: 9px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: var(--sunken); color: var(--text); font-size: 13.5px; font-weight: 500; line-height: 1.45; }
+.res-estado .ico { width: 17px; height: 17px; margin-top: 1px; }
+.res-estado kbd { font: 500 12px var(--mono); padding: 1px 5px; white-space: nowrap; border-radius: 5px; background: var(--surface); box-shadow: var(--shadow-sm); }
 .res-estado:empty { display: none; }
 .res-estado a { font-weight: 500; }
 /* el contenido entra escalonado cuando la hoja sube */
@@ -218,6 +220,9 @@ a { color: inherit; }
 .foto-grande .barrido { position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0; transition: opacity 200ms ease;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, .45) 50%, rgba(255, 255, 255, 0) 100%) 0 0 / 100% 36% no-repeat; }
 .foto-grande.revisando .barrido { opacity: 1; animation: barrer 1.2s linear infinite; }
+.foto-grande.vacio { background: var(--sunken); }
+.foto-grande.vacio img { display: none; }
+.foto-grande.vacio::after { content: "Sin foto"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--text-3); font-size: 13px; }
 .cuerpo-hoja .res { align-content: start; overflow-y: auto; padding: 6px 2px 4px 0; gap: 14px; }
 .cuerpo-hoja .res-titulo { font-size: 34px; letter-spacing: -.04em; }
 .cuerpo-hoja .res-pasos li { font-size: 14px; }
@@ -227,8 +232,14 @@ a { color: inherit; }
   .cuerpo-hoja .res { gap: 10px; }
   .cuerpo-hoja .res-titulo { font-size: 28px; }
   .cuerpo-hoja .res-acciones button { min-height: 54px; }
-  .texto { gap: 16px; padding-bottom: 16px; }
+  .texto { gap: 14px; padding-bottom: 0; }
+  .texto > p { font-size: 15px; }
+  .texto .botones { margin-top: 2px; }
+  .texto .btn-grande { height: 44px; }
   .texto .arrastra { display: none; }
+  .al-celular { margin-top: 0; padding: 8px 14px 8px 8px; }
+  .al-celular .qr { width: 64px; height: 64px; }
+  .al-celular small { display: none; }
 }
 .cuerpo-hoja .btn-grande { width: 100%; }
 .progreso { height: 6px; border-radius: 3px; background: var(--sunken); overflow: hidden; }
@@ -551,7 +562,12 @@ const esMapa = f => /\.(geo)?json$/i.test(f.name) || /json/.test(f.type);
 addEventListener("dragenter", e => {
   if (!conArchivos(e)) return;
   e.preventDefault();
-  if (arrastres++ === 0) { soltar.querySelector("b").textContent = contenido === "mapa" ? "Suelta el mapa aquí" : "Suelta la foto aquí"; soltar.setAttribute("data-visible", ""); }
+  if (arrastres++ === 0) {
+    const tipo = e.dataTransfer.items?.[0]?.type || "";
+    soltar.querySelector("b").textContent = tipo.startsWith("image/") ? "Suelta la foto aquí"
+      : /json/.test(tipo) || contenido === "mapa" ? "Suelta el mapa aquí" : "Suelta aquí la foto o el mapa";
+    soltar.setAttribute("data-visible", "");
+  }
 });
 addEventListener("dragover", e => { if (conArchivos(e)) { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; } });
 addEventListener("dragleave", e => { if (conArchivos(e) && --arrastres <= 0) { arrastres = 0; soltar.removeAttribute("data-visible"); } });
@@ -597,7 +613,7 @@ async function revisar(archivo) {
   if (urlFoto) URL.revokeObjectURL(urlFoto);
   urlFoto = URL.createObjectURL(archivo);
   if (grande) {
-    $("foto-g").src = $("foto-fondo").src = urlFoto;
+    $("foto-g").src = $("foto-fondo").src = urlFoto; $("marco").classList.remove("vacio");
     $("marco").classList.add("revisando");
     pintarEspera(M.modeloListo());
     abrirPanel("hoja");
@@ -610,8 +626,9 @@ async function revisar(archivo) {
   try {
     const r = await M.diagnosticar(archivo, v => { if (yo === turno) { aviso(textoAvance(v)); avanceEspera(v); } });
     if (yo !== turno) return;
-    ultimo = { r, archivo, foto: null };
+    ultimo = { r, archivo, foto: null, png: null };
     pintarResultado(r);
+    if (!tactil.matches && !L_sinHoja(r)) prepararCopia();
     if (!grande) abrirHoja();
     if (M.vozActiva.get() && (grande ? contenido === "hoja" : true)) M.hablar(M.lectura(r).voz);
   } catch (e) {
@@ -643,17 +660,18 @@ function htmlResultado(r, grande) {
       : chicos.length ? `<button class="btn btn-secundario btn-grande" type="button" data-escuchar>${M.icono("voz")}Escuchar</button>` : "");
   }
   return `
-    <p class="res-cat"><span class="punto${L.clave === "dudoso" ? " rayado" : ""}" style="background:${L.color}"></span>${M.esc(L.nombre)}</p>
+    ${L.sinHoja ? "" : `<p class="res-cat"><span class="punto${L.clave === "dudoso" ? " rayado" : ""}" style="background:${L.color}"></span>${M.esc(L.nombre)}</p>`}
     <h2 class="res-titulo">${M.esc(L.titulo)}</h2>
     ${L.sinHoja ? "" : `<div class="res-medida">
       <p><span>Qué tan seguro</span><b class="num">${L.porcentaje} de 100</b></p>
       <div class="barra" role="meter" aria-label="Qué tan seguro" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${L.porcentaje}" aria-valuetext="${L.porcentaje} de 100"><i style="width:${L.porcentaje}%"></i><span class="minimo" style="left:${L.minimo}%" title="Necesita ${L.minimo} para dar un resultado"></span></div>
     </div>`}
-    ${L.cercaDelLimite ? `<p class="limite">${M.icono("alerta")}<span>Casi en el límite: mejor que la vea tu técnico.</span></p>` : ""}
+    ${L.cercaDelLimite ? `<p class="limite">${M.icono("alerta")}<span>No está seguro: quedó casi en el límite.</span></p>` : ""}
     <ul class="res-pasos">${L.pasos.map(([ico, t]) => `<li>${M.icono(ico)}<span>${M.esc(t)}</span></li>`).join("")}</ul>
     ${grande ? acciones : `<div class="res-acciones">${acciones}</div>`}
     <p class="res-estado" data-estado aria-live="polite"></p>`;
 }
+const L_sinHoja = r => M.lectura(r).sinHoja;
 function colores(el, L) {
   el.style.setProperty("--c", L.clave === "dudoso" ? "var(--text)" : L.color);
   el.style.setProperty("--b", L.cercaDelLimite ? "var(--otra)" : L.clave === "dudoso" ? "var(--gris)" : L.color);
@@ -669,7 +687,7 @@ function pintarError(texto, abrir) {
       <div class="res-acciones"><button class="principal" type="button" data-otra>${M.icono("imagen")}Elegir otra foto</button></div>`;
   });
   if (ancho.matches) {
-    if (abrir) { $("foto-g").removeAttribute("src"); $("foto-fondo").removeAttribute("src"); }   // lo que soltó no era foto: no hay nada que mostrar
+    if (abrir) $("marco").classList.add("vacio");   // lo que soltó no era foto: no hay nada que mostrar
     if (abrir || contenido === "hoja") abrirPanel("hoja");
   }
   else abrirHoja();
@@ -678,6 +696,17 @@ function pintarError(texto, abrir) {
 // Mandar al técnico. En el celular: la hoja de compartir con la foto y el resultado escrito encima.
 // En la computadora: WhatsApp Web con el mensaje, y esa foto en Descargas para arrastrarla al chat.
 const fotoLista = () => (ultimo.foto ??= M.fotoConResultado(ultimo.r, ultimo.archivo));
+// La misma foto en PNG, lista antes del clic: el portapapeles solo acepta PNG y solo mientras esta pestaña tiene el foco.
+async function prepararCopia() {
+  const u = ultimo;
+  try {
+    const bmp = await createImageBitmap(await fotoLista());
+    const c = document.createElement("canvas"); c.width = bmp.width; c.height = bmp.height;
+    c.getContext("2d").drawImage(bmp, 0, 0); bmp.close();
+    u.png = await new Promise(ok => c.toBlob(ok, "image/png"));
+  } catch (e) {}
+}
+const pegar = /Mac|iPhone|iPad/.test(navigator.platform) ? "Cmd + V" : "Ctrl + V";
 function descargar(archivo) {
   const a = document.createElement("a");
   a.href = URL.createObjectURL(archivo); a.download = archivo.name;
@@ -691,21 +720,26 @@ async function mandar(estado) {
     let archivo = ultimo.archivo;
     try { archivo = await fotoLista(); } catch (e) {}
     const como = await M.compartir(r, archivo);
-    decir(estado, como === "compartido" ? "Listo, se mandó." : como === "cancelado" ? "No se mandó nada. Puedes intentarlo otra vez."
-      : "Se abrió WhatsApp con el mensaje. La foto no va incluida: mándala aparte.");
+    decir(estado, "<span>" + (como === "compartido" ? "Listo, se mandó." : como === "cancelado" ? "No se mandó nada. Puedes intentarlo otra vez."
+      : "Se abrió WhatsApp con el mensaje. La foto no va incluida: mándala aparte.") + "</span>");
     return;
   }
   const url = "https://web.whatsapp.com/send?text=" + encodeURIComponent(M.mensaje(r));
-  const w = window.open(url, "_blank");   // antes de cualquier espera, para que el navegador no la bloquee
+  // Primero copiar (aún con el foco), luego abrir WhatsApp sin esperar, para que el navegador no lo bloquee.
+  const copia = ultimo.png && navigator.clipboard?.write && window.ClipboardItem
+    ? navigator.clipboard.write([new ClipboardItem({ "image/png": ultimo.png })]).then(() => true, () => false) : Promise.resolve(false);
+  const w = window.open(url, "whatsapp");   // con nombre: si ya la abrió, usa la misma pestaña
   if (w) w.opener = null;
   let guardada = false;
   try { descargar(await fotoLista()); guardada = true; } catch (e) {}
-  const foto = guardada ? " La foto con el resultado quedó en Descargas: arrástrala al chat de tu técnico." : "";
-  if (w) return decir(estado, "Abrimos WhatsApp en otra pestaña." + foto);
+  const pegada = await copia;
+  const foto = pegada ? ` Abre el chat de tu técnico y pega la foto con <kbd>${pegar}</kbd>.` + (guardada ? " También quedó en Descargas." : "")
+    : guardada ? " La foto con el resultado quedó en Descargas: arrástrala al chat de tu técnico." : "";
+  if (w) return decir(estado, M.icono("compartir") + "<span>Abrimos WhatsApp en otra pestaña." + foto + "</span>");
   let copiado = false;
   try { await navigator.clipboard.writeText(M.mensaje(r)); copiado = true; } catch (e) {}
-  decir(estado, `Tu navegador no dejó abrir WhatsApp. <a href="${M.esc(url)}" target="_blank" rel="noopener">Ábrelo aquí</a>.` +
-    (copiado ? " También copiamos el mensaje para que lo pegues." : "") + foto);
+  decir(estado, `<span>Tu navegador no dejó abrir WhatsApp. <a href="${M.esc(url)}" target="whatsapp" rel="noopener">Ábrelo aquí</a>.` +
+    (copiado && !pegada ? " También copiamos el mensaje para que lo pegues." : "") + foto + "</span>");
 }
 ["res", "res-g"].forEach(id => $(id).addEventListener("click", async e => {
   const b = e.target.closest("button");
@@ -714,8 +748,8 @@ async function mandar(estado) {
   if (b.matches("[data-escuchar]") && ultimo) M.hablar(M.lectura(ultimo.r).voz);
   if (b.matches("[data-enviar]") && ultimo) mandar(estado);
   if (b.matches("[data-descargar]") && ultimo) {
-    try { descargar(await fotoLista()); decir(estado, "La foto con el resultado quedó en Descargas."); }
-    catch (err) { decir(estado, "No se pudo preparar la foto."); }
+    try { descargar(await fotoLista()); decir(estado, M.icono("bajar") + "<span>La foto con el resultado quedó en Descargas.</span>"); }
+    catch (err) { decir(estado, "<span>No se pudo preparar la foto.</span>"); }
   }
   if (b.matches("[data-otra]")) { if (!ancho.matches) cerrarHoja(); elegirFoto(true); }
 }));
@@ -817,9 +851,12 @@ arrastrable(panel, $("panel-asa"), cerrarPanel);
 ancho.addEventListener("change", () => { cerrarPanel(true); cerrarHoja(); });   // al cambiar de tamaño, vuelve a la portada
 
 // ------------------------------------------------ el mapa: primero la pregunta, luego el lote
-let vistaMapa = "zonas", resumenMapa = null;
+let vistaMapa = "zonas", resumenMapa = null, lote = null;
 function verLote(fotos, ejemplo) {
-  resumenMapa = mapa.mostrar(fotos, { conSatelite: !ejemplo, relleno: [52, 24, 236, 24] });
+  lote = { fotos, ejemplo };
+  // La leyenda tapa una esquina: si el mapa es bajo y ancho, se le deja espacio a la izquierda; si no, abajo.
+  const el = $("mapa"), aLado = el.clientHeight < 560 && el.clientWidth >= 560;
+  resumenMapa = mapa.mostrar(fotos, { conSatelite: !ejemplo, relleno: aLado ? [52, 24, 24, 256] : [52, 24, 236, 24] });
   $("etiqueta").hidden = !ejemplo;
   pintarLeyenda();
 }
@@ -835,6 +872,8 @@ function pintarLeyenda() {
   const nombres = cuadros ? { sigatoka: "Con Sigatoka", otra_condicion: "Otro problema", sana: "Sanos" } : { sigatoka: "Sigatoka", otra_condicion: "Otro problema", sana: "Sana" };
   const cuenta = cuadros ? res.zonasPor : res.porClase;
   const filas = ["sigatoka", "otra_condicion", "sana"].map(k => `<li><span class="punto" style="background:${M.cat(k).color}"></span>${nombres[k]}<b>${cuenta[k] || 0}</b></li>`);
+  if (!cuadros) Object.keys(res.porClase).filter(k => !nombres[k]).forEach(k =>
+    filas.push(`<li><span class="punto" style="background:${M.cat(k).color}"></span>${M.esc(M.cat(k).nombre)}<b>${res.porClase[k]}</b></li>`));
   if (!cuadros && res.dudosas) filas.push(`<li><span class="punto rayado"></span>Sin confirmar<b>${res.dudosas}</b></li>`);
   $("leyenda").innerHTML = filas.join("");
 }
@@ -854,7 +893,8 @@ $("b-ejemplo").addEventListener("click", () => { loteVisto = true; $("elegir-map
 $("in-mapa").addEventListener("change", e => { const f = e.target.files[0]; e.target.value = ""; if (f) abrirMapa(f); });
 panel.querySelectorAll("[data-vista]").forEach(b => b.addEventListener("click", () => {
   panel.querySelectorAll("[data-vista]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
-  vistaMapa = b.dataset.vista; mapa?.vista(vistaMapa); pintarLeyenda();
+  vistaMapa = b.dataset.vista;
+  if (mapa && lote) { mapa.vista(vistaMapa); verLote(lote.fotos, lote.ejemplo); }   // vuelve a encuadrar todo el lote
 }));
 
 // ------------------------------------------------ el dron

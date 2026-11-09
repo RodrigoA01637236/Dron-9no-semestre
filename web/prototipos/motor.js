@@ -200,6 +200,9 @@ const Motor = (() => {
       : r.seguro ? `Qué tan seguro: ${n} de 100. Necesita ${minimo} para dar un resultado.`
       : `Lo más parecido es ${cat(r.clase).nombre.toLowerCase()}, pero solo ${n} de 100: necesita ${minimo} para decirlo.`) + luz;
     const cerca = r.seguro && n - minimo < 10 ? "Está cerca del límite: que lo confirme tu técnico. " : "";
+    // Sana pero casi en el límite: no decir "se ve sana" ni "no se ven manchas"; pedir que el técnico la vea.
+    if (cerca && clave === "sana") L = { ...L, titulo: "Parece sana", pasos: [
+      ["telefono", "Manda la foto a tu técnico para que lo confirme."], L.pasos[1]] };
     const voz = (r.seguro ? `${L.titulo}. Qué tan seguro: ${n} de 100. ${cerca}` : sinHoja ? "No veo una hoja en la foto. " : "No estoy seguro de lo que veo. ") +
       L.pasos.map(p => p[1]).join(" ");
     return { clave, ...L, color: r.seguro ? cat(r.clase).color : GRIS, nombre: r.seguro ? cat(r.clase).nombre : "Sin confirmar",
