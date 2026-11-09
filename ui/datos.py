@@ -20,6 +20,12 @@ MINIS = DIR / "miniaturas"
 MODELOS = DIR / "modelos"
 ENTRENAMIENTOS = DIR / "entrenamientos"
 DATASET_BASE = RAIZ / "data" / "dataset"
+DATASET_V2 = RAIZ / "data" / "dataset_v2"  # vision/train/preparar_datos.py: más fuentes, sin duplicados
+
+
+def dataset_base() -> Path:
+    """Fotos públicas para reentrenar: la v2 si ya se armó, si no la del v1."""
+    return DATASET_V2 if DATASET_V2.is_dir() else DATASET_BASE
 MODELO_INICIAL = RAIZ / "vision" / "models" / "sigatoka_cls_v1.onnx"
 
 EXT_IMG = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}

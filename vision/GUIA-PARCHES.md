@@ -144,7 +144,7 @@ python vision\train\hacer_parches.py --maestro vision\models\sigatoka_cls_v1.onn
 ```
 
 Qué hace ([train/hacer_parches.py](train/hacer_parches.py)):
-- Por foto saca hasta 6 cuadros a tres escalas (100 %, 60 % y 40 % del lado corto), solo
+- Por foto saca hasta 6 cuadros a cuatro escalas (100, 60, 40 y 30 % del lado corto), solo
   donde hay hoja, y los guarda a 384x384.
 - 40 % de los parches se degradan (menos resolución, desenfoque, JPEG) para parecerse a la
   foto del dron.
@@ -178,6 +178,24 @@ python vision\train\train_cls.py --data data\parches_v2 --model yolo11n-cls.pt -
 - Anota la corrida en [train/experiments.md](train/experiments.md), aunque salga mal.
 
 Sale `runs\classify\parches_v2\weights\best.onnx` (+ `best.json`).
+
+### Atajo: entrenar desde la estación
+
+Los pasos 3, 4 y 5 también se pueden correr desde la página **Modelo** de la estación, en la
+misma laptop: en *Qué modelo* elige **Foto completa (como el v1)**, **Por parches de hoja
+(v2)** o **Los dos, uno después del otro**, y presiona *Reentrenar ahora*.
+
+- Usa como fotos base `data\dataset_v2` si ya hiciste el paso 2 (si no, `data\dataset`), más
+  las fotos que el agrónomo revisó en la estación. El ~20 % de esas fotos revisadas queda
+  como examen de campo y nunca se entrena.
+- Con "Los dos" entrena primero el de foto completa y luego el de parches. Cada uno queda
+  como una versión nueva, sin activarse, con su resultado en el examen de campo.
+- Todo queda en `data\estacion\entrenamientos\<fecha>\` (el log, los parches y el reporte
+  `parches_calibrado\modelo_parches_evaluacion.md`).
+- La calibración en la estación usa hasta 300 fotos por clase para no tardar de más. Para
+  el reporte completo de la Expo, corre `calibrar.py` a mano (paso 5).
+- Para subir un modelo entrenado así al dron, copia `modelo_parches.onnx` y su `.json` a
+  `vision\models\sigatoka_cls_v2.onnx` / `.json` y sigue con el paso 6.
 
 ---
 
