@@ -7,12 +7,17 @@ Requisito de accesibilidad: el usuario final (operador/agrónomo) no instala nad
 Con NetworkManager (incluido en Ubuntu):
 
 ```bash
-sudo nmcli device wifi hotspot ifname wlan0 ssid DRON-SIGATOKA password "eleccion-del-equipo"
-# Persistente entre reinicios:
+sudo nmcli device wifi hotspot ifname wlP1p1s0 ssid DRON-SIGATOKA password "eleccion-del-equipo"
+# Persistente entre reinicios (entonces ya no se conecta sola a otra red WiFi con internet):
 sudo nmcli connection modify Hotspot connection.autoconnect yes
+# Volver a la red con internet:
+sudo nmcli connection down Hotspot
 ```
 
-La Jetson queda típicamente en `10.42.0.1`. El operador se conecta a la red `DRON-SIGATOKA` y abre `http://10.42.0.1` en el navegador.
+En la Orin Nano del proyecto la interfaz WiFi se llama `wlP1p1s0` (no `wlan0`; verlo con `nmcli device`).
+La Jetson queda típicamente en `10.42.0.1`. El operador se conecta a la red `DRON-SIGATOKA` y abre
+`http://10.42.0.1:8000` (el sitio de `web/`, servido por `jetson/sitio_local.sh`) o directo la página de la
+cámara en `http://10.42.0.1:8080` (`zed_right.py`). Ver `jetson/README.md`, sección *Página sin internet*.
 
 Notas:
 - Si el kit no tiene WiFi integrado, un dongle USB WiFi con soporte AP resuelve (~$300 MXN).
