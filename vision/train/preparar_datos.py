@@ -29,6 +29,7 @@ import hashlib
 import json
 import os
 import random
+import re
 import shutil
 import sys
 import unicodedata
@@ -250,6 +251,9 @@ def main() -> None:
                 nombre = Path(fila["path"]).name.split("__", 1)[-1]
                 forzado[(normal(fila["origen"]), nombre)] = fila["split"]
         print(f"Reparto de {args.respetar}: {len(forzado)} imágenes conservan su split")
+    else:
+        print(f"AVISO: no encontré {args.respetar} (el reparto del v1). El reparto será nuevo: algunas fotos"
+              " de test pudieron estar en el train del v1, así que la comparación v2 contra v1 le favorece al v1.")
 
     rng = random.Random(args.seed)
     conflictos, filas = [], []
@@ -337,10 +341,13 @@ def main() -> None:
                 filas.append(fila)
                 continue
             vistos_md5.add(it["md5"])
-            nombre = f"{it['fuente']}__{'_'.join(it['rel'].with_suffix('').parts)}{it['ruta'].suffix.lower()}"
-            nombre = nombre.replace(" ", "_")
+            # Nombre corto (fuente__carpeta_archivo, máx. ~90 caracteres): Windows no acepta rutas
+            # de más de 260 y algunos zip traen 4 niveles de carpetas con nombres largos.
+            corto = re.sub(r"[^\w.-]+", "_", f"{it['rel'].parent.name}_{it['rel'].stem}")[-70:].strip("_")
+            base = f"{it['fuente']}__{corto}"
+            nombre, n_rep = f"{base}{it['ruta'].suffix.lower()}", 1
             while nombre in usados:
-                nombre = "x" + nombre
+                nombre, n_rep = f"{base}_{n_rep}{it['ruta'].suffix.lower()}", n_rep + 1
             usados.add(nombre)
             poner(it["ruta"], out / carpeta / it["clase"] / nombre)
             if it["cajas"] is not None:

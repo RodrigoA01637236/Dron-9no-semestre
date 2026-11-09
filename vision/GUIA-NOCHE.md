@@ -42,6 +42,21 @@ la noche no alcanza.
 Espacio en disco: ~50 GB libres (fotos + parches). Energía: conectada a la corriente y con
 la suspensión desactivada (Configuración → Sistema → Energía → "Nunca").
 
+Tres revisiones más (una vez):
+
+1. **Rutas largas de Windows.** Algunos datasets traen carpetas con nombres muy largos y
+   Windows corta en 260 caracteres. En PowerShell **como administrador**:
+   ```powershell
+   New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name LongPathsEnabled -Value 1 -PropertyType DWORD -Force
+   ```
+   Reinicia la laptop. Ayuda también que el repo esté en una ruta corta (p. ej. `C:\dron\`).
+2. **El dataset del v1** debe estar en `data\raw\public\banana\` con sus carpetas
+   (`HEALTHY PICTURES`, `SIGATOKA PICTURES`...). Si está en otra carpeta, cambia la ruta de
+   `v1_publico` en `vision\train\fuentes_v2.json`.
+3. **El reparto del v1**, `data\manifests\v1_public_baseline.csv`, lo creó `make_splits.py`
+   en la computadora donde se entrenó el v1. Si no está, todo funciona, pero la comparación
+   contra el v1 le favorece al v1 (el script avisa).
+
 ---
 
 ## 1. Descargar los datasets (1–3 h, casi todo esperar) `[PC]`
