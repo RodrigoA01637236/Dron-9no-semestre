@@ -294,10 +294,12 @@
       "clase_fija": "sin_hoja",
       "licencia": "CC BY 4.0",
       "tamano_gb": 0.9,
-      "nota": "Hojas de otros cultivos en fotos reales (maíz, tomate, papa...).",
+      "nota": "Hojas de otros cultivos en fotos reales (maíz, tomate, papa...). Se baja como zip: con git clone falla en Windows por un archivo con '?' en el nombre.",
       "descarga": {
-        "tipo": "git",
-        "url": "https://github.com/pratikkayal/PlantDoc-Dataset"
+        "tipo": "url",
+        "urls": [
+          "https://github.com/pratikkayal/PlantDoc-Dataset/archive/HEAD.zip"
+        ]
       }
     },
     {

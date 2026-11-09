@@ -17,6 +17,7 @@ Ver vision/GUIA-NOCHE.md.
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -74,10 +75,18 @@ def descomprimir(archivo: Path, destino: Path) -> None:
     if archivo.suffix.lower() == ".zip":
         with zipfile.ZipFile(archivo) as z:
             for m in z.infolist():
-                nombre = Path(m.filename)
-                if "__MACOSX" in nombre.parts or nombre.name.startswith("._"):
+                partes = [p for p in m.filename.replace("\\", "/").split("/") if p and p != ".."]
+                if not partes or "__MACOSX" in partes or partes[-1].startswith("._"):
                     continue
-                z.extract(m, destino)
+                # Windows no acepta < > : " | ? * en nombres (PlantDoc trae "foto.JPG?123.jpg")
+                partes = [re.sub(r'[<>:"|?*]', "_", p).rstrip(" .") or "_" for p in partes]
+                salida = destino.joinpath(*partes)
+                if m.is_dir():
+                    salida.mkdir(parents=True, exist_ok=True)
+                    continue
+                salida.parent.mkdir(parents=True, exist_ok=True)
+                with z.open(m) as fuente, open(salida, "wb") as f:
+                    shutil.copyfileobj(fuente, f)
         return
     siete = shutil.which("7z") or next((p for p in (r"C:\Program Files\7-Zip\7z.exe",
                                                     r"C:\Program Files (x86)\7-Zip\7z.exe") if Path(p).exists()), None)
