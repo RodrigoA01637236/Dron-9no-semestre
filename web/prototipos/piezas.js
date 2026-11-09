@@ -10,23 +10,30 @@ const Piezas = (() => {
          <div class="medidor carga" style="--c:var(--tinta); --v:0%" role="progressbar" aria-label="Descarga del modelo" aria-valuemin="0" aria-valuemax="100"><i></i></div></div>`;
   }
 
-  function resultado(r, { otraTexto = "Otra hoja" } = {}) {
+  // compacto: poco texto. La palabra grande, la barra con su número, un solo "qué hacer" y los botones.
+  function resultado(r, { otraTexto = "Otra hoja", compacto = false } = {}) {
     const L = M.lectura(r);
     const sinHoja = !r.seguro && r.calidad?.sinHoja;   // sin hoja, el porcentaje del modelo no dice nada
+    const medidor = sinHoja ? "" : `<div class="medidor" style="--v:${L.porcentaje}%; --m:${L.minimo}%" role="meter" aria-label="Seguridad del modelo: ${L.porcentaje} %" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${L.porcentaje}"><i></i><span class="minimo"><span>mínimo ${L.minimo} %</span></span></div>`;
+    const botones = `<div class="acciones">
+        ${M.puedeHablar ? `<button class="btn btn-borde" type="button" data-accion="voz">${M.icono("voz")}Escuchar</button>` : ""}
+        <button class="btn btn-borde" type="button" data-accion="compartir">${M.icono("compartir")}${compacto ? "Al técnico" : "Mandar al técnico"}</button>
+        <button class="btn btn-primario" type="button" data-accion="otra">${M.icono("camara")}${M.esc(otraTexto)}</button></div>`;
+    if (compacto) return `<div class="resultado nueva compacto" style="--c:${L.color}">
+      <h2 class="titulo-resultado">${M.esc(L.titulo)}</h2>
+      ${medidor ? `<div class="medida">${medidor}<b class="num">${L.porcentaje} %</b></div>` : ""}
+      <p class="hacer-uno">${M.icono(L.pasos[0][0])}<span>${M.esc(L.pasos[0][1])}</span></p>
+      ${botones}</div>`;
     return `<div class="resultado nueva" style="--c:${L.color}">
       <span class="pastilla${L.clave === "dudoso" ? " dudosa" : ""}"><i></i>${M.esc(L.nombre)}</span>
       <h2 class="titulo-resultado">${M.esc(L.titulo)}</h2>
-      <div>${sinHoja ? "" : `<div class="medidor" style="--v:${L.porcentaje}%; --m:${L.minimo}%" role="meter" aria-label="Seguridad del modelo" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${L.porcentaje}"><i></i><span class="minimo"><span>mínimo ${L.minimo} %</span></span></div>`}
-        <p class="confianza">${M.esc(L.confianza)}</p></div>
+      <div>${medidor}<p class="confianza">${M.esc(L.confianza)}</p></div>
       <ul class="hacer">${L.pasos.map(([i, t]) => `<li>${M.icono(i)}<span>${M.esc(t)}</span></li>`).join("")}</ul>
-      <div class="acciones">
-        ${M.puedeHablar ? `<button class="btn btn-borde" type="button" data-accion="voz">${M.icono("voz")}Escuchar</button>` : ""}
-        <button class="btn btn-borde" type="button" data-accion="compartir">${M.icono("compartir")}Mandar al técnico</button>
-        <button class="btn btn-primario" type="button" data-accion="otra">${M.icono("camara")}${M.esc(otraTexto)}</button></div></div>`;
+      ${botones}</div>`;
   }
 
   // Revisa una foto y pinta en `cont`: primero la carga, luego el resultado con sus botones.
-  async function revisar(archivo, cont, { otra, otraTexto } = {}) {
+  async function revisar(archivo, cont, { otra, otraTexto, compacto = false } = {}) {
     M.callar();
     cont.innerHTML = cargando();
     try {
@@ -34,7 +41,7 @@ const Piezas = (() => {
         const c = cont.querySelector(".carga"); if (!c) return;
         c.style.setProperty("--v", `${Math.round(v * 100)}%`); c.setAttribute("aria-valuenow", Math.round(v * 100));
       });
-      cont.innerHTML = resultado(r, { otraTexto });
+      cont.innerHTML = resultado(r, { otraTexto, compacto });
       const L = M.lectura(r);
       cont.querySelector('[data-accion="voz"]')?.addEventListener("click", () => M.hablar(L.voz));
       cont.querySelector('[data-accion="compartir"]').addEventListener("click", () => M.compartir(r, archivo));

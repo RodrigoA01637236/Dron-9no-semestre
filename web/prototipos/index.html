@@ -112,20 +112,19 @@ html, body { margin: 0; height: 100%; background: #111; }
 
 <nav class="proto-picker" aria-label="Prototype variants">
   <span class="proto-picker-highlight" aria-hidden="true"></span>
-  <button class="proto-picker-item" data-active aria-current="true">Tablero</button>
-  <button class="proto-picker-item">Paso a paso</button>
-  <button class="proto-picker-item">Mapa de fondo</button>
-  <button class="proto-picker-item">Clásico</button>
+  <button class="proto-picker-item" data-active aria-current="true">Vuelo</button>
+  <button class="proto-picker-item">Grabado</button>
+  <button class="proto-picker-item">Plano</button>
   <span class="proto-picker-divider" aria-hidden="true"></span>
   <button class="proto-picker-item proto-picker-replay" aria-label="Replay animation (R)">↻</button>
 </nav>
 
 <script>
 // Una variante a la vez, a tamaño completo, cada una en su propia página.
-const paginas = [["tablero.html", "Tablero"], ["pasos.html", "Paso a paso"], ["fondo.html", "Mapa de fondo"], ["clasico.html", "Clásico"]];
+const paginas = [["vuelo.html", "Vuelo"], ["grabado.html", "Grabado"], ["plano.html", "Plano"]];
 const variants = paginas.map(([src, nombre]) => () => `<iframe src="${src}" title="Variante ${nombre}" allow="camera; microphone; clipboard-write; web-share"></iframe>`);
-// En Tablero y Paso a paso el pie de la página está abajo al centro: ahí el selector va arriba.
-const arriba = new Set([0, 1]);
+// Ninguna de las tres tiene algo abajo al centro: el selector se queda abajo.
+const arriba = new Set();
 
 const stage = document.getElementById('stage');
 const picker = document.querySelector('.proto-picker');
