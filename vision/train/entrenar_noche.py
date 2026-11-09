@@ -24,6 +24,7 @@ runs/noche (y data/parches_v2 si cambiaste las fuentes). Ver vision/GUIA-PARCHES
 """
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -52,7 +53,8 @@ def correr(log: Registro, script: str, *args: str) -> None:
     """Corre un script de vision/train/ y copia su salida a la pantalla y al log."""
     cmd = [sys.executable, "-u", str(TRAIN / script), *args]
     log(f"$ {script} {' '.join(args)}")
-    with subprocess.Popen(cmd, cwd=RAIZ, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+    entorno = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")  # acentos en la consola de Windows
+    with subprocess.Popen(cmd, cwd=RAIZ, env=entorno, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                           text=True, encoding="utf-8", errors="replace", bufsize=1) as proc:
         for linea in proc.stdout:
             linea = linea.rstrip()
