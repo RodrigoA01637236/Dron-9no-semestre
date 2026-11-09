@@ -40,7 +40,7 @@ async function cargarResumen() {
   const ins = document.getElementById("pendientes-nav");
   ins.textContent = pend > 999 ? "999+" : pend;
   ins.classList.toggle("oculto", pend <= 0);
-  document.getElementById("version-nav").textContent = RESUMEN.modelo ? `Modelo v${RESUMEN.modelo.version}` : "Modelo";
+  document.getElementById("version-nav").textContent = "Entrenar";
   return RESUMEN;
 }
 

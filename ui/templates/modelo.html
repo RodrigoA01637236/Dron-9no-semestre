@@ -1,210 +1,507 @@
-{% extends "base.html" %}
-{% block titulo %}Modelo · Estación Sigatoka{% endblock %}
-{% block contenido %}
-<section class="hoja-flotante" aria-labelledby="titulo">
-<div class="hoja-contenido">
-<div class="hoja-cabeza">
-  <div>
-    <h1 id="titulo">Mejorar el modelo</h1>
-    <p>Cada foto que revisas le enseña al modelo. Cuando juntes varias correcciones, reentrénalo aquí.
-      El modelo nuevo se compara con el actual en un examen de campo (fotos revisadas que nunca se usan para entrenar)
-      y una persona decide si se activa.</p>
-  </div>
-  <div class="acciones"><a class="boton-icono cerrar" href="/" aria-label="Cerrar y volver al mapa">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></a></div>
-</div>
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entrenar el modelo · Estación Sigatoka</title>
+<meta name="theme-color" content="#fafafa">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0a0a'/%3E%3Cg transform='translate(5 5) scale(.92)' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 19.5C4.5 11 10 4.5 19.5 4.5c0 9.5-6.5 15-15 15Z'/%3E%3Cpath d='M4.5 19.5 14 10'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@500&display=swap">
+<style>
+/* Mismo sistema visual que el sitio público (web/index.html): Geist, blanco, botones negros. */
+:root {
+  --bg: #fafafa; --surface: #ffffff; --sunken: #f4f4f3; --text: #0a0a0a; --text-2: #5c5c5c; --text-3: #8a8a8a;
+  --line: rgba(0, 0, 0, .08);
+  --sana: #2e9e44; --sigatoka: #d7263d; --otra: #f0a202;
+  --font: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Geist Mono", ui-monospace, Consolas, monospace;
+  --ease-out: cubic-bezier(.23, 1, .32, 1);
+  --shadow-sm: 0 0 0 1px rgba(0, 0, 0, .06), 0 1px 2px rgba(0, 0, 0, .04);
+  --shadow-md: 0 0 0 1px rgba(0, 0, 0, .06), 0 2px 4px rgba(0, 0, 0, .03), 0 12px 24px -10px rgba(0, 0, 0, .12);
+  --shadow-lg: 0 0 0 1px rgba(0, 0, 0, .07), 0 6px 12px -4px rgba(0, 0, 0, .06), 0 30px 60px -18px rgba(0, 0, 0, .28);
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font: 400 15px/1.5 var(--font); letter-spacing: -.011em;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+h1, h2, h3, p { margin: 0; }
+button, input, select { font: inherit; color: inherit; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.ico { width: 18px; height: 18px; flex: none; }
+.num { font-variant-numeric: tabular-nums; }
+[hidden] { display: none !important; }
 
-<div class="tarjeta" id="activo"></div>
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 14px; border: 0; border-radius: 10px;
+  font: 500 14px/1 var(--font); letter-spacing: -.01em; cursor: pointer; white-space: nowrap; text-decoration: none;
+  transition: transform 160ms var(--ease-out), background-color 150ms ease, box-shadow 150ms ease; }
+.btn:active { transform: scale(.97); }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.btn-primario { background: var(--text); color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14), 0 1px 2px rgba(0, 0, 0, .24); }
+.btn-secundario { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+.btn-fantasma { background: transparent; color: var(--text-2); }
+.btn-grande { height: 48px; padding: 0 20px; border-radius: 12px; font-size: 15px; }
+/* segundo clic para confirmar lo que no se deshace fácil */
+.btn.confirmando { box-shadow: 0 0 0 3px rgba(10, 10, 10, .14), 0 1px 2px rgba(0, 0, 0, .24); }
+.btn-secundario.confirmando { background: var(--text); color: #fff; }
+@media (hover: hover) and (pointer: fine) {
+  .btn-primario:not(:disabled):hover { background: #262626; }
+  .btn-secundario:not(:disabled):hover { background: #f7f7f7; }
+  .btn-secundario.confirmando:hover { background: #262626; }
+  .btn-fantasma:hover { background: rgba(0, 0, 0, .045); color: var(--text); }
+}
 
-<section class="seccion">
-  <h2>Datos disponibles por categoría</h2>
-  <div class="tabla-marco">
-    <table><thead><tr><th>Categoría</th><th class="der">Fotos base (públicas)</th><th class="der">Revisadas en campo</th>
-      <th class="der">Examen de campo</th><th>Para entrenar</th></tr></thead><tbody id="datos"></tbody></table>
-  </div>
-  <p class="nota" style="margin-top:.6rem">Las revisadas en campo entran al entrenamiento. Las del examen de campo, alrededor
-    del 20 %, nunca se entrenan: sirven para medir si el modelo mejoró de verdad.</p>
-  <p class="mensaje error" id="nota-datos"></p>
-</section>
+/* ------------------------------------------------ encabezado con las pestañas de la estación */
+.encabezado { max-width: 1200px; margin: 0 auto; height: 64px; padding: 0 24px; display: flex; align-items: center; gap: 4px; }
+.marca { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; letter-spacing: -.02em; margin-right: auto; text-decoration: none; }
+.logo { width: 28px; height: 28px; border-radius: 8px; background: var(--text); color: #fff; display: grid; place-items: center; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16); }
+.logo .ico { width: 16px; height: 16px; }
+.pestanas { display: flex; gap: 2px; padding: 3px; border-radius: 12px; background: var(--sunken); }
+.pestanas a { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 9px; font-size: 14px; font-weight: 500; color: var(--text-2);
+  text-decoration: none; transition: background-color 150ms ease, color 150ms ease; }
+.pestanas a[aria-current="page"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+@media (hover: hover) and (pointer: fine) { .pestanas a:not([aria-current]):hover { color: var(--text); } }
+.insignia { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--text); color: #fff; font: 500 11px/18px var(--mono); text-align: center; }
 
-<section class="seccion">
-  <h2>Reentrenar</h2>
-  <div class="tarjeta">
-    <div id="form-entrenar">
-      <div class="fila" style="align-items:flex-end">
-        <label class="campo"><span>Qué modelo</span>
-          <select id="tipo">
-            <option value="foto">Foto completa (como el v1)</option>
-            <option value="parches">Por parches de hoja (v2)</option>
-            <option value="ambos" selected>Los dos, uno después del otro</option>
-          </select></label>
-        <label class="campo"><span>Duración</span>
-          <select id="epocas">
-            <option value="10">Prueba rápida (10 épocas)</option>
-            <option value="50" selected>Completo, recomendado (50 épocas)</option>
-          </select></label>
-        <button class="boton claro" id="btn-entrenar" type="button">Reentrenar ahora</button>
-      </div>
-      <p class="nota" id="duracion" style="margin:.75rem 0 0"></p>
-      <p class="nota" style="margin:.4rem 0 0">La computadora debe quedarse encendida con esta ventana abierta.
-        Puedes seguir revisando fotos mientras entrena. Cada modelo terminado aparece abajo como una versión nueva,
-        sin activarse.</p>
-      <p class="mensaje error" id="msg-entrenar"></p>
-    </div>
-    <div id="en-curso" class="oculto">
-      <div class="fila" style="justify-content:space-between"><b id="fase"></b><span class="nota num" id="tiempo"></span></div>
-      <pre class="registro" id="log"></pre>
-    </div>
-  </div>
-</section>
+/* ------------------------------------------------ arriba: qué es y los tres pasos */
+.portada { max-width: 1200px; margin: 0 auto; padding: 32px 24px 24px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 560px); gap: 56px; align-items: start; }
+.intro { display: grid; gap: 20px; padding-top: 24px; }
+.intro h1 { font-size: clamp(2.4rem, 4.6vw, 3.9rem); font-weight: 600; line-height: 1.02; letter-spacing: -.045em; text-wrap: balance; max-width: 12ch; }
+.intro > p { font-size: 17px; line-height: 1.55; color: var(--text-2); max-width: 40ch; letter-spacing: -.015em; }
 
-<section class="seccion">
-  <h2>Versiones del modelo</h2>
-  <div class="tabla-marco">
-    <table><thead><tr><th>Versión</th><th>Creado</th><th class="der">Categorías</th><th>Examen de campo</th>
-      <th class="der">Prueba pública</th><th></th></tr></thead><tbody id="versiones"></tbody></table>
-  </div>
-  <div id="reproceso" class="oculto" style="margin-top:1rem">
-    <div class="fila" style="justify-content:space-between; margin-bottom:.4rem">
-      <span class="nota">Rediagnosticando todas las fotos con el modelo nuevo</span><span class="nota num" id="rep-txt"></span></div>
-    <div class="progreso"><i id="rep-barra"></i></div>
-  </div>
-  <p class="mensaje error" id="msg-version"></p>
-</section>
+.tarjeta { background: var(--surface); border-radius: 20px; box-shadow: var(--shadow-md); }
+.en-uso { padding: 18px 20px; display: grid; gap: 10px; max-width: 460px; margin-top: 8px; }
+.en-uso .etiqueta { font-size: 13px; color: var(--text-2); display: flex; align-items: center; gap: 8px; }
+.en-uso .etiqueta i { width: 8px; height: 8px; border-radius: 50%; background: var(--sana); box-shadow: 0 0 0 3px rgba(46, 158, 68, .18); }
+.en-uso .grande { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.en-uso .grande b { font-size: 40px; font-weight: 600; letter-spacing: -.04em; line-height: 1; white-space: nowrap; }
+.en-uso .grande span { font-size: 14px; color: var(--text-2); }
+.en-uso p { font-size: 13.5px; color: var(--text-2); }
+.fichas { display: flex; flex-wrap: wrap; gap: 6px; }
+.ficha { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 999px; background: var(--sunken); font-size: 12.5px; color: var(--text); }
+.ficha i { width: 7px; height: 7px; border-radius: 50%; }
 
-<section class="seccion">
-  <details class="tarjeta zona-tecnica">
-    <summary><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
-      Zona del equipo técnico: agregar una categoría</summary>
-    <div style="margin-top:1rem">
-      <p style="max-width:68ch" class="suave">Una categoría nueva, por ejemplo <i>Fusarium</i> o <i>Daño por insecto</i>, aparece como opción en
-        Revisar. El modelo solo aprende a reconocerla después de juntar al menos <b id="minimo"></b> fotos revisadas de ella
-        y reentrenar.</p>
-      <p class="que-hacer" style="max-width:68ch">Agrégala solo si un agrónomo puede distinguirla en las fotos: una categoría
-        confusa empeora el modelo para todas las demás.</p>
-      <div class="fila" style="align-items:flex-end; margin-top:1rem">
-        <label class="campo"><span>Nombre</span><input type="text" id="cat-nombre" placeholder="Por ejemplo, Fusarium"></label>
+/* los tres pasos: revisar, entrenar, decidir */
+.camino { padding: 8px; border-radius: 24px; }
+.pasos { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.paso { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 14px; padding: 18px 16px; border-radius: 18px; transition: background-color 200ms ease; }
+.paso[data-ahora] { background: var(--sunken); }
+.marcador { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--sunken); color: var(--text-2); font: 500 14px var(--mono); }
+.paso[data-ahora] .marcador { background: var(--text); color: #fff; }
+.paso[data-listo] .marcador { background: rgba(46, 158, 68, .12); color: var(--sana); }
+.paso[data-listo] .marcador .ico { width: 18px; height: 18px; }
+.paso-cuerpo { display: grid; gap: 10px; align-content: start; min-width: 0; }
+.paso h2 { font-size: 17px; font-weight: 600; letter-spacing: -.02em; line-height: 36px; margin-bottom: -6px; }
+.paso p { font-size: 14px; color: var(--text-2); line-height: 1.5; }
+.paso p b { color: var(--text); font-weight: 600; }
+.paso:not([data-ahora]):not([data-listo]) h2 { color: var(--text-2); }
+.acciones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+
+.barra { position: relative; height: 8px; border-radius: 4px; background: rgba(0, 0, 0, .07); overflow: hidden; }
+.barra i { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--c, var(--text)); transition: width 400ms var(--ease-out); }
+.paso:not([data-ahora]) .barra { background: var(--sunken); }
+/* entrenando: una franja que avanza (no sabemos cuánto falta con precisión) */
+.barra.sin-fin i { width: 34% !important; animation: avanzar 1.6s var(--ease-out) infinite; }
+@keyframes avanzar { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+.giro { width: 14px; height: 14px; flex: none; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .35); border-top-color: #fff; animation: girar 700ms linear infinite; }
+@keyframes girar { to { transform: rotate(360deg); } }
+.fase { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.fase b { font-size: 15px; font-weight: 600; letter-spacing: -.015em; }
+.fase span { font: 500 12.5px var(--mono); color: var(--text-2); letter-spacing: 0; white-space: nowrap; }
+
+/* comparar el nuevo con el que se usa */
+.comparar { display: grid; gap: 10px; padding: 14px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-sm); }
+.comparar .titulo { font-size: 12.5px; color: var(--text-2); }
+.fila-modelo { display: grid; grid-template-columns: 112px minmax(0, 1fr) 80px; align-items: center; gap: 12px; font-size: 13.5px; }
+.fila-modelo b { font-weight: 600; }
+.fila-modelo small { display: block; color: var(--text-3); font-size: 12px; }
+.fila-modelo .valor { font: 500 13px var(--mono); text-align: right; letter-spacing: 0; white-space: nowrap; }
+.veredicto { display: flex; gap: 9px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; font-size: 14px; font-weight: 500; line-height: 1.4; }
+.veredicto .ico { width: 17px; height: 17px; margin-top: 1px; }
+.veredicto.mejor { background: #e9f5ec; color: #1d5c2a; }
+.veredicto.peor { background: #fdf3dc; color: #6b4a00; }
+.veredicto.igual { background: var(--sunken); color: var(--text); }
+.aviso-error { padding: 10px 12px; border-radius: 12px; background: #fde9ec; color: #8a1424; font-size: 13.5px; font-weight: 500; }
+
+details.detalles summary { cursor: pointer; font-size: 13px; color: var(--text-2); list-style: none; display: inline-flex; align-items: center; gap: 6px; }
+details.detalles summary::-webkit-details-marker { display: none; }
+details.detalles summary .ico { width: 14px; height: 14px; transition: transform 200ms var(--ease-out); }
+details.detalles[open] summary .ico { transform: rotate(90deg); }
+.registro { margin: 10px 0 0; padding: 12px; max-height: 220px; overflow: auto; border-radius: 12px; background: #0b0b0b; color: #d6d6d6; font: 500 11.5px/1.5 var(--mono); white-space: pre-wrap; letter-spacing: 0; }
+.opciones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.campo { display: grid; gap: 5px; font-size: 12.5px; color: var(--text-2); }
+.campo select, .campo input[type="text"] { height: 38px; padding: 0 10px; border: 0; border-radius: 10px; background: var(--surface); box-shadow: var(--shadow-sm); font-size: 14px; color: var(--text); min-width: 0; }
+.campo input[type="color"] { width: 54px; height: 38px; padding: 3px; border: 0; border-radius: 10px; background: var(--surface); box-shadow: var(--shadow-sm); }
+
+/* ------------------------------------------------ abajo: con qué aprende y versiones */
+.abajo { max-width: 1200px; margin: 0 auto; padding: 24px 24px 64px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.bloque { padding: 20px; display: grid; gap: 14px; }
+.bloque h2 { font-size: 16px; font-weight: 600; letter-spacing: -.02em; }
+.bloque > p { font-size: 13.5px; color: var(--text-2); }
+.lista { list-style: none; margin: 0; padding: 0; display: grid; }
+.lista li { display: grid; gap: 6px; padding: 12px 0; border-top: 1px solid var(--line); }
+.lista li:first-child { border-top: 0; padding-top: 0; }
+.dato-cabeza { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.dato-cabeza i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.dato-cabeza b { font-weight: 500; }
+.dato-cabeza span { margin-left: auto; font: 500 13px var(--mono); letter-spacing: 0; }
+.dato-pie { font-size: 12.5px; color: var(--text-2); }
+.dato-pie.falta { color: #8a5a00; font-weight: 500; }
+.version { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 12px !important; }
+.version b { font-weight: 600; font-size: 14px; }
+.version .pildora { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; margin-left: 6px; border-radius: 999px; background: rgba(46, 158, 68, .12); color: #1d5c2a; font-size: 11.5px; font-weight: 500; vertical-align: 1px; }
+.version small { display: block; font-size: 12.5px; color: var(--text-2); }
+.version .btn { height: 34px; font-size: 13px; }
+.tecnico { grid-column: 1 / -1; padding: 16px 20px; }
+.tecnico summary { cursor: pointer; font-size: 14px; font-weight: 500; list-style: none; display: flex; align-items: center; gap: 8px; }
+.tecnico summary::-webkit-details-marker { display: none; }
+.tecnico summary .ico { width: 16px; height: 16px; transition: transform 200ms var(--ease-out); }
+.tecnico[open] summary .ico { transform: rotate(90deg); }
+.tecnico .contenido { display: grid; gap: 12px; margin-top: 14px; max-width: 720px; }
+.tecnico p { font-size: 13.5px; color: var(--text-2); }
+.tecnico .fila { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.casilla { display: inline-flex; align-items: center; gap: 8px; height: 38px; font-size: 13.5px; }
+.mensaje { font-size: 13.5px; }
+.mensaje.error { color: #b4192d; font-weight: 500; }
+.mensaje.bien { color: #1d5c2a; font-weight: 500; }
+
+@media (max-width: 1023px) {
+  .encabezado { padding: 0 16px; height: auto; min-height: 56px; flex-wrap: wrap; row-gap: 8px; padding-top: 10px; padding-bottom: 6px; }
+  .portada { grid-template-columns: minmax(0, 1fr); gap: 24px; padding: 16px 16px 16px; max-width: 640px; }
+  .intro { padding-top: 0; gap: 14px; }
+  .intro h1 { font-size: clamp(2.1rem, 9vw, 2.8rem); }
+  .intro > p { font-size: 15.5px; }
+  .abajo { grid-template-columns: minmax(0, 1fr); padding: 8px 16px 48px; max-width: 640px; }
+}
+@media (max-width: 480px) {
+  .pestanas { width: 100%; }
+  .pestanas a { flex: 1; justify-content: center; padding: 0 6px; }
+  .paso { grid-template-columns: 30px minmax(0, 1fr); gap: 10px; padding: 16px 12px; }
+  .marcador { width: 30px; height: 30px; }
+  .paso h2 { line-height: 30px; }
+  .fila-modelo { grid-template-columns: 84px minmax(0, 1fr) auto; gap: 10px; }
+  .en-uso .grande b { font-size: 34px; }
+  .opciones { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .barra.sin-fin i { animation: none; width: 100% !important; opacity: .35; }
+  .btn { transition-property: background-color, box-shadow; }
+}
+</style>
+</head>
+<body>
+<header class="encabezado">
+  <a class="marca" href="/"><span class="logo" data-ico="hoja"></span>Estación Sigatoka</a>
+  <nav class="pestanas" aria-label="Secciones de la estación">
+    <a href="/">Cargar</a>
+    <a href="/revisar">Revisar<span class="insignia" id="pendientes" hidden></span></a>
+    <a href="/modelo" aria-current="page">Entrenar</a>
+    <a href="/mapa">Mapa</a>
+  </nav>
+</header>
+
+<main class="portada">
+  <section class="intro">
+    <h1>Enséñale al modelo con tus fotos.</h1>
+    <p>Cada foto que revisas le enseña algo. Cuando juntes suficientes, entrénalo de nuevo: la computadora lo pone a prueba y tú decides si lo usas.</p>
+    <div class="tarjeta en-uso" id="en-uso" aria-live="polite"></div>
+  </section>
+
+  <section class="tarjeta camino" aria-label="Pasos para mejorar el modelo">
+    <ol class="pasos">
+      <li class="paso" id="paso-revisar"></li>
+      <li class="paso" id="paso-entrenar"></li>
+      <li class="paso" id="paso-decidir" aria-live="polite"></li>
+    </ol>
+  </section>
+</main>
+
+<section class="abajo">
+  <div class="tarjeta bloque">
+    <h2>Con qué fotos aprende</h2>
+    <ul class="lista" id="datos"></ul>
+    <p id="nota-datos"></p>
+  </div>
+  <div class="tarjeta bloque">
+    <h2>Versiones del modelo</h2>
+    <ul class="lista" id="versiones"></ul>
+    <p class="mensaje error" id="msg-version" hidden></p>
+  </div>
+  <details class="tarjeta tecnico">
+    <summary><span data-ico="flecha-der"></span>Equipo técnico: agregar una categoría nueva</summary>
+    <div class="contenido">
+      <p>Por ejemplo <i>Fusarium</i> o <i>Daño por insecto</i>. Aparece como opción en Revisar, y el modelo la aprende después de juntar al menos
+        <b id="minimo">15</b> fotos revisadas de ella y entrenar. Agrégala solo si un agrónomo la distingue en las fotos: una categoría confusa
+        empeora el modelo para todas las demás.</p>
+      <div class="fila">
+        <label class="campo" style="flex:1; min-width:200px"><span>Nombre</span><input type="text" id="cat-nombre" placeholder="Por ejemplo, Fusarium"></label>
         <label class="campo"><span>Color en el mapa</span><input type="color" id="cat-color" value="#7b61ff"></label>
-        <label class="casilla" style="height:var(--alto-control)"><input type="checkbox" id="cat-ok"> Lo validé con el agrónomo</label>
-        <button class="boton" id="btn-cat" type="button">Agregar categoría</button>
+        <label class="casilla"><input type="checkbox" id="cat-ok"> Lo validé con el agrónomo</label>
+        <button class="btn btn-secundario" type="button" id="btn-cat">Agregar categoría</button>
       </div>
-      <p id="cat-msg" class="mensaje"></p>
+      <p class="mensaje" id="cat-msg" aria-live="polite"></p>
     </div>
   </details>
 </section>
-</div>
-</section>
-{% endblock %}
-{% block scripts %}
+
 <script>
-let sondeo = null;
+"use strict";
+// Entrenamiento continuo, en tres pasos: revisar fotos -> entrenar -> decidir si se usa el nuevo.
+// Usa la misma API que antes: /api/resumen, /api/entrenamiento, /api/modelo/activar, /api/categorias.
 const $ = id => document.getElementById(id);
-const TIPO = { foto: "Foto completa", parches: "Por parches de hoja" };
-
-// Tiempos aproximados con la RTX 4060 de la laptop; sin GPU, varias veces más.
-function duracion() {
-  const rapido = $("epocas").value === "10";
-  const t = { foto: rapido ? "unos 10 minutos" : "unos 35 minutos",
-              parches: rapido ? "alrededor de 1 hora" : "de 2 a 3 horas",
-              ambos: rapido ? "alrededor de 1 hora y cuarto" : "de 2.5 a 3.5 horas" }[$("tipo").value];
-  $("duracion").textContent = `Tarda ${t} con la tarjeta de video de la laptop. El modelo por parches además corta
-    las fotos en trozos de hoja y calibra su umbral antes de terminar.`;
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+async function api(url, opciones = {}) {
+  const r = await fetch(url, opciones);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || d.mensaje || `Error ${r.status}`);
+  return d;
 }
-$("tipo").onchange = $("epocas").onchange = duracion;
-duracion();
+const post = (url, cuerpo) => api(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cuerpo) });
 
-function comparacion(m) {
-  if (m.acc_campo == null) return `<span class="nota">Sin examen de campo aún</span>`;
-  let txt = `<b class="num">${pct(m.acc_campo)}</b> <span class="nota num">(${m.n_campo} fotos)</span>`;
-  if (m.acc_campo_anterior != null) {
-    const dif = Math.round((m.acc_campo - m.acc_campo_anterior) * 100);
-    txt += dif > 0 ? ` <span class="mejor">${dif} pts mejor</span> <span class="nota">que el anterior (${pct(m.acc_campo_anterior)})</span>`
-         : dif < 0 ? ` <span class="peor">${-dif} pts peor</span> <span class="nota">que el anterior (${pct(m.acc_campo_anterior)})</span>`
-         : ` <span class="nota">igual que el anterior</span>`;
-  }
-  return txt;
+const ICONOS = {
+  hoja: '<path d="M4.5 19.5C4.5 11 10 4.5 19.5 4.5c0 9.5-6.5 15-15 15Z"/><path d="M4.5 19.5 14 10"/>',
+  listo: '<path d="M5 12.5 10 17 19 7"/>',
+  "flecha-der": '<path d="M9 5l7 7-7 7"/>',
+  mejor: '<path d="M12 19V5M6 11l6-6 6 6"/>',
+  alerta: '<path d="M12 4 2.8 19.5h18.4Z"/><path d="M12 10v4.5M12 17.2v.1"/>',
+  igual: '<path d="M5 9.5h14M5 14.5h14"/>',
+  revisar: '<path d="M5 12.5 10 17 19 7"/>',
+};
+const icono = n => `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS[n] || ""}</svg>`;
+document.querySelectorAll("[data-ico]").forEach(el => { el.innerHTML = icono(el.dataset.ico); });
+
+const META = 50;   // fotos revisadas nuevas con las que vale la pena entrenar
+const TIPO = { foto: "Foto completa", parches: "Por trozos de hoja" };
+const de100 = x => x == null ? null : Math.round(x * 100);
+function fechaCorta(txt) {
+  const d = new Date(String(txt || "").replace(" ", "T"));
+  return isNaN(d) ? esc(txt || "") : d.toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" });
 }
+const nombreCat = clave => (R?.categorias || []).find(c => c.clave === clave)?.nombre || clave;
+const colorCat = clave => (R?.categorias || []).find(c => c.clave === clave)?.color || "#8a94a6";
 
+// Modelos nuevos que la persona ya decidió no usar: no se vuelven a ofrecer en el paso 3.
+const descartados = {
+  leer() { try { return JSON.parse(localStorage.getItem("modelos-descartados") || "[]"); } catch (e) { return []; } },
+  agregar(vs) { try { localStorage.setItem("modelos-descartados", JSON.stringify([...new Set([...this.leer(), ...vs])])); } catch (e) {} },
+};
+
+// Lo que dice la estación mientras entrena, en palabras sencillas.
+function faseSencilla(f = "") {
+  const parte = (f.match(/^(\d+ de \d+) · /) || [])[1];
+  const texto = /Cortando/.test(f) ? "Cortando las fotos en trozos de hoja"
+    : /Entrenando/.test(f) ? "Aprendiendo de las fotos"
+    : /Calibrando/.test(f) ? "Ajustando qué tan seguro debe estar"
+    : /Midiendo/.test(f) ? "Poniéndolo a prueba con fotos de tu campo"
+    : "Juntando las fotos";
+  return parte ? `${texto} (modelo ${parte})` : texto;
+}
+function duracion(tipo, rapido) {
+  return { foto: rapido ? "unos 10 minutos" : "unos 35 minutos",
+           parches: rapido ? "alrededor de 1 hora" : "de 2 a 3 horas",
+           ambos: rapido ? "alrededor de 1 hora y cuarto" : "de 2 horas y media a 3 horas y media" }[tipo];
+}
+const minutos = s => s == null ? "" : s < 3600 ? `${Math.floor(s / 60)} min` : `${Math.floor(s / 3600)} h ${Math.floor(s % 3600 / 60)} min`;
+
+let R = null, E = null, sondeo = null;
 async function cargar() {
-  const r = await api("/api/entrenamiento");
-  const activo = r.modelos.find(m => m.activo);
-  $("activo").innerHTML = activo
-    ? `<h2>En uso: versión ${activo.version}</h2>
-         <p class="nota" style="margin:.3rem 0 .8rem">Activa desde ${fecha(activo.creado)}.</p>
-       <dl class="hechos">
-         <dt>Tipo</dt><dd>${TIPO[activo.tipo]}</dd>
-         <dt>Reconoce</dt><dd class="fichas">${JSON.parse(activo.clases).map(c => ficha(categoria(c))).join("")}</dd>
-         <dt>Examen de campo</dt><dd>${activo.acc_campo != null ? `<b class="num">${pct(activo.acc_campo)}</b> de aciertos en ${activo.n_campo} fotos revisadas que nunca entrenó` : "Sin examen aún: se crea al revisar fotos"}</dd>
-         <dt>Prueba pública</dt><dd><b class="num">${pct(activo.top1_test)}</b> de aciertos con fotos cercanas de internet, no aéreas</dd>
-       </dl>`
-    : `<h2>No hay modelo en uso</h2><p class="nota" style="margin:.4rem 0 0">Copia
-       <code>sigatoka_cls_v1.onnx</code> a <code>${esc(RESUMEN.modelo_inicial)}</code> y reinicia la estación.</p>`;
-
-  $("datos").innerHTML = r.datos.map(d => `<tr>
-    <td>${ficha(d)}</td><td class="der">${d.base}</td><td class="der">${d.campo}</td><td class="der">${d.examen}</td>
-    <td>${d.entrenable ? "Sí" : `<span class="nota">Faltan ${r.min_por_clase - d.base - d.campo - d.examen} fotos</span>`}</td></tr>`).join("");
-  $("nota-datos").className = "mensaje" + (r.dataset_base ? "" : " error");
-  $("nota-datos").textContent = !r.dataset_base
-    ? "No se encontró el dataset base (data\\dataset_v2 ni data\\dataset). Se entrenará solo con las fotos revisadas."
-    : r.dataset_v2 ? "Fotos base: data\\dataset_v2 (todas las fuentes públicas, sin duplicados)."
-    : "Fotos base: data\\dataset (las del v1). Para usar más fuentes, arma data\\dataset_v2 (vision/GUIA-PARCHES.md, pasos 1 y 2).";
-  $("minimo").textContent = r.min_por_clase;
-
-  $("versiones").innerHTML = r.modelos.map(m => {
-    const peor = m.acc_campo_anterior != null && m.acc_campo < m.acc_campo_anterior;
-    return `<tr><td><b>v${m.version}</b>${m.activo ? ` <span class="nota">en uso</span>` : ""}<br><span class="nota">${TIPO[m.tipo]}</span></td><td>${fecha(m.creado)}</td>
-      <td class="der">${JSON.parse(m.clases).length}</td><td>${comparacion(m)}</td><td class="der">${pct(m.top1_test)}</td>
-      <td class="der">${m.activo ? "" : `<button class="boton${peor ? "" : " claro"}" type="button" data-v="${m.version}">Usar este modelo</button>`}</td></tr>`;
-  }).join("");
-  document.querySelectorAll("#versiones button").forEach(b =>
-    dosPasos(b, "Confirmar: rediagnosticar todo", () => activar(+b.dataset.v)));
-
-  const e = r.estado;
-  const corriendo = !!e.activo;
-  $("form-entrenar").classList.toggle("oculto", corriendo);
-  $("en-curso").classList.toggle("oculto", !e.fase);
-  if (e.fase) {
-    $("fase").textContent = (corriendo ? `En curso: ${e.fase}` : e.error ? `Falló: ${e.fase}` : "Terminado") +
-      (e.error ? `. ${e.error}` : "") +
-      ((e.versiones || []).length > 1 ? `. Se crearon las versiones ${e.versiones.map(v => "v" + v).join(" y ")}; compáralas abajo antes de usar una.`
-       : (e.versiones || []).length === 1 ? `. Se creó la versión v${e.versiones[0]}; compárala abajo antes de usarla.` : "");
-    $("tiempo").textContent = e.transcurrido_s != null ? `${Math.floor(e.transcurrido_s / 60)} min ${e.transcurrido_s % 60} s` : "";
-    $("log").textContent = (e.ultimas || []).join("\n");
-  }
-  const rp = r.reproceso;
-  $("reproceso").classList.toggle("oculto", !rp.activo);
-  if (rp.activo) {
-    $("rep-txt").textContent = `${rp.hechas} de ${rp.total}`;
-    $("rep-barra").style.transform = `scaleX(${rp.hechas / Math.max(rp.total, 1)})`;
-  }
+  try { [R, E] = await Promise.all([api("/api/resumen"), api("/api/entrenamiento")]); }
+  catch (e) { $("paso-revisar").innerHTML = `<span class="marcador">!</span><div class="paso-cuerpo"><p class="aviso-error">No se pudo leer la estación: ${esc(e.message)}</p></div>`; return; }
+  pintar();
   clearTimeout(sondeo);
-  if (corriendo || rp.activo) sondeo = setTimeout(cargar, 3000);
+  if (E.estado.activo || E.reproceso.activo) sondeo = setTimeout(cargar, 3000);
 }
 
-async function activar(v) {
-  try { await post("/api/modelo/activar", { version: v }); $("msg-version").textContent = ""; }
-  catch (e) { $("msg-version").textContent = e.message; }
-  await cargarResumen();
-  await cargar();
+// Solo cambia lo que cambió: así un botón que espera su segundo clic no se reinicia con cada consulta.
+function poner(el, html) { if (el._html !== html) { el._html = html; el.innerHTML = html; } }
+
+function pintar() {
+  const activo = E.modelos.find(m => m.activo);
+  const nuevas = R.revisadas_desde_modelo || 0, pendientes = Math.max(0, (R.total_fotos || 0) - (R.total_revisadas || 0));
+  const e = E.estado, corriendo = !!e.activo, rep = E.reproceso;
+  const ya = new Set(descartados.leer());
+  const candidatos = E.modelos.filter(m => !m.activo && activo && m.version > activo.version && !ya.has(m.version));
+  $("pendientes").hidden = !pendientes; $("pendientes").textContent = pendientes > 999 ? "999+" : pendientes;
+
+  // ---------- el modelo que se usa hoy
+  const acc = activo && de100(activo.acc_campo);
+  poner($("en-uso"), !activo ? `<p class="etiqueta">No hay modelo en uso</p>
+      <p>Copia <code>sigatoka_cls_v1.onnx</code> a <code>${esc(R.modelo_inicial)}</code> y vuelve a abrir la estación.</p>`
+    : `<p class="etiqueta"><i></i>En uso: versión ${activo.version} · ${TIPO[activo.tipo] || ""}</p>
+      ${acc != null
+        ? `<div class="grande"><b class="num">${acc} de 100</b><span>aciertos con fotos de tu campo</span></div>
+           <p>Lo probamos con ${activo.n_campo} fotos revisadas que nunca usó para aprender. En fotos de internet acertó ${de100(activo.top1_test)} de 100.</p>`
+        : `<div class="grande"><b class="num">${de100(activo.top1_test) ?? "—"} de 100</b><span>aciertos con fotos de internet</span></div>
+           <p>Todavía no se prueba con fotos de tu campo: eso pasa la primera vez que lo entrenes con fotos revisadas.</p>`}
+      <div class="fichas">${JSON.parse(activo.clases || "[]").map(c => `<span class="ficha"><i style="background:${colorCat(c)}"></i>${esc(nombreCat(c))}</span>`).join("")}</div>`);
+
+  // ---------- paso 1: revisar fotos
+  const listo1 = nuevas >= META, despues = corriendo || candidatos.length > 0 || rep.activo;   // ya pasó al paso 2 o 3
+  const p1 = $("paso-revisar");
+  p1.toggleAttribute("data-listo", listo1); p1.toggleAttribute("data-ahora", !listo1 && !despues);
+  poner(p1, `<span class="marcador">${listo1 ? icono("listo") : "1"}</span>
+    <div class="paso-cuerpo">
+      <h2>Revisa fotos</h2>
+      ${despues ? `<p><b class="num">${nuevas}</b> ${nuevas === 1 ? "foto revisada" : "fotos revisadas"} desde el último entrenamiento.</p>` : `
+      <p><b class="num">${nuevas}</b> ${nuevas === 1 ? "foto revisada" : "fotos revisadas"} desde el último entrenamiento.
+        ${listo1 ? "Ya son suficientes para entrenar." : `Conviene juntar unas ${META}: ${nuevas ? `faltan ${META - nuevas}` : "empieza en Revisar"}.`}</p>
+      <div class="barra" role="progressbar" aria-label="Fotos revisadas nuevas" aria-valuemin="0" aria-valuemax="${META}" aria-valuenow="${Math.min(nuevas, META)}"
+        style="--c:${listo1 ? "var(--sana)" : "var(--text)"}"><i style="width:${Math.min(100, nuevas / META * 100)}%"></i></div>
+      ${pendientes ? `<div class="acciones"><a class="btn btn-secundario" href="/revisar">Ir a Revisar · ${pendientes} sin revisar</a></div>` : ""}`}
+    </div>`);
+
+  // ---------- paso 2: entrenar
+  const p2 = $("paso-entrenar"), abiertoLog = $("ver-log")?.open, opcionesAbiertas = $("ver-opciones")?.open;
+  const tipoAntes = $("tipo")?.value || (activo?.tipo === "parches" ? "parches" : "foto"), rapidoAntes = $("rapido")?.value || "50";
+  p2.toggleAttribute("data-listo", !corriendo && candidatos.length > 0);
+  p2.toggleAttribute("data-ahora", corriendo || (listo1 && !candidatos.length));
+  const registro = `<details class="detalles" id="ver-log"${abiertoLog ? " open" : ""}><summary>${icono("flecha-der")}Ver detalles</summary>
+      <pre class="registro">${esc((e.ultimas || []).join("\n") || "Sin detalles todavía.")}</pre></details>`;
+  poner(p2, `<span class="marcador">${!corriendo && candidatos.length ? icono("listo") : "2"}</span>
+    <div class="paso-cuerpo">
+      <h2>Entrena</h2>
+      ${!corriendo && (candidatos.length || rep.activo) ? `<p>${candidatos.length
+          ? `Listo: se ${candidatos.length > 1 ? `crearon las versiones ${candidatos.map(m => m.version).join(" y ")}` : `creó la versión ${candidatos[0].version}`}.`
+          : "Listo."}</p>`
+      : corriendo ? `
+        <div class="fase"><b>${esc(faseSencilla(e.fase))}…</b><span class="num">${minutos(e.transcurrido_s)}</span></div>
+        <div class="barra sin-fin" role="progressbar" aria-label="Entrenando"><i></i></div>
+        <p>Deja la computadora encendida y esta ventana abierta. Puedes seguir revisando fotos mientras tanto.</p>
+        ${registro}`
+      : `
+        ${e.error ? `<p class="aviso-error">No se pudo terminar: ${esc(e.error)}</p>${registro}` : ""}
+        <p>La computadora aprende con todas las fotos revisadas y las de internet. Tarda <b id="tarda">${duracion(tipoAntes, rapidoAntes === "10")}</b>.</p>
+        <div class="acciones">
+          <button class="btn ${listo1 && !candidatos.length ? "btn-primario" : "btn-secundario"} btn-grande" type="button" data-accion="entrenar"
+            data-confirmar="Sí, empezar a entrenar">${e.error ? "Intentar de nuevo" : "Entrenar el modelo"}</button>
+        </div>
+        ${!listo1 && nuevas < 15 ? `<p>Con tan pocas fotos nuevas casi no va a cambiar; mejor revisa más primero.</p>` : ""}
+        <details class="detalles" id="ver-opciones"${opcionesAbiertas ? " open" : ""}><summary>${icono("flecha-der")}Opciones para el equipo técnico</summary>
+          <div class="opciones">
+            <label class="campo"><span>Qué modelo</span><select id="tipo">
+              <option value="foto"${tipoAntes === "foto" ? " selected" : ""}>Foto completa (como el v1)</option>
+              <option value="parches"${tipoAntes === "parches" ? " selected" : ""}>Por trozos de hoja (v2)</option>
+              <option value="ambos"${tipoAntes === "ambos" ? " selected" : ""}>Los dos, uno tras otro</option></select></label>
+            <label class="campo"><span>Duración</span><select id="rapido">
+              <option value="50"${rapidoAntes === "50" ? " selected" : ""}>Completo (recomendado)</option>
+              <option value="10"${rapidoAntes === "10" ? " selected" : ""}>Prueba rápida</option></select></label>
+          </div>
+        </details>
+        <p class="mensaje error" id="msg-entrenar" hidden></p>`}
+    </div>`);
+
+  // ---------- paso 3: decidir
+  const p3 = $("paso-decidir");
+  p3.toggleAttribute("data-ahora", !corriendo && (candidatos.length > 0 || rep.activo));
+  p3.removeAttribute("data-listo");
+  let cuerpo;
+  if (rep.activo) {
+    cuerpo = `<div class="fase"><b>Revisando de nuevo todas las fotos con el modelo nuevo…</b><span class="num">${rep.hechas} de ${rep.total}</span></div>
+      <div class="barra" role="progressbar" aria-valuemin="0" aria-valuemax="${rep.total}" aria-valuenow="${rep.hechas}"><i style="width:${rep.total ? rep.hechas / rep.total * 100 : 0}%"></i></div>
+      <p>Así el mapa y la revisión ya usan el modelo nuevo. No cierres la estación.</p>`;
+  } else if (!candidatos.length) {
+    cuerpo = `<p>Cuando termine de entrenar, aquí comparas el modelo nuevo con el que usas y eliges con cuál quedarte.</p>`;
+  } else {
+    const base = activo.acc_campo ?? candidatos[0].acc_campo_anterior, baseN = de100(base);
+    const mejor = candidatos.reduce((a, b) => ((b.acc_campo ?? -1) > (a.acc_campo ?? -1) ? b : a));
+    const filas = [...candidatos].sort((a, b) => a.version - b.version).map(m => {
+      const v = de100(m.acc_campo);
+      return `<div class="fila-modelo"><div><b>Nuevo · v${m.version}</b><small>${esc(TIPO[m.tipo] || "")}</small></div>
+        <div class="barra" style="--c:${v != null && baseN != null && v < baseN ? "var(--otra)" : "var(--sana)"}"><i style="width:${v ?? 0}%"></i></div>
+        <span class="valor num">${v != null ? `${v} de 100` : "—"}</span></div>`;
+    }).join("");
+    const actual = `<div class="fila-modelo"><div><b>En uso · v${activo.version}</b><small>${esc(TIPO[activo.tipo] || "")}</small></div>
+        <div class="barra"><i style="width:${baseN ?? 0}%"></i></div><span class="valor num">${baseN != null ? `${baseN} de 100` : "—"}</span></div>`;
+    const vNuevo = de100(mejor.acc_campo);
+    const sinPrueba = vNuevo == null || baseN == null;
+    const veredicto = sinPrueba
+      ? `<p class="veredicto igual">${icono("alerta")}<span>Todavía no hay fotos de prueba de tu campo, así que no se pueden comparar. Revisa más fotos y vuelve a entrenar, o pruébalo tú.</span></p>`
+      : vNuevo > baseN ? `<p class="veredicto mejor">${icono("mejor")}<span>El nuevo acierta ${vNuevo - baseN} más de cada 100. Conviene usarlo.</span></p>`
+      : vNuevo < baseN ? `<p class="veredicto peor">${icono("alerta")}<span>El nuevo acierta menos. Mejor sigue con el que tienes.</span></p>`
+      : `<p class="veredicto igual">${icono("igual")}<span>Aciertan igual. Puedes seguir con el que tienes.</span></p>`;
+    const conviene = !sinPrueba && vNuevo > baseN;
+    cuerpo = `<p>Los dos se probaron con las mismas fotos revisadas de tu campo, que ninguno usó para aprender.</p>
+      <div class="comparar"><span class="titulo">Aciertos con fotos de tu campo</span>${filas}${actual}</div>
+      ${veredicto}
+      <div class="acciones">
+        <button class="btn ${conviene ? "btn-primario" : "btn-secundario"} btn-grande" type="button" data-accion="usar" data-v="${mejor.version}"
+          data-confirmar="Sí, cambiar al v${mejor.version}">${conviene ? `Usar el modelo nuevo (v${mejor.version})` : `Usar el v${mejor.version} de todos modos`}</button>
+        <button class="btn ${conviene ? "btn-fantasma" : "btn-primario"} btn-grande" type="button" data-accion="seguir">Seguir con el que tengo</button>
+      </div>
+      <p class="mensaje error" id="msg-usar" hidden></p>`;
+  }
+  poner(p3, `<span class="marcador">3</span><div class="paso-cuerpo"><h2>Decide si lo usas</h2>${cuerpo}</div>`);
+
+  // ---------- con qué aprende
+  poner($("datos"), E.datos.map(d => {
+    const campo = d.campo + d.examen, total = d.base + campo, falta = E.min_por_clase - total;
+    return `<li><div class="dato-cabeza"><i style="background:${esc(d.color)}"></i><b>${esc(d.nombre)}</b><span class="num">${total}</span></div>
+      <p class="dato-pie${d.entrenable ? "" : " falta"}">${d.entrenable ? `${d.base} de internet · ${campo} de tu campo` : `Le faltan ${falta} ${falta === 1 ? "foto" : "fotos"} para poder aprenderla`}</p></li>`;
+  }).join(""));
+  $("nota-datos").textContent = !E.dataset_base
+    ? "No se encontraron las fotos de internet (data\\dataset_v2 ni data\\dataset): aprenderá solo con tus fotos revisadas."
+    : "Unas 2 de cada 10 fotos revisadas se guardan aparte para poner a prueba cada modelo nuevo; esas nunca se usan para aprender.";
+  $("minimo").textContent = E.min_por_clase;
+
+  // ---------- versiones
+  poner($("versiones"), E.modelos.map(m => {
+    const v = de100(m.acc_campo);
+    return `<li class="version"><div><b>Versión ${m.version}</b>${m.activo ? `<span class="pildora">En uso</span>` : ""}
+        <small>${esc(TIPO[m.tipo] || "")} · ${fechaCorta(m.creado)} · ${v != null ? `${v} de 100 con fotos de tu campo` : `${de100(m.top1_test) ?? "—"} de 100 con fotos de internet`}</small></div>
+      ${m.activo ? "" : `<button class="btn btn-secundario" type="button" data-accion="usar" data-v="${m.version}" data-confirmar="Sí, usar el v${m.version}">Usar</button>`}</li>`;
+  }).join(""));
 }
 
-dosPasos($("btn-entrenar"), "Confirmar: empezar a entrenar", async () => {
-  try { await post("/api/entrenamiento", { epocas: +$("epocas").value, tipo: $("tipo").value }); $("msg-entrenar").textContent = ""; }
-  catch (e) { $("msg-entrenar").textContent = e.message; }
-  await cargar();
+// ---------- botones (los que no se deshacen fácil piden un segundo clic)
+function armar(b) {
+  b.dataset.original = b.innerHTML; b.classList.add("confirmando"); b.textContent = b.dataset.confirmar;
+  b._t = setTimeout(() => desarmar(b), 4000);
+}
+function desarmar(b) { clearTimeout(b._t); if (b.classList.contains("confirmando")) { b.classList.remove("confirmando"); b.innerHTML = b.dataset.original; } }
+const mostrar = (id, texto) => { const el = $(id); if (el) { el.textContent = texto; el.hidden = !texto; } };
+const ACCIONES = {
+  async entrenar() {
+    try { await post("/api/entrenamiento", { epocas: +($("rapido")?.value || 50), tipo: $("tipo")?.value || "foto" }); }
+    catch (err) { return mostrar("msg-entrenar", err.message); }
+    await cargar();
+  },
+  async usar(b) {
+    try { await post("/api/modelo/activar", { version: +b.dataset.v }); }
+    catch (err) { mostrar("msg-usar", err.message); return mostrar("msg-version", err.message); }
+    await cargar();
+  },
+  seguir() {
+    const activo = E.modelos.find(m => m.activo);
+    descartados.agregar(E.modelos.filter(m => !m.activo && activo && m.version > activo.version).map(m => m.version));
+    pintar();
+  },
+};
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-accion]");
+  if (!b || b.disabled) return;
+  if (b.dataset.confirmar && !b.classList.contains("confirmando")) return armar(b);
+  desarmar(b);
+  b.disabled = true;
+  try { await ACCIONES[b.dataset.accion](b); } finally { b.disabled = false; }
+});
+document.addEventListener("change", e => {
+  if (e.target.id === "tipo" || e.target.id === "rapido") $("tarda").textContent = duracion($("tipo").value, $("rapido").value === "10");
 });
 
-$("btn-cat").onclick = async () => {
+$("btn-cat").addEventListener("click", async () => {
   const msg = $("cat-msg");
   if (!$("cat-ok").checked) { msg.className = "mensaje error"; msg.textContent = "Marca primero la casilla de validación con el agrónomo."; return; }
   try {
     await post("/api/categorias", { nombre: $("cat-nombre").value, color: $("cat-color").value });
     msg.className = "mensaje bien"; msg.textContent = "Categoría agregada. Ya aparece como opción en Revisar.";
     $("cat-nombre").value = ""; $("cat-ok").checked = false;
-    await cargarResumen(); await cargar();
-  } catch (e) { msg.className = "mensaje error"; msg.textContent = e.message; }
-};
+    await cargar();
+  } catch (err) { msg.className = "mensaje error"; msg.textContent = err.message; }
+});
 
-(async () => { await LISTO; await cargar(); })();
+cargar();
 </script>
-{% endblock %}
+</body>
+</html>

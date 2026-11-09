@@ -7,7 +7,7 @@ Tiene cuatro pestañas en la barra de la izquierda (abajo, en el celular):
 |---|---|
 | **Cargar** (la principal) | Subir una imagen, varias, o arrastrar una carpeta completa (con subcarpetas), o usar la cámara en vivo. El modelo dice al momento qué cree que tiene cada imagen (sana, Sigatoka u otra condición), con qué seguridad y qué hacer. Todo se guarda con la fecha de hoy. |
 | **Revisar** | Elige la fecha arriba. *Una por una*: salen primero las imágenes en las que el modelo tiene más dudas y una persona confirma o corrige. *Todas las imágenes*: todas las de esa fecha, de la más dudosa a la más segura. |
-| **Modelo** | Reentrenar con lo revisado (modelo de foto completa, por parches de hoja, o los dos), comparar contra el modelo actual y activar el nuevo solo si mejora. |
+| **Entrenar** | Entrenamiento continuo en tres pasos: *Revisa fotos* (cuántas revisadas nuevas hay; conviene juntar unas 50), *Entrena* (un botón; las opciones de tipo de modelo y duración quedan para el equipo técnico) y *Decide si lo usas* (compara el nuevo contra el que está en uso con fotos de tu campo y recomienda cuál dejar). Mismo estilo que el sitio público. |
 | **Mapa** | Las imágenes con ubicación (GPS) sobre el lote. *Condiciones*: cada zona (10–100 m) toma el color de lo que más hay en ella (Sigatoka, sana, otra condición) y un borde rojo punteado avisa si hay algo de Sigatoka; al pasar el cursor dice cuántas fotos de cada una. *Resaltar una*: % de fotos con una condición por zona. *Fotos*: cada foto como punto. En la leyenda se prende o apaga cada condición. Se descarga para Google Earth. |
 
 ## Cómo abrirla
@@ -26,7 +26,7 @@ Requisitos: el entorno `dron-vision` de la guía del modelo, más `pip install f
 (el `.bat` lo instala solo la primera vez). El modelo `sigatoka_cls_v1.onnx` ya viene en el
 repo, en `vision\models\` (llega con `git pull`). Un modelo nuevo del repo (por ejemplo
 `sigatoka_cls_v2.onnx`, el que revisa por parches de hoja) se registra solo al abrir la
-estación, **sin activarse**: se activa en la página Modelo. Con él, Cargar dibuja sobre la
+estación, **sin activarse**: se activa en la pestaña Entrenar (lista de versiones). Con él, Cargar dibuja sobre la
 foto los trozos de hoja con síntomas. Ver [vision/GUIA-PARCHES.md](../vision/GUIA-PARCHES.md).
 
 ## Borrar imágenes
@@ -71,9 +71,10 @@ Sin laptop también se puede ver desde un celular en la misma red: abre
 2. **Revisar**: elige la fecha y revisa *una por una*, empezando por las dudosas. El
    agrónomo escribe su nombre y etiqueta. Atajos: `1` `2` `3`… categorías, `0` la imagen
    no sirve, `S` saltar, `Z` deshacer.
-3. **Modelo** (de vez en cuando): con unas 50 imágenes revisadas nuevas, *Reentrenar
-   ahora*. Al terminar aparece la versión nueva con su resultado en el **examen de campo**;
-   si mejora, *Usar este modelo* (todas las imágenes se vuelven a diagnosticar con él).
+3. **Entrenar** (de vez en cuando): con unas 50 imágenes revisadas nuevas, *Entrenar el
+   modelo* (pide un segundo clic para confirmar). Al terminar, el paso 3 compara la versión
+   nueva con la que está en uso en el **examen de campo** ("aciertos con fotos de tu campo");
+   si mejora, *Usar el modelo nuevo* (todas las imágenes se vuelven a diagnosticar con él).
 
 ## Cómo "aprende" el modelo (honestamente)
 
@@ -96,7 +97,7 @@ regresar a una versión anterior.
   en fotos del dron solo la dará el examen de campo con fotos propias.
 - **Quién etiqueta importa:** si etiqueta alguien que no distingue Sigatoka de otras
   manchas, el modelo aprende sus errores. La estación guarda quién revisó cada foto.
-- **Categorías nuevas** (zona técnica en *Modelo*): solo con validación del agrónomo y
+- **Categorías nuevas** (zona técnica al final de *Entrenar*): solo con validación del agrónomo y
   al menos 15 fotos revisadas antes de reentrenar.
 
 ## Dónde quedan los datos
