@@ -512,5 +512,5 @@ const Motor = (() => {
   }
 
   return { CAT, cat, GRIS, LECTURAS, esc, plural, pct, icono, qr, SITIO, modelo, modeloListo, diagnosticar, lectura, precargar,
-           hablar, callar, puedeHablar, vozActiva, compartir, leerGeojson, ejemplo, crearMapa, resumen, cuantas, dron };
+           hablar, callar, puedeHablar, vozActiva, compartir, leerGeojson, ejemplo, crearMapa, resumen, zonas, cuantas, dron };
 })();
