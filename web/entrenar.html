@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mejorar el modelo · Dron Sigatoka</title>
+<meta name="description" content="Marca tus fotos de hojas de plátano y tu computadora mejora el modelo que detecta la Sigatoka. Las fotos no se suben a internet.">
+<meta name="theme-color" content="#fafafa">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0a0a'/%3E%3Cg transform='translate(5 5) scale(.92)' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 19.5C4.5 11 10 4.5 19.5 4.5c0 9.5-6.5 15-15 15Z'/%3E%3Cpath d='M4.5 19.5 14 10'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@500&display=swap">
+<style>
+:root {
+  --bg: #fafafa; --surface: #ffffff; --sunken: #f4f4f3; --text: #0a0a0a; --text-2: #5c5c5c; --text-3: #8a8a8a;
+  --line: rgba(0, 0, 0, .08);
+  --sana: #2e9e44; --sigatoka: #d7263d; --otra: #f0a202; --gris: #7d8b96;
+  --font: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Geist Mono", ui-monospace, Consolas, monospace;
+  --ease-out: cubic-bezier(.23, 1, .32, 1);
+  --shadow-sm: 0 0 0 1px rgba(0, 0, 0, .06), 0 1px 2px rgba(0, 0, 0, .04);
+  --shadow-md: 0 0 0 1px rgba(0, 0, 0, .06), 0 2px 4px rgba(0, 0, 0, .03), 0 12px 24px -10px rgba(0, 0, 0, .12);
+  --shadow-lg: 0 0 0 1px rgba(0, 0, 0, .07), 0 6px 12px -4px rgba(0, 0, 0, .06), 0 30px 60px -18px rgba(0, 0, 0, .28);
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font: 400 15px/1.5 var(--font); letter-spacing: -.011em;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+h1, h2, h3, p { margin: 0; }
+button { font: inherit; color: inherit; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.ico { width: 18px; height: 18px; flex: none; }
+.num { font-variant-numeric: tabular-nums; }
+[hidden] { display: none !important; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 14px; border: 0; border-radius: 10px;
+  font: 500 14px/1 var(--font); letter-spacing: -.01em; cursor: pointer; white-space: nowrap; text-decoration: none;
+  transition: transform 160ms var(--ease-out), background-color 150ms ease, box-shadow 150ms ease; }
+.btn:active { transform: scale(.97); }
+.btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+.btn-primario { background: var(--text); color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14), 0 1px 2px rgba(0, 0, 0, .24); }
+.btn-secundario { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+.btn-fantasma { background: transparent; color: var(--text-2); }
+.btn-grande { height: 48px; padding: 0 20px; border-radius: 12px; font-size: 15px; }
+.btn.confirmando { box-shadow: 0 0 0 3px rgba(10, 10, 10, .14), 0 1px 2px rgba(0, 0, 0, .24); }
+.btn-secundario.confirmando, .btn-fantasma.confirmando { background: var(--text); color: #fff; }
+@media (hover: hover) and (pointer: fine) {
+  .btn-primario:not(:disabled):hover { background: #262626; }
+  .btn-secundario:not(:disabled):hover { background: #f7f7f7; }
+  .btn-secundario.confirmando:hover, .btn-fantasma.confirmando:hover { background: #262626; }
+  .btn-fantasma:not(.confirmando):hover { background: rgba(0, 0, 0, .045); color: var(--text); }
+}
+
+.encabezado { max-width: 1200px; margin: 0 auto; height: 64px; padding: 0 24px; display: flex; align-items: center; gap: 12px; }
+.marca { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; letter-spacing: -.02em; margin-right: auto; text-decoration: none; }
+.logo { width: 28px; height: 28px; border-radius: 8px; background: var(--text); color: #fff; display: grid; place-items: center; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16); }
+.logo .ico { width: 16px; height: 16px; }
+.pestanas { display: flex; gap: 2px; padding: 3px; border-radius: 12px; background: var(--sunken); }
+.pestanas a { display: inline-flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 9px; font-size: 14px; font-weight: 500; color: var(--text-2);
+  text-decoration: none; transition: background-color 150ms ease, color 150ms ease; }
+.pestanas a[aria-current="page"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+@media (hover: hover) and (pointer: fine) { .pestanas a:not([aria-current]):hover { color: var(--text); } }
+
+.portada { max-width: 1200px; margin: 0 auto; padding: 32px 24px 24px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 560px); gap: 56px; align-items: start; }
+.intro { display: grid; gap: 20px; padding-top: 24px; }
+.intro h1 { font-size: clamp(2.4rem, 4.6vw, 3.9rem); font-weight: 600; line-height: 1.02; letter-spacing: -.045em; text-wrap: balance; max-width: 12ch; }
+.intro > p { font-size: 17px; line-height: 1.55; color: var(--text-2); max-width: 40ch; letter-spacing: -.015em; }
+.tarjeta { background: var(--surface); border-radius: 20px; box-shadow: var(--shadow-md); }
+.en-uso { padding: 18px 20px; display: grid; gap: 10px; max-width: 460px; margin-top: 8px; }
+.en-uso .etiqueta { font-size: 13px; color: var(--text-2); display: flex; align-items: center; gap: 8px; }
+.en-uso .etiqueta i { width: 8px; height: 8px; border-radius: 50%; background: var(--sana); box-shadow: 0 0 0 3px rgba(46, 158, 68, .18); }
+.en-uso b.titulo { font-size: 22px; font-weight: 600; letter-spacing: -.03em; line-height: 1.15; }
+.en-uso p { font-size: 13.5px; color: var(--text-2); }
+.en-uso .acciones { margin-top: 2px; }
+
+.camino { padding: 8px; border-radius: 24px; }
+.pasos { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.paso { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 14px; padding: 18px 16px; border-radius: 18px; transition: background-color 200ms ease; }
+.paso[data-ahora] { background: var(--sunken); }
+.marcador { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--sunken); color: var(--text-2); font: 500 14px var(--mono); }
+.paso[data-ahora] .marcador { background: var(--text); color: #fff; }
+.paso[data-listo] .marcador { background: rgba(46, 158, 68, .12); color: var(--sana); }
+.paso-cuerpo { display: grid; gap: 10px; align-content: start; min-width: 0; }
+.paso h2 { font-size: 17px; font-weight: 600; letter-spacing: -.02em; line-height: 36px; margin-bottom: -6px; }
+.paso p { font-size: 14px; color: var(--text-2); line-height: 1.5; }
+.paso p b { color: var(--text); font-weight: 600; }
+.paso:not([data-ahora]):not([data-listo]) h2 { color: var(--text-2); }
+.acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.acciones .pista { font-size: 13px; color: var(--text-3); }
+
+.barra { position: relative; height: 8px; border-radius: 4px; background: rgba(0, 0, 0, .07); overflow: hidden; }
+.barra i { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--c, var(--text)); transition: width 300ms var(--ease-out); }
+.paso:not([data-ahora]) .barra { background: var(--sunken); }
+.fase { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.fase b { font-size: 15px; font-weight: 600; letter-spacing: -.015em; }
+.fase span { font: 500 12.5px var(--mono); color: var(--text-2); letter-spacing: 0; white-space: nowrap; }
+.cuentas { display: flex; flex-wrap: wrap; gap: 6px; }
+.ficha { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; background: var(--surface); box-shadow: var(--shadow-sm); font-size: 13px; }
+.ficha i { width: 8px; height: 8px; border-radius: 50%; }
+.ficha b { font: 500 12.5px var(--mono); letter-spacing: 0; }
+
+/* marcar una foto: la foto grande y cuatro botones */
+.por-marcar { position: relative; margin: 0; aspect-ratio: 4 / 3; border-radius: 16px; overflow: hidden; background: #1b1d1a; }
+.por-marcar img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.por-marcar figcaption { position: absolute; left: 10px; bottom: 10px; max-width: calc(100% - 20px); display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 999px;
+  background: rgba(10, 10, 10, .72); -webkit-backdrop-filter: blur(12px) saturate(1.6); backdrop-filter: blur(12px) saturate(1.6); color: #fff; font-size: 12.5px; }
+.por-marcar figcaption i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.pregunta { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.pregunta b { font-size: 15px; font-weight: 600; letter-spacing: -.015em; color: var(--text); }
+.pregunta span { font-size: 13px; color: var(--text-2); }
+.marcas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 8px; }
+.marcas button { min-height: 52px; padding: 6px 10px; border: 0; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-sm); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 500; line-height: 1.2; text-align: center;
+  transition: transform 160ms var(--ease-out), background-color 150ms ease; }
+.marcas button i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.marcas button kbd { font: 500 11px var(--mono); color: var(--text-3); }
+.marcas button:active { transform: scale(.96); }
+.marcas .no-sirve { background: transparent; box-shadow: none; color: var(--text-2); }
+@media (hover: hover) and (pointer: fine) { .marcas button:hover { background: #f7f7f7; } .marcas .no-sirve:hover { background: rgba(0, 0, 0, .045); } }
+@media (hover: none), (pointer: coarse) { .marcas button kbd { display: none; } }
+
+.comparar { display: grid; gap: 10px; padding: 14px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-sm); }
+.comparar .titulo { font-size: 12.5px; color: var(--text-2); }
+.fila-modelo { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; align-items: center; gap: 12px; font-size: 13.5px; }
+.fila-modelo b { font-weight: 600; }
+.fila-modelo .valor { font: 500 13px var(--mono); text-align: right; letter-spacing: 0; white-space: nowrap; }
+.veredicto { display: flex; gap: 9px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; font-size: 14px; font-weight: 500; line-height: 1.4; }
+.veredicto .ico { width: 17px; height: 17px; margin-top: 1px; }
+.veredicto.mejor { background: #e9f5ec; color: #1d5c2a; }
+.veredicto.peor { background: #fdf3dc; color: #6b4a00; }
+.veredicto.igual { background: var(--sunken); color: var(--text); }
+.aviso-error { padding: 10px 12px; border-radius: 12px; background: #fde9ec; color: #8a1424; font-size: 13.5px; font-weight: 500; }
+
+.abajo { max-width: 1200px; margin: 0 auto; padding: 24px 24px 64px; display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.bloque { padding: 20px; display: grid; gap: 14px; }
+.bloque h2 { font-size: 16px; font-weight: 600; letter-spacing: -.02em; }
+.bloque > p { font-size: 13.5px; color: var(--text-2); }
+.bloque code { font: 500 12.5px var(--mono); background: var(--sunken); padding: 1px 5px; border-radius: 5px; letter-spacing: 0; }
+.rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.miniatura { position: relative; aspect-ratio: 1; border: 0; padding: 0; border-radius: 12px; overflow: hidden; background: var(--sunken); cursor: pointer;
+  transition: transform 160ms var(--ease-out); }
+.miniatura:active { transform: scale(.97); }
+.miniatura img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.miniatura .marca-foto { position: absolute; left: 6px; bottom: 6px; display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 7px; border-radius: 999px;
+  background: rgba(255, 255, 255, .92); font-size: 11px; font-weight: 500; color: var(--text); }
+.miniatura .marca-foto i { width: 7px; height: 7px; border-radius: 50%; }
+.miniatura .prueba { position: absolute; right: 6px; top: 6px; height: 18px; padding: 0 6px; border-radius: 999px; background: rgba(10, 10, 10, .7); color: #fff; font-size: 10.5px; line-height: 18px; }
+.vacio { grid-column: 1 / -1; font-size: 13.5px; color: var(--text-3); padding: 12px 0; }
+.mensaje { font-size: 13.5px; }
+.mensaje.bien { color: #1d5c2a; font-weight: 500; }
+.mensaje.error { color: #b4192d; font-weight: 500; }
+
+.soltar { position: fixed; inset: 12px; z-index: 60; display: grid; place-items: center; border-radius: 28px; pointer-events: none;
+  background: rgba(250, 250, 250, .84); -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4); box-shadow: inset 0 0 0 2px var(--text);
+  opacity: 0; transform: scale(.985); transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out); }
+.soltar[data-visible] { opacity: 1; transform: none; }
+.soltar b { font-size: 26px; font-weight: 600; letter-spacing: -.035em; }
+
+@media (max-width: 1023px) {
+  .encabezado { padding: 10px 16px 6px; height: auto; min-height: 56px; flex-wrap: wrap; row-gap: 8px; max-width: 640px; }
+  .portada { grid-template-columns: minmax(0, 1fr); gap: 24px; padding: 16px; max-width: 640px; }
+  .intro { padding-top: 0; gap: 14px; }
+  .intro h1 { font-size: clamp(2.1rem, 9vw, 2.8rem); }
+  .intro > p { font-size: 15.5px; }
+  .abajo { grid-template-columns: minmax(0, 1fr); padding: 8px 16px 48px; max-width: 640px; }
+}
+@media (max-width: 520px) {
+  .pestanas { width: 100%; }
+  .pestanas a { flex: 1; justify-content: center; padding: 0 6px; }
+  .paso { grid-template-columns: 30px minmax(0, 1fr); gap: 10px; padding: 16px 12px; }
+  .marcador { width: 30px; height: 30px; }
+  .paso h2 { line-height: 30px; }
+  .marcas { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .marcas .no-sirve { grid-column: 1 / -1; min-height: 40px; }
+  .fila-modelo { grid-template-columns: 84px minmax(0, 1fr) auto; gap: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn, .marcas button, .miniatura { transition-property: background-color, box-shadow; }
+  .soltar, .soltar[data-visible] { transform: none; }
+}
+</style>
+</head>
+<body>
+<header class="encabezado">
+  <a class="marca" href="./"><span class="logo" data-ico="hoja"></span>Dron Sigatoka</a>
+  <nav class="pestanas" aria-label="Secciones">
+    <a href="./">Revisar una hoja</a>
+    <a href="entrenar.html" aria-current="page">Mejorar el modelo</a>
+  </nav>
+</header>
+
+<main class="portada">
+  <section class="intro">
+    <h1>Mejora el modelo con tus fotos.</h1>
+    <p>Marca qué tiene cada foto de tu lote y tu computadora le enseña al modelo en segundos. Las fotos no se suben a internet: todo pasa aquí.</p>
+    <div class="tarjeta en-uso" id="en-uso" aria-live="polite"></div>
+  </section>
+  <section class="tarjeta camino" aria-label="Pasos para mejorar el modelo">
+    <ol class="pasos">
+      <li class="paso" id="paso-marcar"></li>
+      <li class="paso" id="paso-entrenar"></li>
+      <li class="paso" id="paso-decidir" aria-live="polite"></li>
+    </ol>
+  </section>
+</main>
+
+<section class="abajo">
+  <div class="tarjeta bloque">
+    <h2>Tus fotos marcadas</h2>
+    <p>Toca una foto para volver a marcarla. Las que dicen <b>prueba</b> se apartan para comparar los modelos y nunca se usan para aprender.</p>
+    <div class="rejilla" id="rejilla"></div>
+  </div>
+  <div class="tarjeta bloque">
+    <h2>Para el entrenamiento completo</h2>
+    <p>Aquí solo se ajusta la decisión final del modelo. Para entrenarlo completo, descarga tus fotos marcadas y llévalas a la Estación:
+      copia las carpetas <code>train</code> y <code>test</code> dentro de <code>data\dataset_v2</code> y entrena en la pestaña Entrenar.</p>
+    <div class="acciones">
+      <button class="btn btn-secundario" type="button" data-accion="descargar" id="b-descargar">Descargar fotos marcadas (.zip)</button>
+      <button class="btn btn-fantasma" type="button" data-accion="borrar-todo" data-confirmar="Sí, borrar todas mis fotos">Borrar todas mis fotos</button>
+    </div>
+    <p class="mensaje" id="msg-abajo" aria-live="polite"></p>
+  </div>
+</section>
+
+<div class="soltar" id="soltar" aria-hidden="true"><b>Suelta tus fotos aquí</b></div>
+<input type="file" id="in-fotos" accept="image/*" multiple hidden>
+<script src="motor.js"></script>
+<script>
+"use strict";
+// Mejorar el modelo en este navegador: marcar fotos -> entrenar la última capa -> decidir si se usa.
+// Las fotos, sus rasgos y la capa mejorada se guardan aquí (IndexedDB y localStorage); no se suben.
+const M = Motor;
+const $ = id => document.getElementById(id);
+document.querySelectorAll("[data-ico]").forEach(el => { el.innerHTML = M.icono(el.dataset.ico); });
+const ICO = {
+  listo: '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 10 17 19 7"/></svg>',
+  mejor: '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
+  igual: '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 9.5h14M5 14.5h14"/></svg>',
+};
+const CLASES = ["sana", "sigatoka", "otra_condicion"];               // en el orden de los botones
+const NOMBRE = { sana: "Sana", sigatoka: "Sigatoka", otra_condicion: "Otro problema" };
+const MINIMO = 10, BIEN = 30;
+const fechaCorta = t => new Date(t).toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" });
+
+// ------------------------------------------------ fotos guardadas en este navegador (IndexedDB)
+const db = new Promise((ok, mal) => {
+  const r = indexedDB.open("dron-sigatoka", 1);
+  r.onupgradeneeded = () => r.result.createObjectStore("fotos", { keyPath: "id", autoIncrement: true });
+  r.onsuccess = () => ok(r.result); r.onerror = () => mal(r.error);
+});
+async function tienda(modo, fn) {
+  const t = (await db).transaction("fotos", modo), s = t.objectStore("fotos");
+  const r = fn(s);
+  return new Promise((ok, mal) => { t.oncomplete = () => ok(r?.result); t.onerror = () => mal(t.error); });
+}
+const todas = () => tienda("readonly", s => s.getAll());
+const guardar = f => tienda("readwrite", s => s.put(f));
+const quitar = id => tienda("readwrite", s => s.delete(id));
+
+let FOTOS = [], candidato = null, preparando = null, entrenando = null;
+let avisoFotos = "", errorEntrenar = "", estadoUso = "";   // mensajes de los pasos 1, 2 y 3
+
+// Una copia de hasta 1600 px (para descargarla después) y una miniatura.
+async function reducir(archivo, lado, calidad = .88) {
+  const img = await createImageBitmap(archivo), k = Math.min(1, lado / Math.max(img.width, img.height));
+  const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); img.close();
+  return new Promise(ok => c.toBlob(ok, "image/jpeg", calidad));
+}
+async function agregar(archivos) {
+  archivos = [...archivos].filter(f => f.type.startsWith("image/"));
+  if (!archivos.length) return;
+  let malas = 0;
+  for (let i = 0; i < archivos.length; i++) {
+    preparando = { hechas: i, total: archivos.length, avance: M.modeloListo() ? 1 : 0 }; pintar();
+    try {
+      const foto = await reducir(archivos[i], 1600), mini = await reducir(archivos[i], 360, .8);
+      const r = await M.diagnosticar(foto, v => { preparando.avance = v; pintarPaso1(); }, { espejo: true });
+      if (!r.rasgos) throw new Error("sin rasgos");
+      const L = M.lectura(r);
+      await guardar({ etiqueta: null, apartada: null, foto, mini, nombre: archivos[i].name, fecha: Date.now(), rasgos: r.rasgos, rasgosEspejo: r.rasgosEspejo,
+                      sugerida: { clase: r.clase, nombre: L.nombre, porcentaje: L.porcentaje, color: L.color, sinHoja: L.sinHoja } });
+    } catch (e) { malas++; }
+  }
+  preparando = null; candidato = null; estadoUso = "";
+  FOTOS = await todas();
+  avisoFotos = malas ? `${malas === 1 ? "Una foto no se pudo leer" : `${malas} fotos no se pudieron leer`}; usa fotos JPG o PNG.` : "";
+  pintar();
+}
+
+// Marcar: 1 de cada 4 fotos de cada tipo se aparta para la prueba (la 2.ª, la 6.ª…).
+// Se pinta la siguiente foto al instante y luego se guarda, para marcar rápido con el teclado.
+async function marcar(f, etiqueta) {
+  candidato = null;
+  if (etiqueta === null) { FOTOS = FOTOS.filter(x => x !== f); pintar(); await quitar(f.id); }
+  else {
+    if (f.apartada === null) f.apartada = FOTOS.filter(x => x.etiqueta === etiqueta && x.id !== f.id).length % 4 === 1;
+    f.etiqueta = etiqueta; pintar(); await guardar(f);
+  }
+}
+
+// ------------------------------------------------ entrenar y comparar
+const indice = async clave => (await M.modelo()).clases.indexOf(clave);
+async function muestras(apartadas) {
+  const lista = [];
+  for (const f of FOTOS.filter(x => x.etiqueta && !!x.apartada === apartadas)) {
+    const y = await indice(f.etiqueta);
+    lista.push({ f: f.rasgos, y });
+    if (!apartadas && f.rasgosEspejo) lista.push({ f: f.rasgosEspejo, y });
+  }
+  return lista;
+}
+async function entrenar() {
+  entrenando = 0; pintar();
+  try {
+    const aprende = await muestras(false), prueba = await muestras(true);
+    const c = await M.entrenarCabeza(aprende, { alProgreso: v => { entrenando = v; pintarPaso2(); } });
+    const m = await M.modelo(), actual = M.cabeza.leer(m);
+    candidato = { ...c, fotos: FOTOS.filter(x => x.etiqueta && !x.apartada).length, prueba: prueba.length,
+                  aciertosNuevo: await M.aciertos(c, prueba), aciertosActual: await M.aciertos(actual, prueba), fecha: Date.now() };
+    errorEntrenar = "";
+  } catch (e) { errorEntrenar = e.message || "No se pudo mejorar el modelo."; }
+  entrenando = null; pintar();
+}
+
+// ------------------------------------------------ pintar
+function poner(el, html) { if (el._html !== html) { el._html = html; el.innerHTML = html; } }
+const urls = new Map();
+const url = (f, campo) => { const k = `${f.id}-${campo}`; if (!urls.has(k)) urls.set(k, URL.createObjectURL(f[campo])); return urls.get(k); };
+
+function pintar() { pintarUso(); pintarPaso1(); pintarPaso2(); pintarPaso3(); pintarRejilla(); }
+
+function pintarUso() {
+  let m = null;
+  try { m = JSON.parse(localStorage.getItem("cabeza-mejorada") || "null"); } catch (e) {}
+  poner($("en-uso"), m
+    ? `<p class="etiqueta"><i></i>En uso en este navegador</p><b class="titulo">Tu modelo mejorado</b>
+       <p>Desde el ${fechaCorta(m.fecha)}, aprendió de ${m.fotos} ${m.fotos === 1 ? "foto" : "fotos"}${m.prueba ? `. Con tus fotos de prueba acertó ${m.aciertosNuevo} de ${m.prueba}` : ""}.
+         La página principal ya revisa las hojas con él.</p>
+       <div class="acciones"><button class="btn btn-secundario" type="button" data-accion="original" data-confirmar="Sí, volver al original">Volver al modelo original</button></div>`
+    : `<p class="etiqueta"><i></i>En uso en este navegador</p><b class="titulo">El modelo original</b>
+       <p>En pruebas acertó 9 de cada 10 fotos de internet. Con tus fotos puede acertar más en tu lote.</p>`);
+}
+
+function pintarPaso1() {
+  const p = $("paso-marcar"), marcadas = FOTOS.filter(f => f.etiqueta), pendientes = FOTOS.filter(f => !f.etiqueta);
+  const listo = marcadas.length >= MINIMO && !pendientes.length && !preparando;
+  p.toggleAttribute("data-listo", listo); p.toggleAttribute("data-ahora", !listo && entrenando === null);
+  const cuenta = CLASES.map(c => `<span class="ficha"><i style="background:${M.cat(c).color}"></i>${NOMBRE[c]}<b class="num">${marcadas.filter(f => f.etiqueta === c).length}</b></span>`).join("");
+  let cuerpo;
+  if (preparando) {
+    const lista = preparando.avance >= 1;
+    cuerpo = `<div class="fase"><b>${lista ? `Preparando tus fotos…` : "Preparando, solo la primera vez…"}</b><span class="num">${lista ? `${preparando.hechas + 1} de ${preparando.total}` : `${Math.round(preparando.avance * 100)} %`}</span></div>
+      <div class="barra"><i style="width:${lista ? (preparando.hechas / preparando.total) * 100 : preparando.avance * 100}%"></i></div>
+      <p>${lista ? "El modelo mira cada foto para que tú le digas qué tiene." : "La primera vez la página baja lo que necesita. Puede tardar un minuto."}</p>`;
+  } else if (pendientes.length) {
+    const f = pendientes[0], s = f.sugerida || {};
+    cuerpo = `<figure class="por-marcar"><img src="${url(f, "foto")}" alt="Foto por marcar">
+        <figcaption><i style="background:${s.color || "#7d8b96"}"></i>${s.sinHoja ? "El modelo no ve una hoja" : `El modelo cree: ${M.esc(s.nombre || "")} · ${s.porcentaje} de 100`}</figcaption></figure>
+      <div class="pregunta"><b>¿Qué tiene esta hoja?</b><span class="num">${pendientes.length === 1 ? "Es la última" : `Quedan ${pendientes.length}`}</span></div>
+      <div class="marcas">${CLASES.map((c, i) => `<button type="button" data-marca="${c}" data-id="${f.id}"><i style="background:${M.cat(c).color}"></i>${NOMBRE[c]}<kbd>${i + 1}</kbd></button>`).join("")}
+        <button type="button" class="no-sirve" data-marca="" data-id="${f.id}">No sirve<kbd>0</kbd></button></div>`;
+  } else {
+    const n = marcadas.length, meta = n < MINIMO ? MINIMO : BIEN;
+    cuerpo = `<p>${n ? `Llevas <b class="num">${n}</b> ${n === 1 ? "foto marcada" : "fotos marcadas"}.` : "Sube fotos de hojas de tu lote y di qué tiene cada una."}
+        ${n < MINIMO ? `Necesitas al menos ${MINIMO}.` : n < BIEN ? `Ya puedes mejorarlo; con ${BIEN} o más aprende mejor.` : "Muy bien: entre más fotos, mejor aprende."}</p>
+      ${n ? `<div class="cuentas">${cuenta}</div>` : ""}
+      <div class="barra" style="--c:${n >= MINIMO ? "var(--sana)" : "var(--text)"}"><i style="width:${Math.min(100, n / meta * 100)}%"></i></div>
+      <div class="acciones"><button class="btn ${n < MINIMO ? "btn-primario" : "btn-secundario"} btn-grande" type="button" data-accion="agregar">${M.icono("imagen")}Agregar fotos</button>
+        <span class="pista">o arrástralas a esta ventana</span></div>
+      ${avisoFotos ? `<p class="mensaje error">${M.esc(avisoFotos)}</p>` : ""}`;
+  }
+  poner(p, `<span class="marcador">${listo ? ICO.listo : "1"}</span><div class="paso-cuerpo"><h2>Marca tus fotos</h2>${cuerpo}</div>`);
+}
+
+function pintarPaso2() {
+  const p = $("paso-entrenar"), marcadas = FOTOS.filter(f => f.etiqueta), pendientes = FOTOS.filter(f => !f.etiqueta);
+  const tipos = new Set(marcadas.filter(f => !f.apartada).map(f => f.etiqueta)).size;
+  const puede = marcadas.length >= MINIMO && tipos >= 2 && !preparando;
+  const corriendo = entrenando !== null;
+  let enUso = null;
+  try { enUso = JSON.parse(localStorage.getItem("cabeza-mejorada") || "null"); } catch (e) {}
+  // el que se usa ya aprendió de todas estas fotos: no hay nada nuevo que enseñarle
+  const alDia = !candidato && enUso && enUso.fotos === marcadas.filter(f => !f.apartada).length;
+  p.toggleAttribute("data-listo", (!!candidato || alDia) && !corriendo);
+  p.toggleAttribute("data-ahora", corriendo || (puede && !pendientes.length && !candidato && !alDia));
+  const cuerpo = corriendo
+    ? `<div class="fase"><b>Aprendiendo de tus fotos…</b><span class="num">${Math.round(entrenando * 100)} %</span></div>
+       <div class="barra"><i style="width:${entrenando * 100}%"></i></div><p>Lo hace tu computadora. Tarda unos segundos.</p>`
+    : candidato ? `<p>Listo: aprendió de ${candidato.fotos} ${candidato.fotos === 1 ? "foto" : "fotos"} (y de cada una volteada).</p>
+       <div class="acciones"><button class="btn btn-fantasma" type="button" data-accion="entrenar">Volver a mejorarlo</button></div>`
+    : alDia ? `<p>El modelo que usas ya aprendió de estas fotos. Marca más para mejorarlo otra vez.</p>
+       <div class="acciones"><button class="btn btn-fantasma" type="button" data-accion="entrenar">Volver a mejorarlo</button></div>`
+    : `<p>${puede ? "Tu computadora le enseña con tus fotos. Tarda unos segundos."
+         : marcadas.length < MINIMO ? `Primero marca al menos ${MINIMO} fotos.` : "Marca fotos de al menos dos tipos, por ejemplo sanas y con Sigatoka."}</p>
+       <div class="acciones"><button class="btn ${puede && !pendientes.length ? "btn-primario" : "btn-secundario"} btn-grande" type="button" data-accion="entrenar"${puede ? "" : " disabled"}>Mejorar el modelo</button></div>
+       ${errorEntrenar ? `<p class="aviso-error">${M.esc(errorEntrenar)}</p>` : ""}`;
+  poner(p, `<span class="marcador">${(candidato || alDia) && !corriendo ? ICO.listo : "2"}</span><div class="paso-cuerpo"><h2>Mejora el modelo</h2>${cuerpo}</div>`);
+}
+
+function pintarPaso3() {
+  const p = $("paso-decidir");
+  p.toggleAttribute("data-ahora", !!candidato && entrenando === null);
+  let cuerpo;
+  if (!candidato) cuerpo = estadoUso ? `<p class="mensaje bien">${M.esc(estadoUso)}</p>`
+    : `<p>Cuando termine, aquí lo comparas con el que usas, con fotos que se apartaron y que no usó para aprender.</p>`;
+  else {
+    const c = candidato, n = c.prueba, usaMejorado = !!localStorage.getItem("cabeza-mejorada");
+    const fila = (titulo, a, color) => `<div class="fila-modelo"><b>${titulo}</b><div class="barra" style="--c:${color}"><i style="width:${n ? a / n * 100 : 0}%"></i></div><span class="valor num">${n ? `${a} de ${n}` : "—"}</span></div>`;
+    const conviene = n >= 3 && c.aciertosNuevo > c.aciertosActual;
+    const veredicto = n < 3 ? `<p class="veredicto igual">${M.icono("alerta")}<span>Hay muy pocas fotos de prueba (${n}) para compararlos bien. Marca más fotos; mientras, puedes probarlo tú.</span></p>`
+      : c.aciertosNuevo > c.aciertosActual ? `<p class="veredicto mejor">${ICO.mejor}<span>El mejorado acierta ${c.aciertosNuevo - c.aciertosActual} ${c.aciertosNuevo - c.aciertosActual === 1 ? "foto" : "fotos"} más. Conviene usarlo.</span></p>`
+      : c.aciertosNuevo < c.aciertosActual ? `<p class="veredicto peor">${M.icono("alerta")}<span>El mejorado acierta menos. Mejor sigue con el que tienes y marca más fotos.</span></p>`
+      : `<p class="veredicto igual">${ICO.igual}<span>Aciertan igual con estas fotos. Marca más fotos para notar la diferencia.</span></p>`;
+    cuerpo = `<div class="comparar"><span class="titulo">Aciertos con tus fotos de prueba</span>
+        ${fila("Mejorado", c.aciertosNuevo, c.aciertosNuevo < c.aciertosActual ? "var(--otra)" : "var(--sana)")}${fila(usaMejorado ? "El que usas" : "Original", c.aciertosActual, "var(--text)")}</div>
+      ${veredicto}
+      <div class="acciones">
+        <button class="btn ${conviene || n < 3 ? "btn-primario" : "btn-secundario"} btn-grande" type="button" data-accion="usar">${conviene || n < 3 ? "Usar el modelo mejorado" : "Usarlo de todos modos"}</button>
+        <button class="btn ${conviene || n < 3 ? "btn-fantasma" : "btn-primario"} btn-grande" type="button" data-accion="descartar">Seguir con el actual</button>
+      </div>`;
+  }
+  poner(p, `<span class="marcador">3</span><div class="paso-cuerpo"><h2>Decide si lo usas</h2>${cuerpo}</div>`);
+}
+
+function pintarRejilla() {
+  const marcadas = FOTOS.filter(f => f.etiqueta).sort((a, b) => b.fecha - a.fecha);
+  poner($("rejilla"), marcadas.length ? marcadas.map(f => `<button class="miniatura" type="button" data-remarcar="${f.id}" aria-label="${NOMBRE[f.etiqueta]}: volver a marcar">
+      <img src="${url(f, "mini")}" alt="" loading="lazy"><span class="marca-foto"><i style="background:${M.cat(f.etiqueta).color}"></i>${NOMBRE[f.etiqueta]}</span>
+      ${f.apartada ? `<span class="prueba">prueba</span>` : ""}</button>`).join("")
+    : `<p class="vacio">Todavía no marcas ninguna foto.</p>`);
+  $("b-descargar").disabled = !marcadas.length;
+}
+
+// ------------------------------------------------ descargar en carpetas para la Estación (.zip sin compresión)
+const TABLA = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = d => { let c = 0xffffffff; for (let i = 0; i < d.length; i++) c = TABLA[(c ^ d[i]) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+function zip(archivos) {
+  const partes = [], centro = [], ahora = new Date();
+  const hora = (ahora.getHours() << 11) | (ahora.getMinutes() << 5) | (ahora.getSeconds() >> 1);
+  const dia = ((ahora.getFullYear() - 1980) << 9) | ((ahora.getMonth() + 1) << 5) | ahora.getDate();
+  let pos = 0;
+  for (const a of archivos) {
+    const nombre = new TextEncoder().encode(a.nombre), crc = crc32(a.datos), n = a.datos.length;
+    const loc = new DataView(new ArrayBuffer(30));
+    [[0, 0x04034b50, 4], [4, 20, 2], [6, 0x0800, 2], [8, 0, 2], [10, hora, 2], [12, dia, 2], [14, crc, 4], [18, n, 4], [22, n, 4], [26, nombre.length, 2], [28, 0, 2]]
+      .forEach(([o, v, t]) => t === 4 ? loc.setUint32(o, v, true) : loc.setUint16(o, v, true));
+    const cen = new DataView(new ArrayBuffer(46));
+    [[0, 0x02014b50, 4], [4, 20, 2], [6, 20, 2], [8, 0x0800, 2], [10, 0, 2], [12, hora, 2], [14, dia, 2], [16, crc, 4], [20, n, 4], [24, n, 4], [28, nombre.length, 2],
+     [30, 0, 2], [32, 0, 2], [34, 0, 2], [36, 0, 2], [38, 0, 4], [42, pos, 4]].forEach(([o, v, t]) => t === 4 ? cen.setUint32(o, v, true) : cen.setUint16(o, v, true));
+    partes.push(loc, nombre, a.datos); centro.push(cen, nombre);
+    pos += 30 + nombre.length + n;
+  }
+  const tam = centro.reduce((s, x) => s + x.byteLength, 0), fin = new DataView(new ArrayBuffer(22));
+  [[0, 0x06054b50, 4], [4, 0, 2], [6, 0, 2], [8, archivos.length, 2], [10, archivos.length, 2], [12, tam, 4], [16, pos, 4], [20, 0, 2]]
+    .forEach(([o, v, t]) => t === 4 ? fin.setUint32(o, v, true) : fin.setUint16(o, v, true));
+  return new Blob([...partes, ...centro, fin], { type: "application/zip" });
+}
+async function descargarZip() {
+  const marcadas = FOTOS.filter(f => f.etiqueta), archivos = [];
+  for (const f of marcadas) {
+    const base = (f.nombre || "foto").replace(/\.[^.]+$/, "").replace(/[^\w-]+/g, "_").slice(0, 40);
+    archivos.push({ nombre: `${f.apartada ? "test" : "train"}/${f.etiqueta}/${base}_${f.id}.jpg`, datos: new Uint8Array(await f.foto.arrayBuffer()) });
+  }
+  const leeme = `Fotos marcadas en dron-sigatoka.netlify.app (Mejorar el modelo), ${new Date().toLocaleString("es-MX")}.\r\n\r\n` +
+    `train/<categoría>: para aprender. test/<categoría>: las que la página apartó para comparar modelos.\r\n` +
+    `Para el entrenamiento completo: en la laptop de la Estación, copia las carpetas train y test dentro de\r\n` +
+    `data\\dataset_v2 (se suman a las que ya hay) y entrena en la pestaña Entrenar.\r\n` +
+    `Las fotos están reducidas a 1600 px como máximo.\r\n`;
+  archivos.push({ nombre: "LEEME.txt", datos: new TextEncoder().encode(leeme) });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(zip(archivos)); a.download = `fotos-marcadas-${new Date().toISOString().slice(0, 10)}.zip`;
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  $("msg-abajo").className = "mensaje bien"; $("msg-abajo").textContent = `Listo: ${marcadas.length} ${marcadas.length === 1 ? "foto" : "fotos"} en Descargas.`;
+}
+
+// ------------------------------------------------ botones, teclas y arrastrar
+function armar(b) { b.dataset.original = b.innerHTML; b.classList.add("confirmando"); b.textContent = b.dataset.confirmar; b._t = setTimeout(() => desarmar(b), 4000); }
+function desarmar(b) { clearTimeout(b._t); if (b.classList.contains("confirmando")) { b.classList.remove("confirmando"); b.innerHTML = b.dataset.original; } }
+const ACCIONES = {
+  agregar: () => $("in-fotos").click(),
+  entrenar,
+  async usar() {
+    const m = await M.modelo();
+    M.cabeza.guardar({ W: candidato.W, b: candidato.b, fecha: candidato.fecha, fotos: candidato.fotos, prueba: candidato.prueba, aciertosNuevo: candidato.aciertosNuevo }, m);
+    candidato = null; estadoUso = "Listo: la página principal ya revisa las hojas con tu modelo mejorado."; pintar();
+  },
+  descartar() { candidato = null; estadoUso = "Seguiste con el modelo que ya usabas."; pintar(); },
+  original() { M.cabeza.quitar(); estadoUso = "Volviste al modelo original."; pintar(); },
+  descargar: descargarZip,
+  async "borrar-todo"() {
+    for (const f of FOTOS) await quitar(f.id);
+    candidato = null; FOTOS = []; $("msg-abajo").className = "mensaje"; $("msg-abajo").textContent = "Se borraron tus fotos de este navegador."; pintar();
+  },
+};
+document.addEventListener("click", async e => {
+  const marca = e.target.closest("[data-marca]");
+  if (marca) { const f = FOTOS.find(x => x.id === +marca.dataset.id); if (f) await marcar(f, marca.dataset.marca || null); return; }
+  const re = e.target.closest("[data-remarcar]");
+  if (re) { const f = FOTOS.find(x => x.id === +re.dataset.remarcar); if (f) { f.etiqueta = null; await guardar(f); candidato = null; FOTOS = await todas(); pintar(); $("paso-marcar").scrollIntoView({ behavior: "smooth", block: "center" }); } return; }
+  const b = e.target.closest("[data-accion]");
+  if (!b || b.disabled) return;
+  if (b.dataset.confirmar && !b.classList.contains("confirmando")) return armar(b);
+  desarmar(b);
+  b.disabled = true;
+  try { await ACCIONES[b.dataset.accion](b); } finally { b.disabled = false; }
+});
+document.addEventListener("keydown", e => {
+  if (e.metaKey || e.ctrlKey || e.altKey || /input|select|textarea/i.test(e.target.tagName)) return;
+  const i = "1230".indexOf(e.key);
+  const b = i < 0 ? null : document.querySelectorAll("#paso-marcar [data-marca]")[i];
+  if (b) { e.preventDefault(); b.click(); }
+});
+$("in-fotos").addEventListener("change", e => { agregar(e.target.files); e.target.value = ""; });
+let arrastres = 0;
+const conArchivos = e => [...(e.dataTransfer?.types || [])].includes("Files");
+addEventListener("dragenter", e => { if (conArchivos(e)) { e.preventDefault(); if (arrastres++ === 0) $("soltar").setAttribute("data-visible", ""); } });
+addEventListener("dragover", e => { if (conArchivos(e)) { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; } });
+addEventListener("dragleave", e => { if (conArchivos(e) && --arrastres <= 0) { arrastres = 0; $("soltar").removeAttribute("data-visible"); } });
+addEventListener("drop", e => { if (!conArchivos(e)) return; e.preventDefault(); arrastres = 0; $("soltar").removeAttribute("data-visible"); agregar(e.dataTransfer.files); });
+
+(async () => {
+  try { FOTOS = await todas(); }
+  catch (e) { avisoFotos = "Este navegador no deja guardar fotos (¿modo privado?). Ábrelo en una ventana normal."; }
+  pintar();
+  M.precargar();
+})();
+</script>
+</body>
+</html>

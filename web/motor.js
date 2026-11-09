@@ -105,6 +105,56 @@ const Motor = (() => {
     return todo;
   }
 
+  // ------------------------------------------------------------------ rasgos y última capa
+  // El modelo termina en: rasgos (1280 números) -> una capa lineal (3 x 1280) -> softmax.
+  // Para mejorar esa última capa en el navegador, al cargarlo se le agrega una salida con los
+  // rasgos (mismo modelo, mismos pesos; se edita el protobuf del .onnx aquí mismo) y se leen
+  // los pesos de la capa. Si algo falla, el modelo funciona igual, solo sin poder mejorarse.
+  const RASGOS = "/model.9/Flatten_output_0", PESO = "model.9.linear.weight", SESGO = "model.9.linear.bias";
+  function varint(buf, p) { let x = 0, f = 1, b; do { b = buf[p++]; x += (b & 127) * f; f *= 128; } while (b & 128); return [x, p]; }
+  function codificar(x) { const o = []; while (x > 127) { o.push((x % 128) | 128); x = Math.floor(x / 128); } o.push(x); return o; }
+  function campos(buf, ini, fin) {
+    const lista = [];
+    for (let p = ini; p < fin;) {
+      const k0 = p; let k, a, b, n;
+      [k, p] = varint(buf, p);
+      const campo = Math.floor(k / 8), tipo = k & 7;
+      if (tipo === 0) { a = p; [, p] = varint(buf, p); b = p; }
+      else if (tipo === 1) { a = p; p += 8; b = p; }
+      else if (tipo === 5) { a = p; p += 4; b = p; }
+      else if (tipo === 2) { [n, a] = varint(buf, p); b = a + n; p = b; }
+      else throw new Error("protobuf con un tipo inesperado");
+      lista.push({ campo, tipo, k0, a, b });
+    }
+    return lista;
+  }
+  const largo = (campo, bytes) => [...codificar(campo * 8 + 2), ...codificar(bytes.length), ...bytes];
+  const entero = (campo, v) => [...codificar(campo * 8), ...codificar(v)];
+  function conRasgos(bytes) {
+    const grafo = campos(bytes, 0, bytes.length).find(c => c.campo === 7 && c.tipo === 2);
+    const enGrafo = campos(bytes, grafo.a, grafo.b);
+    const leer = (nombre) => {   // TensorProto float guardado en raw_data
+      for (const c of enGrafo.filter(c => c.campo === 5)) {
+        const t = campos(bytes, c.a, c.b), n = t.find(x => x.campo === 8);
+        if (n && new TextDecoder().decode(bytes.subarray(n.a, n.b)) === nombre) {
+          const r = t.find(x => x.campo === 9);
+          return new Float32Array(bytes.slice(r.a, r.b).buffer);
+        }
+      }
+      throw new Error("no encontré " + nombre);
+    };
+    const W0 = leer(PESO), b0 = leer(SESGO);
+    const forma = largo(2, [...largo(1, entero(1, 1)), ...largo(1, entero(1, W0.length / b0.length))]);
+    const salida = largo(12, largo(1, [...new TextEncoder().encode(RASGOS)]).concat(largo(2, largo(1, [...entero(1, 1), ...forma]))));
+    const nuevoGrafo = new Uint8Array(grafo.b - grafo.a + salida.length);
+    nuevoGrafo.set(bytes.subarray(grafo.a, grafo.b)); nuevoGrafo.set(salida, grafo.b - grafo.a);
+    const cabeza = codificar(7 * 8 + 2).concat(codificar(nuevoGrafo.length));
+    const todo = new Uint8Array(grafo.k0 + cabeza.length + nuevoGrafo.length + bytes.length - grafo.b);
+    todo.set(bytes.subarray(0, grafo.k0)); todo.set(cabeza, grafo.k0);
+    todo.set(nuevoGrafo, grafo.k0 + cabeza.length); todo.set(bytes.subarray(grafo.b), grafo.k0 + cabeza.length + nuevoGrafo.length);
+    return { bytes: todo, W0, b0 };
+  }
+
   function modelo(alProgreso) {
     if (alProgreso) { oyentes.add(alProgreso); alProgreso(avance); }
     promesaModelo ??= (async () => {
@@ -115,10 +165,17 @@ const Motor = (() => {
       ort.env.wasm.wasmBinary = (await bajar(RAIZ + "vendor/ort-wasm-simd-threaded.wasm", TAMANOS.wasm, 0, total)).buffer;
       const meta = await (await fetch(RAIZ + "modelo/sigatoka_cls_v1.json")).json();
       const bytes = await bajar(RAIZ + "modelo/sigatoka_cls_v1.onnx", TAMANOS.onnx, TAMANOS.wasm, total);
-      const sesion = await ort.InferenceSession.create(bytes, { executionProviders: ["wasm"] });
+      let sesion = null, ultima = null;
+      try {
+        const c = conRasgos(bytes);
+        sesion = await ort.InferenceSession.create(c.bytes, { executionProviders: ["wasm"] });
+        if (sesion.outputNames.includes(RASGOS)) ultima = { W0: c.W0, b0: c.b0 }; else sesion = null;
+      } catch (e) { sesion = null; }
+      sesion ??= await ort.InferenceSession.create(bytes, { executionProviders: ["wasm"] });
       avisarAvance(1);
-      return { sesion, entrada: sesion.inputNames[0], salida: sesion.outputNames[0], clases: meta.classes,
-               umbral: meta.umbral_confianza ?? 0.65, lado: meta.input[meta.input.length - 1], acierto: meta.top1_test };
+      return { sesion, entrada: sesion.inputNames[0], salida: sesion.outputNames.find(n => n !== RASGOS), clases: meta.classes,
+               umbral: meta.umbral_confianza ?? 0.65, lado: meta.input[meta.input.length - 1], acierto: meta.top1_test,
+               nombre: meta.model || "sigatoka_cls_v1", rasgos: ultima ? RASGOS : null, ...(ultima || {}) };
     })();
     promesaModelo.catch(() => { promesaModelo = null; avisarAvance(0); });   // si falla, el siguiente intento lo vuelve a bajar
     const quitar = () => { if (alProgreso) oyentes.delete(alProgreso); };
@@ -148,11 +205,12 @@ const Motor = (() => {
   }
 
   // Mismo preprocesado que vision/clasificador.py: estirar a 384 x 384, RGB, /255, CHW.
-  async function tensorDe(archivo, lado) {
+  async function tensorDe(archivo, lado, espejo = false) {
     const imagen = await createImageBitmap(archivo);
     const lienzo = document.createElement("canvas");
     lienzo.width = lienzo.height = lado;
     const ctx = lienzo.getContext("2d", { willReadFrequently: true });
+    if (espejo) { ctx.translate(lado, 0); ctx.scale(-1, 1); }
     ctx.drawImage(imagen, 0, 0, lado, lado);
     imagen.close();
     const { data } = ctx.getImageData(0, 0, lado, lado);
@@ -163,16 +221,23 @@ const Motor = (() => {
     return new ort.Tensor("float32", x, [1, 3, lado, lado]);
   }
 
-  // Devuelve { clase, confianza, seguro, umbral, probs, ms }.
-  async function diagnosticar(archivo, alProgreso) {
+  // Devuelve { clase, confianza, seguro, umbral, probs, ms, mejorado, rasgos, rasgosEspejo }.
+  // opciones.espejo: también los rasgos de la foto volteada (para mejorar el modelo).
+  async function diagnosticar(archivo, alProgreso, opciones = {}) {
     const m = await modelo(alProgreso);
     const inicio = performance.now();
     let revision = null;
     try { revision = await calidad(archivo); } catch (e) {}
-    let p;
+    let p, rasgos = null, rasgosEspejo = null, mejorado = false;
     try {
       const salida = await m.sesion.run({ [m.entrada]: await tensorDe(archivo, m.lado) });
       p = Array.from(salida[m.salida].data);
+      if (m.rasgos) {
+        rasgos = Float32Array.from(salida[m.rasgos].data);
+        const c = cabeza.leer(m);
+        if (c) { p = aplicarCabeza(c, rasgos); mejorado = true; }
+        if (opciones.espejo) rasgosEspejo = Float32Array.from((await m.sesion.run({ [m.entrada]: await tensorDe(archivo, m.lado, true) }))[m.rasgos].data);
+      }
     } catch (e) {
       if (e instanceof DOMException || /decode|image|source/i.test(e.message)) throw new Error("No pude leer esa foto. Prueba con una foto JPG o PNG.");
       throw e;
@@ -184,7 +249,74 @@ const Motor = (() => {
     }
     const top = p.indexOf(Math.max(...p));
     return { clase: m.clases[top], confianza: p[top], seguro: p[top] >= m.umbral && !revision?.sinHoja, umbral: m.umbral,
-             probs: Object.fromEntries(m.clases.map((c, i) => [c, p[i]])), ms: Math.round(performance.now() - inicio), calidad: revision };
+             probs: Object.fromEntries(m.clases.map((c, i) => [c, p[i]])), ms: Math.round(performance.now() - inicio), calidad: revision,
+             mejorado, rasgos, rasgosEspejo };
+  }
+
+  // ------------------------------------------------------------------ mejorar la última capa aquí mismo
+  // Probabilidades de una cabeza { W (K x D, por filas), b (K) } para unos rasgos.
+  function aplicarCabeza(c, f) {
+    const K = c.b.length, D = f.length, z = new Float64Array(K);
+    for (let k = 0; k < K; k++) { let s = c.b[k]; const o = k * D; for (let d = 0; d < D; d++) s += c.W[o + d] * f[d]; z[k] = s; }
+    const mx = Math.max(...z); let t = 0;
+    for (let k = 0; k < K; k++) { z[k] = Math.exp(z[k] - mx); t += z[k]; }
+    return Array.from(z, v => v / t);
+  }
+  // La cabeza mejorada que usa este navegador (se guarda aquí, no sale de la computadora).
+  const cabeza = {
+    clave: "cabeza-mejorada",
+    leer(m) {
+      try {
+        const c = JSON.parse(localStorage.getItem(this.clave) || "null");
+        if (!c || (m && (c.modelo !== m.nombre || c.W.length !== m.W0.length))) return null;
+        return { ...c, W: Float32Array.from(c.W), b: Float32Array.from(c.b) };
+      } catch (e) { return null; }
+    },
+    guardar(c, m) {
+      localStorage.setItem(this.clave, JSON.stringify({ ...c, W: Array.from(c.W), b: Array.from(c.b), modelo: m.nombre }));
+    },
+    quitar() { try { localStorage.removeItem(this.clave); } catch (e) {} },
+  };
+  // Entrena la última capa con [{ f: rasgos, y: índice de la clase }]. Empieza desde la del modelo
+  // original y no se aleja mucho de ella (ancla), para no olvidar lo que ya sabe. Clases equilibradas.
+  async function entrenarCabeza(muestras, { vueltas = 400, ancla = 0.1, alProgreso } = {}) {
+    const m = await modelo();
+    if (!m.rasgos) throw new Error("Este navegador no pudo preparar el modelo para mejorarlo.");
+    const K = m.b0.length, D = m.W0.length / K, N = muestras.length;
+    const W = Float32Array.from(m.W0), b = Float32Array.from(m.b0);
+    const porClase = new Array(K).fill(0); muestras.forEach(s => porClase[s.y]++);
+    const presentes = porClase.filter(Boolean).length;
+    const peso = porClase.map(n => n ? N / (presentes * n) : 0);
+    const norma2 = muestras.reduce((a, s) => a + s.f.reduce((x, v) => x + v * v, 0), 0) / N;
+    const paso = 1 / (norma2 / 2 + ancla);   // descenso de gradiente estable para esta escala de rasgos
+    const gW = new Float64Array(K * D), gb = new Float64Array(K);
+    let antes = Infinity;
+    for (let v = 0; v < vueltas; v++) {
+      gW.fill(0); gb.fill(0);
+      let perdida = 0;
+      for (const s of muestras) {
+        const p = aplicarCabeza({ W, b }, s.f), w = peso[s.y] / N;
+        perdida -= w * Math.log(Math.max(p[s.y], 1e-12));
+        for (let k = 0; k < K; k++) {
+          const e = (p[k] - (k === s.y ? 1 : 0)) * w, o = k * D;
+          gb[k] += e;
+          for (let d = 0; d < D; d++) gW[o + d] += e * s.f[d];
+        }
+      }
+      for (let i = 0; i < W.length; i++) { W[i] -= paso * (gW[i] + ancla * (W[i] - m.W0[i])); perdida += ancla / 2 * (W[i] - m.W0[i]) ** 2; }
+      for (let k = 0; k < K; k++) b[k] -= paso * (gb[k] + ancla * (b[k] - m.b0[k]));
+      if (v % 20 === 0) { alProgreso?.(v / vueltas); await new Promise(r => setTimeout(r)); }
+      if (Math.abs(antes - perdida) < 1e-6) break;
+      antes = perdida;
+    }
+    alProgreso?.(1);
+    return { W, b };
+  }
+  // Aciertos de una cabeza (o del modelo original, si es null) con [{ f, y }].
+  async function aciertos(c, muestras) {
+    const m = await modelo();
+    const usar = c || { W: m.W0, b: m.b0 };
+    return muestras.reduce((a, s) => { const p = aplicarCabeza(usar, s.f); return a + (p.indexOf(Math.max(...p)) === s.y); }, 0);
   }
 
   // Lo que la interfaz dice de una lectura: palabra, título, color, pasos, frase de confianza y voz.
@@ -550,5 +682,5 @@ const Motor = (() => {
   }
 
   return { CAT, cat, GRIS, LECTURAS, esc, plural, pct, icono, qr, SITIO, modelo, modeloListo, diagnosticar, lectura, precargar,
-           hablar, callar, puedeHablar, vozActiva, mensaje, compartir, fotoConResultado, leerGeojson, ejemplo, crearMapa, resumen, zonas, cuantas, dron };
+           hablar, callar, puedeHablar, vozActiva, mensaje, cabeza, entrenarCabeza, aciertos, aplicarCabeza, compartir, fotoConResultado, leerGeojson, ejemplo, crearMapa, resumen, zonas, cuantas, dron };
 })();

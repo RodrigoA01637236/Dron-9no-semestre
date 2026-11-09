@@ -11,6 +11,16 @@ Todo está en una sola página, `index.html`, pensada para productores (palabras
 | Mapa del lote | Primero pregunta si el técnico mandó el mapa (`.geojson` de la estación) o si se quiere ver un ejemplo. Muestra cuadros de 20 × 20 m y qué revisar primero. El archivo se lee **en el navegador**: no se sube a ningún lado |
 | Dron en vivo | Video, GPS y revisión en vivo de la Jetson (`jetson/zed_right.py`) a través de un túnel https |
 
+`entrenar.html` (pestaña *Mejorar el modelo*): cada persona marca fotos de su lote (sana, Sigatoka u
+otro problema) y **su computadora** reentrena la última capa del modelo en segundos, sin subir nada.
+Al cargar el modelo, `motor.js` le agrega una salida con los rasgos de la foto (1280 números, mismos
+pesos; edita el protobuf del `.onnx` en el navegador) y lee los pesos de la capa final (3 × 1280).
+Se entrena esa capa desde la original, sin alejarse mucho de ella, con cada foto y su espejo; 1 de cada
+4 fotos marcadas se aparta para comparar el modelo mejorado contra el que se usa. Si la persona lo
+elige, la capa se guarda en su navegador (`localStorage`) y la página principal la usa. Las fotos y
+sus rasgos quedan en IndexedDB. *Descargar fotos marcadas (.zip)* las entrega en `train/<categoría>`
+y `test/<categoría>` para el entrenamiento completo en la Estación (`data\dataset_v2`).
+
 En la computadora el resultado, el mapa y el dron se abren en grande junto a la portada; en el celular
 salen en hojas que suben desde abajo. `motor.js` hace el trabajo (modelo, mapa, dron) y `index.html`
 lo pinta. `identificar.html`, `mapa.html` y `dron.html` solo redirigen a la página principal para

@@ -55,6 +55,12 @@ a { color: inherit; }
 
 /* ------------------------------------------------ encabezado */
 .encabezado { max-width: 1200px; margin: 0 auto; height: 64px; padding: 0 24px; display: flex; align-items: center; gap: 4px; position: relative; z-index: 20; }
+.pestanas { display: flex; gap: 2px; padding: 3px; margin-right: 8px; border-radius: 12px; background: var(--sunken); }
+.pestanas a { display: inline-flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 9px; font-size: 14px; font-weight: 500; color: var(--text-2);
+  text-decoration: none; transition: background-color 150ms ease, color 150ms ease; }
+.pestanas a[aria-current="page"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+@media (hover: hover) and (pointer: fine) { .pestanas a:not([aria-current]):hover { color: var(--text); } }
+.res-cat .mejorado { margin-left: 4px; height: 20px; padding: 0 8px; border-radius: 999px; background: var(--sunken); color: var(--text-2); font-size: 11.5px; font-weight: 500; display: inline-flex; align-items: center; }
 .marca { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; letter-spacing: -.02em; margin-right: auto; text-decoration: none; }
 .logo { width: 28px; height: 28px; border-radius: 8px; background: var(--text); color: #fff; display: grid; place-items: center; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16); }
 .logo .ico { width: 16px; height: 16px; }
@@ -324,7 +330,9 @@ a { color: inherit; }
 /* ------------------------------------------------ celular y tableta: sin marco de teléfono; hojas que suben */
 @media (max-width: 1023px) {
   .solo-ancho { display: none !important; }
-  .encabezado { padding: 0 16px; height: 56px; max-width: 600px; }
+  .encabezado { padding: 10px 16px 6px; height: auto; min-height: 56px; max-width: 600px; flex-wrap: wrap; row-gap: 8px; }
+  .encabezado .pestanas { order: 3; width: 100%; margin-right: 0; }
+  .encabezado .pestanas a { flex: 1; justify-content: center; padding: 0 6px; }
   .credito { display: none; }
   .portada { grid-template-columns: minmax(0, 1fr); gap: 24px; min-height: 0; padding: 8px 16px 40px; max-width: 600px; }
   .texto { padding: 0; gap: 14px; }
@@ -373,6 +381,10 @@ a { color: inherit; }
 <body>
 <header class="encabezado">
   <a class="marca" href="./"><span class="logo" data-ico="hoja"></span>Dron Sigatoka</a>
+  <nav class="pestanas" aria-label="Secciones">
+    <a href="./" aria-current="page">Revisar una hoja</a>
+    <a href="entrenar.html">Mejorar el modelo</a>
+  </nav>
   <span class="ancla">
     <button class="btn btn-fantasma" type="button" data-pop="pop-como" aria-expanded="false" aria-controls="pop-como">Cómo funciona</button>
     <div class="pop" id="pop-como" role="dialog" aria-label="Cómo funciona">
@@ -660,7 +672,7 @@ function htmlResultado(r, grande) {
       : chicos.length ? `<button class="btn btn-secundario btn-grande" type="button" data-escuchar>${M.icono("voz")}Escuchar</button>` : "");
   }
   return `
-    ${L.sinHoja ? "" : `<p class="res-cat"><span class="punto${L.clave === "dudoso" ? " rayado" : ""}" style="background:${L.color}"></span>${M.esc(L.nombre)}</p>`}
+    ${L.sinHoja ? "" : `<p class="res-cat"><span class="punto${L.clave === "dudoso" ? " rayado" : ""}" style="background:${L.color}"></span>${M.esc(L.nombre)}${r.mejorado ? `<span class="mejorado">Tu modelo mejorado</span>` : ""}</p>`}
     <h2 class="res-titulo">${M.esc(L.titulo)}</h2>
     ${L.sinHoja ? "" : `<div class="res-medida">
       <p><span>Qué tan seguro</span><b class="num">${L.porcentaje} de 100</b></p>
