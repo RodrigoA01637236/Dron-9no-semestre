@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dron Sigatoka</title>
+<meta name="description" content="El mapa del lote de fondo y, encima, la herramienta para revisar una hoja de plátano con una foto.">
+<meta name="theme-color" content="#eef1ed">
+<link rel="stylesheet" href="base.css">
+<style>
+body { background: #eef1ed; }
+.fondo { position: fixed; inset: 0; }
+.fondo .mapa { position: absolute; inset: 0; }
+.flota { position: absolute; z-index: 700; background: #fff; border-radius: 20px; box-shadow: var(--sombra-flota); }
+
+/* la herramienta, a la izquierda */
+.herramienta { top: 16px; left: 16px; bottom: 16px; width: 420px; display: grid; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; }
+.herramienta-cabeza { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--linea); }
+.herramienta-cabeza .casilla { margin-left: auto; }
+.herramienta-cuerpo { overflow-y: auto; overscroll-behavior: contain; padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+.herramienta-cuerpo > * { flex: none; }
+.herramienta h1 { font-size: 2rem; font-weight: 800; }
+.herramienta .bajada { color: var(--tinta-2); }
+.zona-foto { aspect-ratio: 4 / 3; }
+.guia { display: grid; justify-items: center; gap: 10px; padding: 16px; }
+.guia p { color: var(--tinta-2); font-size: .92rem; max-width: 30ch; }
+.zona-foto.con-foto { border-style: solid; border-color: var(--linea); }
+.botones { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+details.como { border-top: 1px solid var(--linea); padding-top: 14px; }
+details.como summary { font-size: .95rem; }
+details.como ol { list-style: none; padding: 0; margin: 12px 0 0; gap: 10px; }
+details.como li b { color: var(--tinta); }
+details.como .verdad { margin-top: 12px; color: var(--tinta-2); font-size: .9rem; }
+.equipo { color: var(--tinta-3); font-size: .84rem; }
+
+/* el lote, arriba a la derecha */
+.lote { top: 16px; right: 16px; width: 290px; padding: 16px; display: grid; gap: 12px; }
+.lote h2 { font-size: 1.05rem; font-weight: 800; letter-spacing: -.01em; }
+.lote .frase { color: var(--tinta-2); font-size: .86rem; }
+.etiqueta-ejemplo { position: absolute; z-index: 650; top: 16px; left: 50%; transform: translateX(-50%); padding: 6px 14px; border-radius: 999px; background: var(--tinta); color: #fff; font-size: .85rem; font-weight: 700; white-space: nowrap; }
+
+/* el dron, abajo a la derecha */
+.dron { right: 16px; bottom: 16px; width: 340px; padding: 14px; display: grid; gap: 10px; }
+.dron-cabeza { display: flex; align-items: center; gap: 8px; }
+.dron-cuerpo { display: grid; gap: 10px; }
+.dron-cabeza b { font-weight: 800; }
+.dron-cabeza .acciones { margin-left: auto; }
+.dron.plegado { width: auto; padding: 0; background: transparent; box-shadow: none; }
+.dron.plegado .dron-cabeza, .dron.plegado .dron-cuerpo { display: none; }
+.dron:not(.plegado) .abrir-dron { display: none; }
+.abrir-dron { box-shadow: var(--sombra-flota); }
+.expo { position: absolute; z-index: 650; left: 452px; bottom: 16px; display: flex; align-items: center; gap: 10px; padding: 10px 14px 10px 10px; border-radius: 16px; background: #fff; box-shadow: var(--sombra-flota); font-weight: 700; font-size: .88rem; }
+.expo .qr { width: 64px; height: 64px; }
+/* los controles del mapa, al lado de la herramienta y no debajo */
+.fondo .leaflet-left { left: 436px; }
+.fondo .leaflet-bottom.leaflet-left { bottom: 96px; }
+
+@media (max-width: 960px) {
+  body { background: var(--gris); }
+  .fondo { position: relative; height: 46vh; }
+  .flota { position: relative; inset: auto; width: auto; margin: 12px; box-shadow: var(--sombra); }
+  .herramienta { top: auto; left: auto; bottom: auto; display: block; margin-top: -28px; }
+  .herramienta-cuerpo { overflow: visible; }
+  .lote { top: auto; right: auto; }
+  .dron, .dron.plegado { right: auto; bottom: auto; width: auto; padding: 14px; background: #fff; box-shadow: var(--sombra); }
+  .dron.plegado .dron-cabeza { display: flex; }
+  .dron.plegado .abrir-dron { width: 100%; }
+  .expo { display: none; }
+  .etiqueta-ejemplo { top: 10px; }
+  .fondo .leaflet-left { left: 0; } .fondo .leaflet-bottom { bottom: 28px; }
+}
+</style>
+</head>
+<body>
+<div class="fondo"><div class="mapa" id="mapa" aria-label="Mapa del lote"></div></div>
+<span class="etiqueta-ejemplo oculto" id="etiqueta">Ejemplo con datos inventados</span>
+
+<section class="flota herramienta" aria-labelledby="t-hoja">
+  <div class="herramienta-cabeza"><span class="marca"><span class="logo" data-ico="hoja"></span>Dron Sigatoka</span>
+    <label class="casilla"><input type="checkbox" id="voz"> Voz</label></div>
+  <div class="herramienta-cuerpo">
+    <div id="intro" style="display:grid; gap:8px">
+      <h1 id="t-hoja">¿Tu hoja tiene Sigatoka?</h1>
+      <p class="bajada">Toma una foto de una hoja de plátano. El modelo te dice qué ve y qué hacer, y el mapa de atrás muestra el lote zona por zona.</p>
+    </div>
+    <div class="zona-foto" id="zona">
+      <div class="guia" id="guia"><span class="circulo" data-ico="hoja"></span><p>Que la hoja llene el cuadro, sin sombra fuerte y sin que salga borrosa.</p></div>
+      <img class="oculto" id="foto" alt="La hoja que estás revisando">
+    </div>
+    <div class="botones" id="botones"><button class="btn btn-primario btn-grande" type="button" id="b-camara"></button><button class="btn btn-borde btn-grande" type="button" id="b-galeria" aria-label="Elegir una foto guardada"></button></div>
+    <div id="salida" aria-live="polite"></div>
+    <details class="como"><summary>Cómo funciona</summary>
+      <ol>
+        <li><b>El dron fotografía las hojas</b> con su cámara y les pone ubicación con el GPS.</li>
+        <li><b>El modelo revisa cada una</b>, en el dron y en tu celular. Si no está seguro, lo dice.</li>
+        <li><b>Un agrónomo confirma</b> en la estación de tierra y el mapa marca dónde actuar.</li>
+      </ol>
+      <p class="verdad">Acertó <b class="num">91.8 %</b> en fotos públicas tomadas de cerca; aún no lo medimos con fotos del dron en campo. Confirma siempre con un técnico.</p>
+    </details>
+    <p class="equipo">Equipo Platanos Machos · MR3002B · <a href="https://github.com/RodrigoA01637236/Dron-9no-semestre">Código en GitHub</a></p>
+  </div>
+</section>
+
+<section class="flota lote" aria-labelledby="t-lote">
+  <h2 id="t-lote">Mapa del lote</h2>
+  <ul class="leyenda" id="leyenda"></ul>
+  <p class="frase" id="frase"></p>
+  <div class="segmento" role="group" aria-label="Ver el mapa por"><button type="button" data-vista="zonas" aria-pressed="true">Zonas</button><button type="button" data-vista="fotos" aria-pressed="false">Cada foto</button></div>
+  <div class="acciones"><button class="btn btn-primario btn-chico" type="button" id="b-archivo">Abrir mi archivo</button><button class="btn btn-borde btn-chico oculto" type="button" id="b-ejemplo">Ver el ejemplo</button></div>
+  <p class="error oculto" id="error-mapa" role="alert"></p>
+</section>
+
+<section class="flota dron plegado" id="dron" aria-label="Dron en vivo">
+  <button class="btn btn-borde abrir-dron" type="button" id="b-abrir-dron"></button>
+  <div class="dron-cabeza"><span data-ico="dron"></span><b>Dron en vivo</b><div class="acciones"><button class="btn btn-texto btn-chico" type="button" id="b-cerrar-dron" aria-label="Cerrar">Cerrar</button></div></div>
+  <div class="dron-cuerpo">
+    <form class="fila-campo campo" id="form-dron" autocomplete="off"><input id="dir-dron" type="text" inputmode="url" spellcheck="false" placeholder="https://….trycloudflare.com" aria-label="Dirección del dron"><button class="btn btn-primario" type="submit" id="b-conectar">Conectar</button></form>
+    <div id="aviso-dron" aria-live="polite"></div>
+    <div class="visor oculto" id="visor"><img id="video" alt="Video en vivo de la cámara del dron"><span class="vivo">En vivo</span></div>
+    <div class="oculto" id="en-vivo" style="display:grid; gap:8px"><div id="lectura-dron"></div><p class="nota" id="gps"></p>
+      <div class="acciones"><button class="btn btn-borde btn-chico" type="button" id="b-foto-dron">Tomar foto</button><button class="btn btn-texto btn-chico" type="button" id="b-desconectar">Desconectar</button></div></div>
+  </div>
+</section>
+
+<div class="expo"><span id="qr"></span><span>¿En la Expo?<br>Pruébalo con tu celular</span></div>
+
+<input type="file" id="in-camara" accept="image/*" capture="environment" hidden>
+<input type="file" id="in-galeria" accept="image/*" hidden>
+<input type="file" id="in-mapa" accept=".geojson,.json,application/geo+json,application/json" hidden>
+<script src="motor.js"></script>
+<script src="piezas.js"></script>
+<script>
+"use strict";
+const M = Motor, P = Piezas;
+const $ = id => document.getElementById(id);
+const angosta = matchMedia("(max-width: 960px)");
+document.querySelectorAll("[data-ico]").forEach(el => { el.innerHTML = M.icono(el.dataset.ico); });
+$("b-camara").innerHTML = M.icono("camara") + "Tomar foto de la hoja";
+$("b-galeria").innerHTML = M.icono("imagen");
+$("b-abrir-dron").innerHTML = M.icono("dron") + "Ver el dron en vivo";
+$("qr").innerHTML = M.qr();
+$("voz").checked = M.vozActiva.get();
+$("voz").onchange = e => { M.vozActiva.set(e.target.checked); if (!e.target.checked) M.callar(); };
+
+// ------------------------------------------------ hoja
+let urlFoto = null;
+$("b-camara").onclick = () => $("in-camara").click();
+$("b-galeria").onclick = () => $("in-galeria").click();
+["in-camara", "in-galeria"].forEach(id => $(id).onchange = e => { revisar(e.target.files[0]); e.target.value = ""; });
+P.soltarFoto($("zona"), revisar);
+async function revisar(archivo) {
+  if (!archivo) return;
+  if (urlFoto) URL.revokeObjectURL(urlFoto);
+  urlFoto = URL.createObjectURL(archivo);
+  $("foto").src = urlFoto; $("foto").classList.remove("oculto"); $("guia").classList.add("oculto");
+  $("zona").classList.add("con-foto");
+  $("intro").classList.add("oculto"); $("botones").classList.add("oculto");
+  await P.revisar(archivo, $("salida"), { otra: () => $("in-camara").click() });
+  if (angosta.matches) $("salida").scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+
+// ------------------------------------------------ lote: el ejemplo de entrada, hasta que abras el tuyo
+let mapa = null;
+const relleno = () => angosta.matches ? [44, 16, 16, 16] : [60, 330, 16, 452];
+async function verLote(fotos, ejemplo) {
+  mapa ??= await M.crearMapa($("mapa"), { posicionZoom: angosta.matches ? "topright" : "topleft" });
+  const res = mapa.mostrar(fotos, { conSatelite: !ejemplo, relleno: relleno() });
+  $("etiqueta").classList.toggle("oculto", !ejemplo);
+  $("b-ejemplo").classList.toggle("oculto", ejemplo);
+  $("b-archivo").textContent = ejemplo ? "Abrir mi archivo" : "Abrir otro archivo";
+  $("leyenda").innerHTML = P.leyenda(res);
+  $("frase").textContent = (ejemplo ? "Así se vería un lote. " : "") + res.frase;
+}
+$("b-archivo").onclick = () => $("in-mapa").click();
+$("b-ejemplo").onclick = () => verLote(M.ejemplo(), true);
+$("in-mapa").onchange = async e => {
+  const f = e.target.files[0]; e.target.value = "";
+  if (!f) return;
+  try { await verLote(await P.leerArchivoMapa(f), false); $("error-mapa").classList.add("oculto"); }
+  catch (err) { $("error-mapa").textContent = err.message; $("error-mapa").classList.remove("oculto"); }
+};
+document.querySelectorAll("[data-vista]").forEach(b => b.onclick = () => {
+  document.querySelectorAll("[data-vista]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  mapa?.vista(b.dataset.vista);
+});
+verLote(M.ejemplo(), true);
+
+// ------------------------------------------------ dron
+const caja = $("dron");
+$("b-abrir-dron").onclick = () => { caja.classList.remove("plegado"); $("dir-dron").focus(); };
+$("b-cerrar-dron").onclick = () => { dron.desconectar(); caja.classList.add("plegado"); };
+const dron = M.dron({
+  aviso(a) { $("aviso-dron").innerHTML = P.avisoDron(a); },
+  conectado({ video }) {
+    $("video").src = video; $("aviso-dron").innerHTML = "";
+    ["visor", "en-vivo"].forEach(id => $(id).classList.remove("oculto")); $("form-dron").classList.add("oculto");
+  },
+  estado(e) { $("lectura-dron").innerHTML = P.lecturaDron(e); $("gps").textContent = P.gps(e.gps); },
+  desconectado() {
+    $("video").removeAttribute("src");
+    ["visor", "en-vivo"].forEach(id => $(id).classList.add("oculto")); $("form-dron").classList.remove("oculto");
+  },
+});
+$("dir-dron").value = dron.sugerida;
+$("form-dron").onsubmit = e => { e.preventDefault(); if ($("dir-dron").value.trim()) dron.conectar($("dir-dron").value); };
+$("b-desconectar").onclick = () => dron.desconectar();
+$("b-foto-dron").onclick = async () => {
+  try { const f = await dron.foto(); window.open(f.url, "_blank", "noopener"); }
+  catch (e) { $("aviso-dron").innerHTML = `<p class="error">No se pudo tomar la foto: ${M.esc(e.message)}</p>`; }
+};
+$("video").onerror = () => { if (dron.conectado()) setTimeout(() => { if (dron.conectado()) $("video").src = dron.video(); }, 2000); };
+if (dron.inicial) { caja.classList.remove("plegado"); dron.conectar(dron.inicial); }
+M.precargar();
+</script>
+</body>
+</html>

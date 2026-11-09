@@ -346,7 +346,7 @@ const Motor = (() => {
   }
 
   // Crea el mapa en un elemento. colores: { borde } para el contorno de las zonas sobre el fondo.
-  async function crearMapa(el, { borde = "#ffffff" } = {}) {
+  async function crearMapa(el, { borde = "#ffffff", posicionZoom = "topright" } = {}) {
     const L = await leaflet();
     el.style.isolation = "isolate";   // que las capas de Leaflet no pinten encima de la barra de la página
     const tactil = matchMedia("(pointer: coarse)").matches;
@@ -366,7 +366,7 @@ const Motor = (() => {
         aviso.style.opacity = 1; clearTimeout(t); t = setTimeout(() => { aviso.style.opacity = 0; }, 1200);
       }, { passive: true });
     }
-    L.control.zoom({ position: "topright" }).addTo(mapa);
+    L.control.zoom({ position: posicionZoom }).addTo(mapa);
     L.control.scale({ imperial: false, position: "bottomleft" }).addTo(mapa);
     const satelite = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
       { maxZoom: 20, maxNativeZoom: 19, attribution: "Imágenes © Esri" });
@@ -400,7 +400,8 @@ const Motor = (() => {
     }
     return {
       mapa,
-      mostrar(lista, { conSatelite = true } = {}) {
+      // relleno: [arriba, derecha, abajo, izquierda] en px que tapan otros paneles encima del mapa.
+      mostrar(lista, { conSatelite = true, relleno = null } = {}) {
         fotos = lista;
         mapa.invalidateSize();   // por si el contenedor cambió de tamaño desde que se creó
         if (conSatelite) satelite.addTo(mapa); else satelite.remove();
@@ -409,7 +410,8 @@ const Motor = (() => {
         // Encuadra las zonas completas (no solo los puntos), para que ninguna quede cortada en el borde.
         const zs = zonas(fotos, metros);
         const esquinas = zs.length ? zs.flatMap(z => [[z.i * z.dLat, z.j * z.dLon], [(z.i + 1) * z.dLat, (z.j + 1) * z.dLon]]) : fotos.map(f => [f.lat, f.lon]);
-        mapa.fitBounds(L.latLngBounds(esquinas), { padding: [20, 20], maxZoom: 19 });
+        const [ar, de, ab, iz] = relleno || [20, 20, 20, 20];
+        mapa.fitBounds(L.latLngBounds(esquinas), { paddingTopLeft: [iz, ar], paddingBottomRight: [de, ab], maxZoom: 19 });
         return resumen(fotos, metros);
       },
       vista(v) { vista = v; dibujar(); },
