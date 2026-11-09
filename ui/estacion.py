@@ -175,19 +175,29 @@ def api_mapa():
 def api_geojson():
     vuelo = request.args.get("vuelo")
     with conectar() as con:
-        cats = {r["clave"]: r["nombre"] for r in con.execute("SELECT clave, nombre FROM categorias")}
+        cats = {r["clave"]: (r["nombre"], r["color"]) for r in con.execute("SELECT clave, nombre, color FROM categorias")}
         sql = "SELECT * FROM fotos WHERE lat IS NOT NULL" + (" AND vuelo=?" if vuelo else "")
         filas = con.execute(sql, [vuelo] if vuelo else []).fetchall()
-    feats = [{
-        "type": "Feature",
-        "geometry": {"type": "Point", "coordinates": [f["lon"], f["lat"]]},
-        "properties": {
-            "vuelo": f["vuelo"], "archivo": f["archivo"], "fecha": f["fecha"],
-            "diagnostico": cats.get(f["etiqueta"] or f["pred"], f["etiqueta"] or f["pred"]),
-            "fuente": "revisión humana" if f["etiqueta"] else "modelo",
-            "confianza_modelo": f["conf"], "revisor": f["revisor"],
-        },
-    } for f in filas if f["etiqueta"] != DESCARTAR]
+    clf, _ = clasificador()
+    umbral = clf.umbral if clf else 0.65
+    feats = []
+    for f in filas:
+        if f["etiqueta"] == DESCARTAR:
+            continue
+        clave = f["etiqueta"] or f["pred"]
+        nombre, color = cats.get(clave, (clave, "#7d8b96"))
+        feats.append({
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [f["lon"], f["lat"]]},
+            "properties": {
+                "vuelo": f["vuelo"], "archivo": f["archivo"], "fecha": f["fecha"],
+                "diagnostico": nombre, "clave": clave, "color": color,
+                "fuente": "revisión humana" if f["etiqueta"] else "modelo",
+                "confianza_modelo": f["conf"], "umbral": umbral, "revisor": f["revisor"],
+                # el sitio web muestra en gris lo que el modelo no diagnosticó con seguridad
+                "dudoso": not f["etiqueta"] and (f["conf"] is None or f["conf"] < umbral),
+            },
+        })
     nombre = f"sigatoka_{vuelo or 'todos'}.geojson"
     resp = app.response_class(json.dumps({"type": "FeatureCollection", "features": feats},
                                          ensure_ascii=False, indent=1),

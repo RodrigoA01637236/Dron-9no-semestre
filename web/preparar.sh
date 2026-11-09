@@ -7,7 +7,9 @@ set -e
 RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
 WEB="$RAIZ/web"
 
-mkdir -p "$WEB/modelo" "$WEB/fuentes" "$WEB/vendor"
+mkdir -p "$WEB/modelo" "$WEB/fuentes" "$WEB/vendor/leaflet"
+# Leaflet para el mapa (la misma copia que usa la estación, sin CDN)
+cp -r "$RAIZ/ui/static/leaflet/." "$WEB/vendor/leaflet/"
 cp "$RAIZ/vision/models/sigatoka_cls_v1.onnx" "$RAIZ/vision/models/sigatoka_cls_v1.json" "$WEB/modelo/"
 cp "$RAIZ/ui/static/fuentes/fuentes.css" "$RAIZ/ui/static/fuentes/manrope-0.woff2" "$RAIZ/ui/static/fuentes/LEEME.txt" "$WEB/fuentes/"
 

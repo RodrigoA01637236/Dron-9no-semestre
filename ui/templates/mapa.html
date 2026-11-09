@@ -50,7 +50,9 @@
     <a class="boton claro grande ancho" id="btn-revisar" href="/revisar"></a>
     <a class="boton ancho" id="geojson" href="/api/geojson">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>
-      Descargar para Google Earth</a>
+      Descargar el mapa</a>
+    <p class="nota" style="margin:-8px 0 0">Ábrelo en Google Earth o en el sitio web, página Mapa. Dice dónde está el
+      cultivo: compártelo solo con el equipo.</p>
     <p class="nota" style="margin:0" id="nota-gps"></p>
   </div>
 </aside>
@@ -103,6 +105,11 @@ function cuantas(clave, n) {
 }
 
 // Mensaje del panel para la vista por condición.
+function mensajePuntos() {
+  return "Cada punto es una foto: tócalo para ver su diagnóstico. Los grises son fotos donde el modelo no está seguro; " +
+    "los de borde blanco ya los revisó alguien del equipo.";
+}
+
 function mensajeCondicion() {
   const zonas = Mapa.zonasCondicion();
   if (!zonas.length) return Mapa.op.ocultas.size
@@ -134,6 +141,7 @@ function resumen(vuelo) {
   const rojas = Mapa.zonas().filter(z => z.pos / z.n > .25).length;
   $("msg-zonas").innerHTML = !fotos.length ? "Este vuelo no tiene fotos con ubicación."
     : Mapa.op.vista === "condicion" ? mensajeCondicion()
+    : Mapa.op.vista === "puntos" ? mensajePuntos()
     : rojas ? `<b>${plural(rojas, "zona en rojo tiene", "zonas en rojo tienen")}</b> más de una cuarta parte de fotos con ${esc(nombre)}. Ahí conviene revisar primero.`
     : `Ninguna zona pasa de 25 % de fotos con ${esc(nombre)}.`;
   const pend = v ? v.fotos - v.revisadas : RESUMEN.total_fotos - RESUMEN.total_revisadas;

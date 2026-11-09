@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mapa del lote · Dron Sigatoka</title>
+<meta name="description" content="Abre el mapa que exporta la estación de tierra del Dron Sigatoka y mira por zonas dónde hay Sigatoka, hojas sanas u otra condición. El archivo se lee en tu navegador.">
+<meta name="theme-color" content="#0f171d">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f171d'/%3E%3Cpath d='M6 12V6h6M20 6h6v6M26 20v6h-6M12 26H6v-6' fill='none' stroke='%23eaf0f4' stroke-width='2.4'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23ff5a6e'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="sitio.css">
+</head>
+<body>
+<header class="barra-sup">
+  <a class="pastilla" href="./" aria-label="Dron Sigatoka, inicio">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 8V3h5M16 3h5v5M21 16v5h-5M8 21H3v-5"/><circle cx="12" cy="12" r="2.5" fill="#ff5a6e" stroke="none"/></svg>
+    Dron Sigatoka</a>
+  <nav class="navegacion" aria-label="Secciones">
+    <a href="./">Proyecto</a>
+    <a href="identificar.html">Identificar<span class="nav-largo"> una hoja</span></a>
+    <a href="dron.html">Dron<span class="nav-largo"> en vivo</span></a>
+    <a href="mapa.html" aria-current="page">Mapa</a>
+  </nav>
+</header>
+
+<main>
+  <section class="hoja" aria-labelledby="titulo">
+    <div class="hoja-cabeza">
+      <div>
+        <h1 id="titulo">Mapa del lote</h1>
+        <p>Abre el archivo del mapa que descarga la estación de tierra y mira, zona por zona, dónde hay Sigatoka, hojas
+          sanas u otra condición. El archivo se lee en tu navegador: no se sube a ningún lado.</p>
+      </div>
+      <label class="boton claro grande">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3Z"/></svg>
+        Abrir archivo<input type="file" id="archivo" accept=".geojson,.json,application/geo+json,application/json" hidden></label>
+    </div>
+
+    <div class="mesa">
+      <div class="mesa-foto marco-mapa" id="marco">
+        <div id="mapa" class="mapa oculto" aria-label="Mapa del lote"></div>
+        <div class="leyenda-mapa oculto" id="leyenda"></div>
+        <div class="soltar" id="soltar">
+          <svg class="soltar-icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2Z"/><path d="M9 4v14M15 6v14"/></svg>
+          <div>
+            <h2>Abre el archivo del mapa o arrástralo aquí</h2>
+            <p style="margin-top:.5rem">Es el archivo <code>.geojson</code> que da la estación en <b>Mapa</b> &gt;
+              <b>Descargar el mapa</b>. Solo salen las fotos que tienen ubicación (GPS).</p>
+          </div>
+          <label class="boton grande">Elegir archivo<input type="file" id="archivo-2" accept=".geojson,.json,application/geo+json,application/json" hidden></label>
+          <p class="mensaje error" id="msg-archivo"></p>
+        </div>
+      </div>
+
+      <div class="mesa-lectura" aria-live="polite">
+        <div id="sin-archivo" style="display:grid; gap:12px">
+          <h2>Sin archivo</h2>
+          <p class="suave" style="margin:0">Cuando abras el archivo, aquí verás cuántas fotos hay de cada condición y qué
+            zonas conviene revisar primero.</p>
+        </div>
+
+        <div id="resumen" class="oculto" style="display:grid; gap:18px">
+          <div>
+            <div class="nota" id="sub"></div>
+            <h2 style="margin-top:4px">Así está el lote</h2>
+          </div>
+          <label class="campo oculto" id="caja-vuelo"><span>Fecha</span><select id="vuelo"></select></label>
+          <div class="cifra-grande"><b id="n-objetivo" style="color:var(--rojo)">0</b><span id="txt-objetivo"></span></div>
+          <div>
+            <div class="barra-apilada" id="barra-reparto"></div>
+            <div class="reparto" id="reparto"></div>
+          </div>
+          <div class="que-hacer" id="msg-zonas"></div>
+          <div style="display:grid; gap:10px">
+            <div class="segmentos" role="radiogroup" aria-label="Vista del mapa">
+              <label><input type="radio" name="vista" value="condicion" checked><span>Condiciones</span></label>
+              <label><input type="radio" name="vista" value="zonas"><span>Resaltar una</span></label>
+              <label><input type="radio" name="vista" value="puntos"><span>Fotos</span></label>
+            </div>
+            <details>
+              <summary>Más opciones</summary>
+              <div class="fila" style="align-items:flex-end">
+                <label class="campo" id="caja-objetivo" style="flex:1 1 9rem"><span>Condición a resaltar</span><select id="objetivo"></select></label>
+                <label class="campo" id="caja-zona" style="flex:0 1 7rem"><span>Tamaño de zona</span>
+                  <select id="tam-zona"><option value="10">10 m</option><option value="20" selected>20 m</option>
+                    <option value="50">50 m</option><option value="100">100 m</option></select></label>
+              </div>
+            </details>
+          </div>
+          <p class="nota" style="margin:0" id="nota-gps"></p>
+        </div>
+      </div>
+    </div>
+    <div class="pie-foto"><span id="pie-archivo">Ningún archivo abierto</span><span id="lectura-pos"></span></div>
+
+    <div class="seccion" style="margin-top:32px">
+      <details>
+        <summary>Cómo sacar el archivo de la estación</summary>
+        <ol class="instrucciones">
+          <li>En la estación de tierra, abre <b>Mapa</b>.</li>
+          <li>Elige la fecha arriba (o <i>Todas las fechas</i>).</li>
+          <li>Presiona <b>Descargar el mapa</b>. Se baja un archivo <code>sigatoka_….geojson</code>.</li>
+          <li>Ábrelo aquí con <b>Abrir archivo</b>, desde cualquier computadora o celular. También abre en Google Earth.</li>
+        </ol>
+        <p class="nota" style="margin:.8rem 0 0">El archivo trae la ubicación de cada foto y su diagnóstico. Compártelo
+          solo con quien deba verlo: dice dónde está el cultivo y dónde hay enfermedad.</p>
+      </details>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Equipo Platanos Machos · MR3002B ·
+  <a href="https://github.com/RodrigoA01637236/Dron-9no-semestre">Código en GitHub</a>
+</footer>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="sitio.js"></script>
+<script src="mapa.js"></script>
+</body>
+</html>

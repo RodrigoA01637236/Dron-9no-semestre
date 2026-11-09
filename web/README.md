@@ -8,9 +8,11 @@ propio ni la laptop encendida.
 | `index.html` | Qué es el Dron Sigatoka, cómo funciona y qué tan bueno es el modelo |
 | `identificar.html` | Sube o toma una foto de una hoja y el modelo `sigatoka_cls_v1.onnx` la diagnostica **en el navegador** (onnxruntime-web). La foto no sale del dispositivo |
 | `dron.html` | Video, GPS y diagnóstico en vivo de la Jetson (`jetson/zed_right.py`) a través de un túnel https |
+| `mapa.html` | Abre el mapa que exporta la estación (`.geojson`) y muestra por zonas dónde hay Sigatoka, hojas sanas u otra condición. El archivo se lee **en el navegador**: no se sube a ningún lado |
 
 El estilo sigue [DESIGN.md](../DESIGN.md) (mismos colores, Manrope y componentes que la estación).
-`preparar.sh` copia a `web/` el modelo (`vision/models/`) y la fuente (`ui/static/fuentes/`), y baja
+`preparar.sh` copia a `web/` el modelo (`vision/models/`), la fuente (`ui/static/fuentes/`) y Leaflet
+(`ui/static/leaflet/`), y baja
 onnxruntime-web 1.30.0 a `web/vendor/` (verifica el sha256), así que no hay copias en git y el sitio
 no depende de ningún CDN: Netlify lo corre en cada despliegue (`netlify.toml` en la raíz).
 
@@ -39,6 +41,18 @@ solo; `netlify.toml` ya tiene el comando y la carpeta.
   1 a 2 puntos de probabilidad (`bus.jpg`: 53 % contra 54 % Sigatoka).
 - Usa `ort.wasm.min.js` (solo WebAssembly, ~14 MB de `.wasm`, unos 4 MB comprimido); la primera
   visita lo baja y luego queda en caché.
+
+## Mapa
+
+- El sitio no guarda ubicaciones del cultivo: el mapa solo existe en el archivo que se abre. Así nada
+  de dónde está el lote o dónde hay enfermedad queda publicado.
+- El archivo sale de la estación: **Mapa > Descargar el mapa** (`/api/geojson`). Trae, por foto, la
+  ubicación, el diagnóstico, si lo revisó alguien y si el modelo no estaba seguro. Archivos de antes
+  (sin `clave`, `color` ni `dudoso`) también abren: la página lo deduce del nombre y la confianza.
+- Tres vistas, iguales a las de la estación: *Condiciones* (la condición que más se repite en cada
+  zona; empate gana la más grave), *Resaltar una* (porcentaje de una condición por zona) y *Fotos*.
+- El fondo satelital (Esri) y el de calles (OpenStreetMap) sí piden mosaicos a internet; sin internet
+  queda la opción *Sin fondo*.
 
 ## Dron en vivo
 

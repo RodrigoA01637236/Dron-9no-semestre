@@ -1,5 +1,5 @@
 #!/bin/bash
-# Sirve el sitio web/ (Proyecto, Identificar una hoja, Dron en vivo) desde la Jetson, sin internet.
+# Sirve el sitio web/ (Proyecto, Identificar una hoja, Dron en vivo, Mapa) desde la Jetson, sin internet.
 # Con el hotspot DRON-SIGATOKA: http://10.42.0.1:8000  (Dron en vivo se conecta solo al puerto 8080).
 # Es un servidor aparte: no abre ni toca la cámara; zed_right.py sigue igual.
 #   bash jetson/sitio_local.sh            puerto 8000

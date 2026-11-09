@@ -213,6 +213,65 @@ ol.instrucciones { margin: 0; padding-left: 1.3rem; color: var(--texto-2); font-
 .dron-gps.sin-senal { color: var(--texto-2); }
 @media (max-width: 600px) { .dron-gps { top: 52px; right: 16px; left: auto; } }
 
+/* ---------------------------------------------------------------- mapa del lote */
+.marco-mapa { display: block; min-height: 0; }
+.marco-mapa .soltar { min-height: 520px; }
+.mapa { width: 100%; height: min(72vh, 680px); background: var(--fondo-mapa); }
+.leyenda-mapa {
+  position: absolute; z-index: 800; top: 10px; left: 10px; right: 60px; display: flex; flex-wrap: wrap; gap: 6px 10px;
+  align-items: center; width: max-content; max-width: calc(100% - 70px); padding: 8px 10px;
+  background: var(--panel); border-radius: var(--r-s); box-shadow: var(--sombra); font-size: var(--t-xs); color: var(--texto-2);
+}
+.leyenda-mapa span { display: inline-flex; gap: 6px; align-items: center; }
+.leyenda-mapa i { width: 10px; height: 10px; border-radius: 2px; }
+.leyenda-mapa i.punto { border-radius: 50%; }
+.chip-capa {
+  display: inline-flex; gap: 6px; align-items: center; padding: 3px 9px; border-radius: 999px;
+  border: 1px solid var(--borde); background: transparent; color: var(--texto-2); font: inherit; cursor: pointer;
+  transition: opacity 150ms ease, background-color 150ms ease;
+}
+.chip-capa:hover { background: var(--panel-2); }
+.chip-capa[aria-pressed="false"] { opacity: .45; text-decoration: line-through; }
+.chip-capa:focus-visible { outline: 2px solid var(--acento); outline-offset: 1px; }
+.segmentos { display: inline-flex; padding: 4px; gap: 4px; border-radius: var(--r-s); background: var(--panel); width: max-content; }
+.segmentos label { position: relative; }
+.segmentos input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.segmentos span { display: block; padding: .45rem .75rem; border-radius: 8px; font-size: var(--t-s); font-weight: 700; color: var(--texto-2); white-space: nowrap; transition: background-color 150ms ease, color 150ms ease; }
+.segmentos input:checked + span { background: var(--claro); color: var(--sobre-claro); }
+.segmentos input:focus-visible + span { outline: 2px solid var(--acento); outline-offset: 1px; }
+.cifra-grande { display: flex; align-items: baseline; gap: 12px; }
+.cifra-grande b { font-size: 3.5rem; font-weight: 800; line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.cifra-grande span { font-size: var(--t-s); color: var(--texto-2); line-height: 1.35; }
+.barra-apilada { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--panel); }
+.barra-apilada > i { display: block; height: 100%; }
+.reparto { display: flex; gap: 6px 14px; flex-wrap: wrap; margin-top: 8px; font-size: var(--t-s); color: var(--texto-2); }
+.reparto span { display: inline-flex; gap: 6px; align-items: center; }
+.reparto i { width: 8px; height: 8px; border-radius: 2px; }
+select {
+  height: var(--alto-control); padding: 0 2.2rem 0 .75rem; min-width: 0; appearance: none; cursor: pointer;
+  border: 1px solid var(--borde-fuerte); border-radius: var(--r-s); color: var(--texto); font: 600 var(--t-s) var(--sans);
+  background-color: var(--panel);
+  background-image: linear-gradient(45deg, transparent 50%, var(--texto-2) 50%), linear-gradient(135deg, var(--texto-2) 50%, transparent 50%);
+  background-position: calc(100% - 1.05rem) 52%, calc(100% - .75rem) 52%; background-size: .3rem .3rem; background-repeat: no-repeat;
+}
+select:focus-visible { outline: 2px solid var(--acento); outline-offset: 0; border-color: var(--acento); }
+.leaflet-container { font: 500 var(--t-s)/1.4 var(--sans); background: var(--fondo-mapa); }
+.leaflet-bar { border: 0 !important; border-radius: var(--r-s) !important; box-shadow: var(--sombra) !important; overflow: hidden; }
+.leaflet-bar a, .leaflet-bar a:hover { width: 36px !important; height: 36px !important; line-height: 36px !important; background: var(--panel); color: var(--texto); border-bottom-color: var(--borde) !important; }
+.leaflet-control-layers { background: var(--panel); color: var(--texto); border: 0 !important; border-radius: var(--r-s) !important; box-shadow: var(--sombra) !important; }
+.leaflet-control-layers-toggle { filter: invert(1); width: 36px !important; height: 36px !important; }
+.leaflet-control-layers-expanded { padding: .7rem .9rem; }
+.leaflet-container .leaflet-control-attribution { background: rgba(15, 23, 29, .75); color: var(--texto-3); font-size: .66rem; }
+.leaflet-container .leaflet-control-attribution a { color: var(--texto-3); }
+.leaflet-control-scale-line { border-color: var(--texto); background: rgba(15, 23, 29, .75); color: var(--texto); font-family: var(--sans); }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--panel); color: var(--texto); box-shadow: var(--sombra); }
+.leaflet-popup-content-wrapper { border-radius: var(--r); }
+.leaflet-container a.leaflet-popup-close-button { color: var(--texto-3); }
+.leaflet-tooltip { background: var(--panel); color: var(--texto); border: 0; border-radius: 8px; box-shadow: var(--sombra); font-family: var(--sans); }
+.leaflet-tooltip-top::before { border-top-color: var(--panel); }
+.ficha-mapa { width: 13rem; display: grid; gap: .5rem; }
+.ficha-mapa .meta { font-size: var(--t-xs); color: var(--texto-3); line-height: 1.4; overflow-wrap: anywhere; }
+
 footer { max-width: 1272px; margin: 0 auto; padding: 4px calc(var(--margen) + 4px) 28px; color: var(--texto-3); font-size: var(--t-xs); }
 
 /* ---------------------------------------------------------------- pantallas chicas */
@@ -227,8 +286,12 @@ footer { max-width: 1272px; margin: 0 auto; padding: 4px calc(var(--margen) + 4p
   .barra-sup { gap: 8px; }
   .pastilla { height: 44px; }
   .navegacion { width: 100%; }
-  .navegacion a { flex: 1; justify-content: center; padding: 0 8px; }
+  .navegacion a { flex: 1 1 auto; justify-content: center; padding: 0 8px; }
+  .nav-largo { display: none; }
   .mesa-foto { min-height: 300px; }
+  .mapa { height: 62vh; }
+  .marco-mapa .soltar { min-height: 360px; }
+  .leyenda-mapa { right: 54px; max-width: calc(100% - 64px); }
   .mesa-lectura { padding: 20px; }
   .hechos { grid-template-columns: 1fr; }
   .hechos dt { padding-bottom: 0; }

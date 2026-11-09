@@ -6,6 +6,7 @@ const CATEGORIAS = {
   sana: { nombre: "Sana", color: "#2e9e44" },
   sigatoka: { nombre: "Sigatoka", color: "#d7263d" },
   otra_condicion: { nombre: "Otra condición", color: "#f0a202" },
+  sin_hoja: { nombre: "Sin hojas de plátano", color: "#8a94a6" },
 };
 const categoria = clave => CATEGORIAS[clave] || { nombre: clave, color: "#9fb0bc" };
 
