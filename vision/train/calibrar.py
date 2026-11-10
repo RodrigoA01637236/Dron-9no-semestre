@@ -64,8 +64,12 @@ def preparar_meta(onnx: Path) -> dict:
         return json.loads(ruta.read_text(encoding="utf-8"))
     import onnxruntime as ort
     s = ort.InferenceSession(str(onnx), providers=["CPUExecutionProvider"])
-    nombres = ast.literal_eval(s.get_modelmeta().custom_metadata_map["names"])
+    datos = s.get_modelmeta().custom_metadata_map
+    nombres = ast.literal_eval(datos["names"])
     lado = s.get_inputs()[0].shape[-1]
+    if not isinstance(lado, int):  # exportado con dynamic=True: el lado viene en los metadatos
+        imgsz = ast.literal_eval(datos.get("imgsz", "[384, 384]"))
+        lado = imgsz[-1] if isinstance(imgsz, (list, tuple)) else imgsz
     meta = {"model": onnx.name, "input": [1, 3, int(lado), int(lado)],
             "classes": [nombres[i] for i in sorted(nombres)], "umbral_confianza": 0.65}
     ruta.write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
