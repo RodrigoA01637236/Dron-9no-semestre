@@ -67,6 +67,17 @@ def correr(log: Registro, script: str, *args: str) -> None:
                          "al corregirlo, vuelve a correr el mismo comando y sigue donde se quedó.")
 
 
+def entrenamiento_completo(pt: Path) -> bool:
+    """best.pt de una corrida que sí terminó: ultralytics le quita el optimizador al final."""
+    if not pt.exists():
+        return False
+    try:
+        import torch
+        return torch.load(pt, map_location="cpu", weights_only=False).get("optimizer") is None
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def entrenar(log: Registro, carpeta: Path, nombre: str, base: str, horas: float, batch: int,
              workers: int, parches: Path) -> Path:
     destino = carpeta / nombre
@@ -74,6 +85,15 @@ def entrenar(log: Registro, carpeta: Path, nombre: str, base: str, horas: float,
     if onnx.exists():
         log(f"{nombre}: ya entrenado ({onnx}); se salta.")
         return onnx
+    if entrenamiento_completo(destino / "weights" / "best.pt"):
+        # Terminó de entrenar pero falló después (la prueba en test o la exportación):
+        # no se repiten horas de entrenamiento, solo se exporta.
+        log(f"{nombre}: ya entrenado, falta el ONNX; exportando {destino / 'weights' / 'best.pt'}")
+        from ultralytics import YOLO
+        YOLO(str(destino / "weights" / "best.pt")).export(format="onnx", imgsz=384, opset=17, dynamic=True)
+        if onnx.exists():
+            return onnx
+        raise SystemExit(f"No se pudo exportar {onnx}. Revisa el log.")
     if destino.exists():
         shutil.rmtree(destino)  # corrida a medias: se repite completa
     log(f"{nombre}: entrenando {base} por {horas} h (termina ~{datetime.now() + timedelta(hours=horas):%H:%M})")

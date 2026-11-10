@@ -141,7 +141,8 @@ Al empezar imprime la hora aproximada en que termina. Todo queda en `runs\noche\
 (log completo: `runs\noche\noche.log`).
 
 - **Si se interrumpe** (apagón, error): corrige lo que diga el log y vuelve a correr el
-  mismo comando. Sigue donde se quedó.
+  mismo comando. Sigue donde se quedó. Si un modelo ya había terminado de entrenar y lo que
+  falló fue la prueba final o la exportación, solo lo exporta: no repite las horas.
 - **`CUDA out of memory`**: `python vision\train\entrenar_noche.py --batch-s 32 --batch-n 64`.
 - **`Couldn't open shared file mapping ... error code: <1455>`** al empezar a entrenar, o
   **`CUDA error: out of memory` en `pin memory thread`** al validar la primera época: a

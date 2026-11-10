@@ -11,6 +11,7 @@ runs/classify/<run>/weights/{best.pt,best.onnx} en Drive.
 Ver vision/GUIA-MODELO.md fase 3.
 """
 import argparse
+import gc
 import json
 from pathlib import Path
 
@@ -62,10 +63,23 @@ def main() -> None:
         **({"time": args.time} if args.time else {}),
     )
 
+    # Soltar los procesos que cargaban fotos durante el entrenamiento: en una laptop
+    # de 16 GB, si siguen vivos, la prueba de abajo se queda sin memoria.
+    model.trainer = None
+    gc.collect()
+
     # Evaluar SIEMPRE en test; las métricas de val no se reportan como finales.
-    metrics = model.val(split="test")
-    print(f"top1 (test): {metrics.top1:.4f}")
-    print("Matriz de confusión y curvas en runs/classify/<run>/")
+    # Con los mismos procesos y lote del entrenamiento (sin eso usa 8 procesos).
+    # Si la prueba falla, el modelo ya entrenado se exporta igual: calibrar.py
+    # vuelve a medirlo en test con fotos completas.
+    top1 = None
+    try:
+        metrics = model.val(split="test", batch=args.batch, workers=args.workers)
+        top1 = round(float(metrics.top1), 4)
+        print(f"top1 (test): {top1:.4f}")
+        print("Matriz de confusión y curvas en runs/classify/<run>/")
+    except Exception as e:  # noqa: BLE001
+        print(f"AVISO: no se pudo evaluar en test ({type(e).__name__}: {e}); se exporta igual.")
 
     # Exportar el paquete modelo: entrada del pipeline de la Jetson (doc 07).
     # dynamic=True: lote libre, para clasificar todos los parches de una foto de una vez.
@@ -85,7 +99,7 @@ def main() -> None:
         "classes": [model.names[i] for i in sorted(model.names)],
         "umbral_confianza": 0.65,
         "dataset": str(args.data),
-        "top1_test": round(float(metrics.top1), 4),
+        "top1_test": top1,
     }
     meta_path = Path(onnx_path).with_suffix(".json")
     meta_path.write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
