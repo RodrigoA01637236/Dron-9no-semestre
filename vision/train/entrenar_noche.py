@@ -103,7 +103,9 @@ def main() -> None:
                     help="fotos por clase en cada prueba de calibrar.py (0 = todas; más lento)")
     ap.add_argument("--batch-s", type=int, default=64, help="si sale 'CUDA out of memory', usa 32")
     ap.add_argument("--batch-n", type=int, default=128, help="si sale 'CUDA out of memory', usa 64")
-    ap.add_argument("--workers", type=int, default=6)
+    ap.add_argument("--workers", type=int, default=2,
+                    help="procesos que cargan fotos (y otros tantos para validar). Con 16 GB de RAM, 2; "
+                         "con 32 GB se puede subir a 6")
     ap.add_argument("--solo-s", action="store_true", help="no entrenar el modelo ligero")
     ap.add_argument("--meta", type=float, default=0.90)
     args = ap.parse_args()

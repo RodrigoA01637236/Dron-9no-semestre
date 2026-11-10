@@ -143,12 +143,13 @@ Al empezar imprime la hora aproximada en que termina. Todo queda en `runs\noche\
 - **Si se interrumpe** (apagón, error): corrige lo que diga el log y vuelve a correr el
   mismo comando. Sigue donde se quedó.
 - **`CUDA out of memory`**: `python vision\train\entrenar_noche.py --batch-s 32 --batch-n 64`.
-- **`Couldn't open shared file mapping ... error code: <1455>`** al empezar a entrenar: a
-  Windows le falta memoria virtual para los procesos que cargan las fotos. Vuelve a correrlo
-  con menos procesos: `python vision\train\entrenar_noche.py --workers 2`. Para dejarlo
-  arreglado: Configuración → Sistema → Información → Configuración avanzada del sistema →
-  Rendimiento → Configuración → Opciones avanzadas → Memoria virtual → "Administrar
-  automáticamente el tamaño del archivo de paginación", y reinicia.
+- **`Couldn't open shared file mapping ... error code: <1455>`** al empezar a entrenar, o
+  **`CUDA error: out of memory` en `pin memory thread`** al validar la primera época: a
+  Windows le falta memoria para los procesos que cargan las fotos (entrenar y validar usan
+  los suyos). Con 16 GB de RAM deja `--workers 2` (el valor por defecto), cierra el navegador
+  y vuelve a correr el comando; si sigue, `--workers 0`. Ayuda también subir la memoria
+  virtual: Windows + R → `SystemPropertiesPerformance` → Advanced → Virtual memory → Change →
+  quita "Automatically manage...", elige C:, Custom size 16384 / 32768, Set, OK y reinicia.
 - **Menos tiempo:** `--horas-s 2 --horas-n 1`, o solo el principal con `--solo-s`.
 - **Empezar de cero** (por ejemplo, después de agregar fuentes): borra `runs\noche`,
   `data\dataset_v2` y `data\parches_v2`.
