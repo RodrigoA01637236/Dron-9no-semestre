@@ -15,3 +15,4 @@ Regla: **cada corrida de entrenamiento agrega una fila aquí**, aunque haya sali
 - **Pesos:** ruta en Drive de `best.pt` y `best.onnx` (no van a git).
 - **Notas:** qué se cambió respecto a la corrida anterior y los 2–3 patrones de error
   principales vistos al revisar las imágenes mal clasificadas.
+| noche | 2026-11-10 | v2_publico (otra_condicion 6388, sana 6386, sigatoka 6436, sin_hoja 8675 fotos en train) | yolo11s-cls por parches | 384 | 3.5 h | 64 | **0.956** (fotos) | otra_condicion=0.96, sana=0.93, sigatoka=0.97, sin_hoja=0.96 (recall) | 0.5 | runs/noche/ | entrenar_noche.py; T=1.55; ver sigatoka_cls_v2_evaluacion.md |
