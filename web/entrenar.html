@@ -216,7 +216,8 @@ a { color: inherit; }
   <div class="tarjeta bloque">
     <h2>Para el entrenamiento completo</h2>
     <p>Aquí solo se ajusta la decisión final del modelo. Para entrenarlo completo, descarga tus fotos marcadas y llévalas a la Estación:
-      copia las carpetas <code>train</code> y <code>test</code> dentro de <code>data\dataset_v2</code> y entrena en la pestaña Entrenar.</p>
+      el contenido de <code>train\&lt;categoría&gt;</code> va a <code>data\raw\propias\&lt;categoría&gt;</code> (entra al entrenamiento de una noche) y el de
+      <code>test\&lt;categoría&gt;</code>, a <code>data\dataset_v2\test_campo\&lt;categoría&gt;</code> (el examen de campo). Ver <code>vision\GUIA-NOCHE.md</code>.</p>
     <div class="acciones">
       <button class="btn btn-secundario" type="button" data-accion="descargar" id="b-descargar">Descargar fotos marcadas (.zip)</button>
       <button class="btn btn-fantasma" type="button" data-accion="borrar-todo" data-confirmar="Sí, borrar todas mis fotos">Borrar todas mis fotos</button>
@@ -467,8 +468,11 @@ async function descargarZip() {
   }
   const leeme = `Fotos marcadas en dron-sigatoka.netlify.app (Mejorar el modelo), ${new Date().toLocaleString("es-MX")}.\r\n\r\n` +
     `train/<categoría>: para aprender. test/<categoría>: las que la página apartó para comparar modelos.\r\n` +
-    `Para el entrenamiento completo: en la laptop de la Estación, copia las carpetas train y test dentro de\r\n` +
-    `data\\dataset_v2 (se suman a las que ya hay) y entrena en la pestaña Entrenar.\r\n` +
+    `Para el entrenamiento completo (vision\\GUIA-NOCHE.md), en la laptop del equipo:\r\n` +
+    `- El contenido de train\\<categoría> va a data\\raw\\propias\\<categoría>: entra al entrenamiento de una noche\r\n` +
+    `  (python vision\\train\\entrenar_noche.py), que vuelve a armar data\\dataset_v2 con todas las fuentes.\r\n` +
+    `- El contenido de test\\<categoría> va a data\\dataset_v2\\test_campo\\<categoría> después de la noche: es el examen de campo.\r\n` +
+    `  Nunca lo pongas en train.\r\n` +
     `Las fotos están reducidas a 1600 px como máximo.\r\n`;
   archivos.push({ nombre: "LEEME.txt", datos: new TextEncoder().encode(leeme) });
   const a = document.createElement("a");
