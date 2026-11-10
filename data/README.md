@@ -23,7 +23,7 @@ data/
 | Banana Leaf Disease Images (Hailu) — 10.17632/rjykr62kdh.1 | CC BY 4.0 | al bajar | entrenar |
 | BLADE — 10.17632/w7ytz3twjv.2 | CC BY 4.0 | al bajar | solo train |
 | Deficiencias de nutrientes — 10.17632/7vpdrbdkd4.2 (sin Sulphur) | CC BY 4.0 | al bajar | entrenar (otra condición) |
-| UAV Black Sigatoka DS-v2, Colombia — 10.5281/zenodo.20945958 | CC BY 4.0 | al bajar | solo prueba externa |
+| UAV Black Sigatoka DS-v2, Colombia — 10.5281/zenodo.20945958 | CC BY 4.0 | al bajar | separada por vuelo: 65 % entrena, 35 % examen `test_colombia_uav` |
 | Banana Imagery Tanzania — 10.5281/zenodo.7670326 (opcional, 34 GB) | CC BY 4.0 | al bajar | entrenar |
 | DeepWeeds — github.com/AlexOlsen/DeepWeeds | CC BY 4.0 | al bajar | sin_hoja |
 | PlantDoc — github.com/pratikkayal/PlantDoc-Dataset | CC BY 4.0 | al bajar | sin_hoja |

@@ -196,7 +196,14 @@ def main() -> None:
             else f"   yolo11{nombre}-cls · sin datos de test")
 
     def puntaje(nombre):
-        return metrica(metas[nombre][1]).get("f1_macro") or 0.0
+        # F1 de las fotos de hoja y, si existe, el de las fotos aéreas del dron (pesan igual:
+        # el dron es para lo que se usa)
+        m = metas[nombre][1]
+        f1s = [metrica(m).get("f1_macro") or 0.0]
+        aereo = metrica(m, "test_colombia_uav").get("f1_macro")
+        if aereo is not None:
+            f1s.append(aereo)
+        return sum(f1s) / len(f1s)
 
     elegido = max(metas, key=puntaje)
     if "n" in metas and elegido == "s" and puntaje("s") - puntaje("n") < 0.01:

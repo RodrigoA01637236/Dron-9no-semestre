@@ -1,5 +1,5 @@
 {
-  "_nota": "Fuentes del dataset v2, verificadas el 2026-11-09. 'uso': 'entrenar' entra al reparto train/val/test; 'solo_entrenar' va completa a train (sus fotos salen de una misma foto original y contaminarían test); 'externo' va completa a test_<nombre> (nunca se entrena con ella). 'clase_fija' manda toda la fuente a una clase (negativos -> sin_hoja). 'mapa' manda sobre 'palabras'. Carpetas con algo de 'excluir' se saltan. 'descarga' la usa vision/train/descargar_datos.py. Registrar cada fuente en data/README.md.",
+  "_nota": "Fuentes del dataset v2, verificadas el 2026-11-09. 'uso': 'entrenar' entra al reparto train/val/test; 'solo_entrenar' va completa a train (sus fotos salen de una misma foto original y contaminarían test); 'externo' va completa a test_<nombre> (nunca se entrena con ella); 'dividir' separa la fuente por vuelo ('grupo', expresión sobre el nombre del archivo): la fracción 'prueba' va a test_<nombre> en vuelos completos y el resto a train/val. En formato YOLO, 'vacias' es la clase de las imágenes con etiqueta vacía (revisadas, sin lesiones) y 'max_vacias' su tope. 'clase_fija' manda toda la fuente a una clase (negativos -> sin_hoja). 'mapa' manda sobre 'palabras'. Carpetas con algo de 'excluir' se saltan. 'descarga' la usa vision/train/descargar_datos.py. Registrar cada fuente en data/README.md.",
   "clases": [
     "otra_condicion",
     "sana",
@@ -230,16 +230,20 @@
     {
       "nombre": "colombia_uav",
       "carpeta": "data/raw/public/colombia_uav",
-      "uso": "externo",
+      "uso": "dividir",
       "formato": "yolo",
       "clases_yolo": {
         "0": "sigatoka"
       },
+      "vacias": "sana",
+      "grupo": "^(\\d{8}_\\d{2}-\\d{2})",
+      "prueba": 0.35,
       "licencia": "CC BY 4.0",
       "doi": "10.5281/zenodo.20945958",
       "tamano_gb": 11.7,
-      "max_imagenes": 3000,
-      "nota": "DS-v2: recortes de 1024x1024 de fotos de dron (Colombia, 2025) con cajas de Sigatoka. Solo prueba: no trae hojas sanas confirmadas.",
+      "max_imagenes": 4000,
+      "max_vacias": 4000,
+      "nota": "DS-v2: recortes de 1024x1024 de fotos de dron RGB (Colombia, 2025). Con cajas: Sigatoka negra; con etiqueta vacía: revisados sin lesiones (se usan como 'sana'). Se divide por vuelo (fecha_hora del nombre): 35 % de las imágenes, en vuelos completos, van al examen test_colombia_uav; el resto a train/val.",
       "descarga": {
         "tipo": "zenodo",
         "id": "20945958",

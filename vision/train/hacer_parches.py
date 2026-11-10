@@ -27,6 +27,12 @@ Los descartados se anotan en parches.csv para poder revisarlos.
 --equilibrar saca más parches por foto de las clases con menos fotos (hasta 3 veces), así
 el modelo no aprende a decir siempre la clase más común. Solo en train.
 
+Fotos aéreas con lesiones marcadas (cajas YOLO en <split>/cajas_yolo.json, p. ej. el dron de
+Colombia): los cuadros se cortan alrededor de cada lesión, del mismo tamaño que usa la
+inferencia en esa foto (vision/parches.py) y con la lesión en una posición al azar. La caja
+es la etiqueta verdadera, así que el maestro no los filtra (el v1 no ve lesiones desde el
+aire). Las aéreas sin lesiones (caja vacía) se cortan como cualquier foto sana.
+
 Uso (desde la raíz del repo, con el venv activo):
     python vision/train/hacer_parches.py --maestro vision/models/sigatoka_cls_v1.onnx --equilibrar
     python vision/train/hacer_parches.py --entrada data/dataset_v2 --salida data/parches_v2 --procesos 8
@@ -37,6 +43,7 @@ de fotos completas en vision/train/calibrar.py. Ver vision/GUIA-PARCHES.md.
 """
 import argparse
 import csv
+import json
 import os
 import random
 import sys
@@ -122,6 +129,26 @@ def cuadros_de_foto(img: np.ndarray, escalas: list[float], min_hoja: float, masc
     return salida
 
 
+def cuadros_de_cajas(img: np.ndarray, cajas: list, cuantos: int, rng: random.Random) -> list[dict]:
+    """Cuadros que contienen completa una lesión marcada (cx, cy, w, h normalizados)."""
+    alto, ancho = img.shape[:2]
+    corto = min(alto, ancho)
+    base = P.lado_cuadro(alto, ancho, P.config(None))  # el tamaño que usa la inferencia
+    orden = list(cajas)
+    rng.shuffle(orden)
+    salida = []
+    for i in range(min(cuantos, 2 * len(orden))):
+        cx, cy, bw, bh = orden[i % len(orden)]
+        cx, cy, bw, bh = cx * ancho, cy * alto, bw * ancho, bh * alto
+        lado = int(min(corto, max(base * rng.uniform(0.8, 1.25), 1.2 * max(bw, bh))))
+        holgura_x, holgura_y = max(0.0, (lado - bw) / 2), max(0.0, (lado - bh) / 2)
+        x = int(round(cx - lado / 2 + rng.uniform(-holgura_x, holgura_x)))
+        y = int(round(cy - lado / 2 + rng.uniform(-holgura_y, holgura_y)))
+        x, y = min(max(0, x), ancho - lado), min(max(0, y), alto - lado)
+        salida.append({"x": x, "y": y, "w": lado, "h": lado, "hoja": 1.0, "escala": round(lado / corto, 2)})
+    return salida
+
+
 # ------------------------------------------------------------------ un proceso por foto
 
 _G: dict = {}
@@ -138,7 +165,7 @@ def _iniciar(args_dict: dict) -> None:
 
 
 def procesar_foto(tarea: tuple) -> tuple[list[dict], Counter, Counter]:
-    ruta, split, clase, cuantos, semilla = tarea
+    ruta, split, clase, cuantos, semilla, cajas = tarea
     rng = random.Random(semilla)
     entrada, salida = Path(_G["entrada"]), Path(_G["salida"])
     maestro = _G["maestro"]
@@ -147,6 +174,13 @@ def procesar_foto(tarea: tuple) -> tuple[list[dict], Counter, Counter]:
     if img is None:
         motivos["no se pudo leer"] += 1
         return filas, conteo, motivos
+
+    por_caja = bool(cajas)  # foto aérea con lesiones marcadas
+    if por_caja:
+        cs = cuadros_de_cajas(img, cajas, cuantos, rng)
+        etiquetas_fijas = [None] * len(cs)
+        recortes = [cv2.resize(P.recortar(img, c), (LADO, LADO), interpolation=cv2.INTER_AREA) for c in cs]
+        return _guardar(ruta, split, clase, cs, recortes, etiquetas_fijas, None, None, rng, entrada, salida)
 
     mascara = P.mascara_hoja(img)
     es_sin_hoja = clase == SIN_HOJA
@@ -171,7 +205,12 @@ def procesar_foto(tarea: tuple) -> tuple[list[dict], Counter, Counter]:
 
     recortes = [cv2.resize(P.recortar(img, c), (LADO, LADO), interpolation=cv2.INTER_AREA) for c in cs]
     probs = maestro.probabilidades(recortes) if maestro is not None else None
+    return _guardar(ruta, split, clase, cs, recortes, etiquetas_fijas, probs, maestro, rng, entrada, salida)
 
+
+def _guardar(ruta, split, clase, cs, recortes, etiquetas_fijas, probs, maestro, rng, entrada, salida):
+    """Filtra con el maestro (si hay), altera y guarda los parches de una foto."""
+    filas, conteo, motivos = [], Counter(), Counter()
     for i, (c, rec) in enumerate(zip(cs, recortes)):
         etiqueta, motivo, p_clase = etiquetas_fijas[i] or clase, "", None
         if probs is not None:
@@ -244,6 +283,11 @@ def main() -> None:
     # Tareas: (foto, split, clase, parches a sacar, semilla)
     tareas = []
     for split in splits:
+        archivo_cajas = entrada / split / "cajas_yolo.json"
+        cajas = json.loads(archivo_cajas.read_text(encoding="utf-8")) if archivo_cajas.exists() else {}
+        if cajas:
+            print(f"  {split:6s} {sum(1 for v in cajas.values() if v)} fotos aéreas con lesiones marcadas:"
+                  " cuadros alrededor de cada lesión")
         por_clase = {}
         for d in sorted(p for p in (entrada / split).iterdir() if p.is_dir()) if (entrada / split).is_dir() else []:
             por_clase[d.name] = sorted(p for p in d.rglob("*") if p.suffix.lower() in IMG_EXTS)
@@ -256,7 +300,8 @@ def main() -> None:
             if clase == SIN_HOJA:
                 cuantos = max(2, args.por_foto // 2)  # muchas fuentes de negativos: menos por foto
             print(f"  {split:6s} {clase:16s} {len(fotos):6d} fotos x {cuantos} parches")
-            tareas += [(r, split, clase, cuantos, args.seed + len(tareas) + k) for k, r in enumerate(fotos)]
+            tareas += [(r, split, clase, cuantos, args.seed + len(tareas) + k, cajas.get(r.name))
+                       for k, r in enumerate(fotos)]
 
     print(f"\n{len(tareas)} fotos, {args.procesos} procesos"
           f"{'; maestro ' + Path(args.maestro).name if args.maestro else ''}")

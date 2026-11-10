@@ -14,6 +14,10 @@ Qué hace:
    comparación v1 contra v2 sea justa (v1 nunca vio esas fotos).
 5. Reparte el resto 70/15/15 por clase. Las fuentes con uso 'externo' van completas a
    test_<nombre>/ y se les quitan las fotos repetidas de train.
+6. Las fuentes con uso 'dividir' (fotos aéreas de Colombia) se separan por vuelo: los vuelos
+   de 'prueba' van completos a test_<nombre>/ (el examen nunca ve un vuelo del entrenamiento)
+   y el resto a train/val. En formato YOLO, una etiqueta vacía (revisada, sin lesiones) da la
+   clase 'vacias' de la fuente (p. ej. "sana"); 'max_vacias' limita cuántas.
 
 Uso (desde la raíz del repo, con el venv activo):
     python vision/train/preparar_datos.py
@@ -134,6 +138,7 @@ def recolectar_carpetas(fuente: dict, cfg: dict, raiz: Path, avisos: Counter) ->
 def recolectar_yolo(fuente: dict, raiz: Path, avisos: Counter) -> list[dict]:
     """Formato YOLO: images/x.jpg + labels/x.txt (clase cx cy w h normalizados)."""
     mapa = {int(k): v for k, v in fuente.get("clases_yolo", {"0": "sigatoka"}).items()}
+    vacias = fuente.get("vacias")
     items = []
     for ruta in sorted(raiz.rglob("*")):
         if ruta.suffix.lower() not in IMG_EXTS or ruta.name.startswith(".") or not ruta.is_file():
@@ -147,18 +152,65 @@ def recolectar_yolo(fuente: dict, raiz: Path, avisos: Counter) -> list[dict]:
         if not etiqueta.exists():
             etiqueta = ruta.with_suffix(".txt")
         cajas, clases = [], Counter()
-        if etiqueta.exists():
-            for linea in etiqueta.read_text(encoding="utf-8", errors="ignore").splitlines():
-                v = linea.split()
-                if len(v) >= 5 and int(float(v[0])) in mapa:
-                    clases[mapa[int(float(v[0]))]] += 1
-                    cajas.append([float(x) for x in v[1:5]])
+        texto = etiqueta.read_text(encoding="utf-8", errors="ignore") if etiqueta.exists() else None
+        for linea in (texto or "").splitlines():
+            v = linea.split()
+            if len(v) >= 5 and int(float(v[0])) in mapa:
+                clases[mapa[int(float(v[0]))]] += 1
+                cajas.append([float(x) for x in v[1:5]])
         if not clases:
+            if vacias and texto is not None and not texto.strip():
+                # etiqueta vacía: los autores revisaron la imagen y no marcaron lesiones
+                items.append({"ruta": ruta, "rel": ruta.relative_to(raiz), "clase": vacias,
+                              "fuente": fuente["nombre"], "uso": fuente["uso"], "cajas": []})
+                continue
             avisos[f"{fuente['nombre']}: imagen sin cajas de una clase conocida (se omite)"] += 1
             continue
         items.append({"ruta": ruta, "rel": ruta.relative_to(raiz), "clase": clases.most_common(1)[0][0],
                       "fuente": fuente["nombre"], "uso": fuente["uso"], "cajas": cajas})
     return items
+
+
+def foto_de(it: dict) -> str:
+    """Foto original de un recorte: '20250703_10-58_CLOUDY_004_r0_c3' -> '20250703_10-58_CLOUDY_004'."""
+    return re.sub(r"_r\d+_c\d+$", "", it["ruta"].stem)
+
+
+def marcar_division(items: list[dict], fuente: dict, semilla: int) -> None:
+    """Uso 'dividir': marca cada imagen con prueba=True/False (por vuelo) y val=True/False (por foto).
+
+    Un vuelo completo va al examen o al entrenamiento, nunca a los dos: dos fotos seguidas del
+    mismo vuelo se traslapan y verían las mismas plantas. Si hay menos de 4 vuelos se divide
+    por foto original (los recortes de una foto siempre quedan juntos).
+    """
+    patron = re.compile(fuente.get("grupo") or r"^(\d{8}_\d{2}-\d{2})")
+
+    def vuelo(it):
+        m = patron.match(it["ruta"].stem)
+        return m.group(1) if m else foto_de(it)
+
+    clave, nombre = vuelo, "vuelos"
+    grupos = Counter(vuelo(it) for it in items)
+    if len(grupos) < 4:
+        clave, nombre = foto_de, "fotos"
+        grupos = Counter(foto_de(it) for it in items)
+        print(f"    AVISO {fuente['nombre']}: menos de 4 vuelos; divido por foto original.")
+    orden = sorted(grupos)
+    random.Random(semilla).shuffle(orden)
+    meta, n, prueba = float(fuente.get("prueba", 0.35)) * len(items), 0, set()
+    for g in orden:  # agrega un vuelo solo si acerca el examen a la fracción pedida
+        if abs(n + grupos[g] - meta) < abs(n - meta):
+            prueba.add(g)
+            n += grupos[g]
+    for it in items:
+        it["prueba"] = clave(it) in prueba
+        # val por foto original (estable entre corridas): 15 % de lo que no es examen
+        it["val"] = not it["prueba"] and int(hashlib.md5(foto_de(it).encode()).hexdigest(), 16) % 100 < 15
+    cuenta = Counter((it["prueba"], it["clase"]) for it in items)
+    print(f"    {fuente['nombre']}: {len(grupos)} {nombre}; examen {len(prueba)} {nombre}"
+          f" ({dict(sorted((c, k) for (p, c), k in cuenta.items() if p))}),"
+          f" entrenamiento {len(grupos) - len(prueba)}"
+          f" ({dict(sorted((c, k) for (p, c), k in cuenta.items() if not p))})")
 
 
 # ------------------------------------------------------------------ principal
@@ -192,11 +244,22 @@ def main() -> None:
             continue
         nuevos = recolectar_yolo(f, raiz, avisos) if f.get("formato") == "yolo" else \
             recolectar_carpetas(f, cfg, raiz, avisos)
+        rng_f = random.Random(args.seed)
+        tope_v = int(f.get("max_vacias") or 0)
+        if tope_v and f.get("vacias"):
+            vac = [i for i in nuevos if i["cajas"] == []]
+            if len(vac) > tope_v:
+                quitar = {id(i) for i in rng_f.sample(vac, len(vac) - tope_v)}
+                nuevos = [i for i in nuevos if id(i) not in quitar]
         tope = int(f.get("max_imagenes") or 0)
-        if tope and len(nuevos) > tope:
-            nuevos = random.Random(args.seed).sample(nuevos, tope)
+        con_cajas = [i for i in nuevos if i["cajas"] != []] if tope_v else nuevos
+        if tope and len(con_cajas) > tope:
+            quitar = {id(i) for i in rng_f.sample(con_cajas, len(con_cajas) - tope)}
+            nuevos = [i for i in nuevos if id(i) not in quitar]
         conteo = Counter(i["clase"] for i in nuevos)
         print(f"  {f['nombre']:14s} {len(nuevos):6d} imágenes  {dict(sorted(conteo.items()))}  [{f['uso']}]")
+        if f["uso"] == "dividir":
+            marcar_division(nuevos, f, args.seed)
         items += nuevos
     for a, n in sorted(avisos.items()):
         print(f"  AVISO {a}: {n}")
@@ -283,6 +346,14 @@ def main() -> None:
         if usos == {"externo"}:
             destino_grupo[raiz_g] = "externo"
             continue
+        if "dividir" in usos:
+            div = [items[k] for k in ks if items[k]["uso"] == "dividir"]
+            if any(it["prueba"] for it in div):
+                destino_grupo[raiz_g] = "externo"  # test_<fuente>: vuelos que el modelo no ve
+            else:
+                # no cuenta en 'asignado': el reparto 70/15/15 de las demás fuentes no cambia
+                destino_grupo[raiz_g] = "val" if all(it["val"] for it in div) else "train"
+            continue
         if "solo_entrenar" in usos:
             destino_grupo[raiz_g] = "train"
             asignado[(clase, "train")] += len(ks)
@@ -328,6 +399,9 @@ def main() -> None:
     for raiz_g, s in destino_grupo.items():
         ks = miembros[raiz_g]
         mixto = s != "externo" and any(items[k]["uso"] == "externo" for k in ks)
+        if s == "externo" and any(items[k]["uso"] == "dividir" for k in ks):
+            # grupo de examen aéreo: solo entran las imágenes de esa fuente
+            ks = [k for k in ks if items[k]["uso"] in ("dividir", "externo")]
         vistos_md5 = set()
         for k in ks:
             it = items[k]

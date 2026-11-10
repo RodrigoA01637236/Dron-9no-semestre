@@ -102,7 +102,7 @@ rutas están en [train/fuentes_v2.json](train/fuentes_v2.json); si usas otra, c�
 | Banana Leaf Disease Images (Hailu) | doi.org/10.17632/rjykr62kdh.1 | `data\raw\public\hailu` | Más variedad de campo |
 | BLADE | doi.org/10.17632/w7ytz3twjv.2 | `data\raw\public\blade` | Opcional |
 | Banana Leaf Disease Dataset of Bangladesh | doi.org/10.17632/wzshm7ky49.1 | `data\raw\public\bangladesh` | Opcional |
-| Sigatoka desde dron, Colombia (cajas YOLO), CC BY 4.0 | doi.org/10.5281/zenodo.20945958 | `data\raw\public\colombia_uav` | **Solo prueba**: fotos aéreas reales |
+| Sigatoka desde dron, Colombia (cajas YOLO), CC BY 4.0 | doi.org/10.5281/zenodo.20945958 | `data\raw\public\colombia_uav` | Fotos aéreas reales, separadas por vuelo: 65 % entrena, 35 % examen (`test_colombia_uav`) |
 
 - Descarga el zip desde la página (Zenodo y Mendeley se descargan con el navegador) y
   descomprímelo en su carpeta. No importa cuántas subcarpetas traiga.

@@ -89,7 +89,7 @@ Fuentes (verificadas el 2026-11-09; todas en [train/fuentes_v2.json](train/fuent
 | Hailu, Etiopía (10.17632/rjykr62kdh.1) | CC BY 4.0 | 1,289 | la única con Xanthomonas (fotos muy chicas) |
 | BLADE, India (10.17632/w7ytz3twjv.2) | CC BY 4.0 | 1,218 | texturas de lesión; solo para train |
 | Deficiencias de nutrientes (10.17632/7vpdrbdkd4.2) | CC BY 4.0 | hasta 3,000 | deficiencias (otra condición) |
-| **Dron, Colombia DS-v2** (Zenodo 10.5281/zenodo.20945958) | CC BY 4.0 | hasta 3,000 | **solo prueba**: fotos aéreas reales con Sigatoka |
+| **Dron, Colombia DS-v2** (Zenodo 10.5281/zenodo.20945958) | CC BY 4.0 | hasta 4,000 con Sigatoka + 4,000 sin lesiones | fotos aéreas reales, **separadas por vuelo**: 65 % entrena, 35 % es el examen `test_colombia_uav` (vuelos que el modelo nunca ve) |
 | *Sin hojas:* DeepWeeds (manual), PlantDoc, iBean, café de Perú (10.17632/mfpxg4y65r.2), COCO val2017 | CC BY 4.0 / MIT / Flickr | ~11,000 | maleza, otros cultivos, frijol, café, escenas; COCO sin las fotos con plátano |
 | *Opcional:* Tanzania Zenodo (10.5281/zenodo.7670326) | CC BY 4.0 | 11,767 | más del mismo laboratorio, resolución completa; **34 GB**: `--con-grandes` |
 
