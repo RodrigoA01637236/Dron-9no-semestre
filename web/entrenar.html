@@ -175,6 +175,7 @@ a { color: inherit; }
   .marcas .no-sirve { grid-column: 1 / -1; min-height: 40px; }
   .fila-modelo { grid-template-columns: 84px minmax(0, 1fr) auto; gap: 10px; }
 }
+@media (max-width: 520px) { .largo { display: none; } }
 @media (prefers-reduced-motion: reduce) {
   .btn, .marcas button, .miniatura { transition-property: background-color, box-shadow; }
   .soltar, .soltar[data-visible] { transform: none; }
@@ -185,8 +186,9 @@ a { color: inherit; }
 <header class="encabezado">
   <a class="marca" href="./"><span class="logo" data-ico="hoja"></span>Dron Sigatoka</a>
   <nav class="pestanas" aria-label="Secciones">
-    <a href="./">Revisar una hoja</a>
-    <a href="entrenar.html" aria-current="page">Mejorar el modelo</a>
+    <a href="./">Revisar<span class="largo">&nbsp;una hoja</span></a>
+    <a href="historial.html">Historial</a>
+    <a href="entrenar.html" aria-current="page">Mejorar<span class="largo">&nbsp;el modelo</span></a>
   </nav>
 </header>
 

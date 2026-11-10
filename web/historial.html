@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Historial · Dron Sigatoka</title>
+<meta name="description" content="Cómo va tu lote vuelo tras vuelo: fotos con Sigatoka, cuadros que preocupan y mapa de calor. Todo se guarda en tu navegador.">
+<meta name="theme-color" content="#fafafa">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0a0a'/%3E%3Cg transform='translate(5 5) scale(.92)' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 19.5C4.5 11 10 4.5 19.5 4.5c0 9.5-6.5 15-15 15Z'/%3E%3Cpath d='M4.5 19.5 14 10'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@500&display=swap">
+<style>
+:root {
+  --bg: #fafafa; --surface: #ffffff; --sunken: #f4f4f3; --text: #0a0a0a; --text-2: #5c5c5c; --text-3: #8a8a8a;
+  --line: rgba(0, 0, 0, .08); --grid: #ececea;
+  --sana: #2e9e44; --sigatoka: #d7263d; --otra: #f0a202; --sin: #b3bbc2;
+  /* % de fotos con Sigatoka por cuadro: un solo tono, de claro a oscuro (validado: monótono, pasos >= 0.06, extremo claro 2.26:1) */
+  --r1: #ec8492; --r2: #dc4a5f; --r3: #bf1a32; --r4: #86101f; --cero: #d6ddd3;
+  /* cambio entre vuelos: rojo (empeoró) y azul (mejoró) con gris en medio */
+  --peor2: #bf1a32; --peor1: #ec8492; --igual: #e2e1dc; --mejor1: #6da7ec; --mejor2: #256abf;
+  --font: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Geist Mono", ui-monospace, Consolas, monospace;
+  --ease-out: cubic-bezier(.23, 1, .32, 1);
+  --shadow-sm: 0 0 0 1px rgba(0, 0, 0, .06), 0 1px 2px rgba(0, 0, 0, .04);
+  --shadow-md: 0 0 0 1px rgba(0, 0, 0, .06), 0 2px 4px rgba(0, 0, 0, .03), 0 12px 24px -10px rgba(0, 0, 0, .12);
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font: 400 15px/1.5 var(--font); letter-spacing: -.011em;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+h1, h2, h3, p { margin: 0; }
+button, input { font: inherit; color: inherit; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.ico { width: 18px; height: 18px; flex: none; }
+.num { font-variant-numeric: tabular-nums; }
+[hidden] { display: none !important; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 14px; border: 0; border-radius: 10px;
+  font: 500 14px/1 var(--font); letter-spacing: -.01em; cursor: pointer; white-space: nowrap; text-decoration: none;
+  transition: transform 160ms var(--ease-out), background-color 150ms ease, box-shadow 150ms ease; }
+.btn:active { transform: scale(.97); }
+.btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+.btn-primario { background: var(--text); color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14), 0 1px 2px rgba(0, 0, 0, .24); }
+.btn-secundario { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+.btn-fantasma { background: transparent; color: var(--text-2); }
+.btn-icono { width: 36px; height: 36px; padding: 0; }
+.btn.confirmando { background: var(--text); color: #fff; }
+@media (hover: hover) and (pointer: fine) {
+  .btn-primario:not(:disabled):hover { background: #262626; }
+  .btn-secundario:not(:disabled):not(.confirmando):hover { background: #f7f7f7; }
+  .btn-fantasma:not(.confirmando):hover { background: rgba(0, 0, 0, .045); color: var(--text); }
+}
+
+.encabezado { max-width: 1200px; margin: 0 auto; height: 64px; padding: 0 24px; display: flex; align-items: center; gap: 12px; }
+.marca { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; letter-spacing: -.02em; margin-right: auto; text-decoration: none; }
+.logo { width: 28px; height: 28px; border-radius: 8px; background: var(--text); color: #fff; display: grid; place-items: center; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16); }
+.logo .ico { width: 16px; height: 16px; }
+.pestanas { display: flex; gap: 2px; padding: 3px; border-radius: 12px; background: var(--sunken); }
+.pestanas a { display: inline-flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 9px; font-size: 14px; font-weight: 500; color: var(--text-2);
+  text-decoration: none; transition: background-color 150ms ease, color 150ms ease; }
+.pestanas a[aria-current="page"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+@media (hover: hover) and (pointer: fine) { .pestanas a:not([aria-current]):hover { color: var(--text); } }
+
+.pagina { max-width: 1200px; margin: 0 auto; padding: 24px 24px 64px; display: grid; gap: 20px; }
+.intro { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 32px; padding: 12px 0 8px; }
+.intro h1 { font-size: clamp(2.2rem, 4.4vw, 3.4rem); font-weight: 600; line-height: 1.02; letter-spacing: -.045em; }
+.intro p { font-size: 16px; color: var(--text-2); max-width: 46ch; margin-top: 10px; }
+.intro .acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+.aviso-ejemplo { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; background: #fdf3dc; color: #6b4a00; font-size: 13.5px; font-weight: 500; }
+.aviso-ejemplo .btn { margin-left: auto; height: 32px; font-size: 13px; }
+
+.tarjeta { background: var(--surface); border-radius: 20px; box-shadow: var(--shadow-md); }
+.vacio { padding: 40px 24px; display: grid; justify-items: center; text-align: center; gap: 12px; }
+.vacio .circulo { width: 56px; height: 56px; border-radius: 16px; background: var(--sunken); display: grid; place-items: center; }
+.vacio .circulo .ico { width: 26px; height: 26px; }
+.vacio h2 { font-size: 22px; font-weight: 600; letter-spacing: -.03em; }
+.vacio p { font-size: 14.5px; color: var(--text-2); max-width: 52ch; }
+.vacio .acciones { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 6px; }
+
+/* el selector de vuelo: una fila arriba de todo lo que cambia con él */
+.selector { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 10px 12px; border-radius: 16px; background: var(--surface); box-shadow: var(--shadow-sm);
+  position: sticky; top: 8px; z-index: 900; }
+.selector .etiqueta { font-size: 13px; color: var(--text-2); font-weight: 500; }
+.selector input[type="range"] { flex: 1; min-width: 160px; accent-color: var(--text); height: 28px; }
+.selector .cual { font-size: 14px; font-weight: 600; letter-spacing: -.015em; white-space: nowrap; }
+.selector .cual small { font-weight: 400; color: var(--text-2); margin-left: 6px; font-size: 13px; }
+
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.kpi { padding: 16px 18px; display: grid; gap: 6px; align-content: start; }
+.kpi .nombre { font-size: 13px; color: var(--text-2); }
+.kpi .valor { font-size: 34px; font-weight: 600; letter-spacing: -.04em; line-height: 1.05; }
+.kpi .valor small { font-size: 15px; font-weight: 500; color: var(--text-2); letter-spacing: -.01em; margin-left: 4px; }
+.kpi .delta { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-2); }
+.kpi .delta .ico { width: 15px; height: 15px; }
+.kpi .delta.peor { color: #a8172b; } .kpi .delta.mejor { color: #1d6b2e; }
+
+.principal { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.columna { display: grid; gap: 20px; }
+.cabeza { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 16px 18px 0; }
+.cabeza h2 { font-size: 16px; font-weight: 600; letter-spacing: -.02em; margin-right: auto; }
+.cabeza p { flex-basis: 100%; font-size: 13px; color: var(--text-2); margin-top: -6px; }
+.segmento { display: inline-flex; padding: 3px; gap: 2px; border-radius: 10px; background: var(--sunken); }
+.segmento button { height: 30px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease; }
+.segmento button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+.casilla { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-2); cursor: pointer; }
+.casilla input { accent-color: var(--text); }
+
+.mapa-marco { position: relative; margin: 14px 18px 0; height: 460px; border-radius: 14px; overflow: hidden; isolation: isolate; }
+.mapa { position: absolute; inset: 0; background: #f1f2ef; }
+.mapa-aviso { position: absolute; z-index: 600; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 10px 14px; border-radius: 12px; background: rgba(255, 255, 255, .92);
+  box-shadow: var(--shadow-md); font-size: 13.5px; text-align: center; max-width: 80%; }
+.escala { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 12px 18px 16px; font-size: 12.5px; color: var(--text-2); }
+.escala span { display: inline-flex; align-items: center; gap: 6px; }
+.escala i { width: 14px; height: 14px; border-radius: 4px; flex: none; }
+.escala i.vacia { box-shadow: inset 0 0 0 1.5px #9aa1a6; }
+.leaflet-container { font-family: var(--font); }
+.leaflet-tooltip { border-radius: 10px; box-shadow: var(--shadow-md); border: 0; font-size: 12.5px; padding: 8px 10px; }
+.leaflet-tooltip b { font-size: 13.5px; }
+.leaflet-control-attribution { font-size: 10.5px; background: rgba(255, 255, 255, .7) !important; }
+.leaflet-touch .leaflet-bar { border: 0; border-radius: 10px; overflow: hidden; box-shadow: var(--shadow-md); }
+
+.grafica { position: relative; padding: 8px 12px 14px; }
+.grafica svg { display: block; width: 100%; overflow: visible; }
+.grafica svg:focus-visible { outline: 2px solid var(--text); outline-offset: 4px; border-radius: 6px; }
+.leyenda { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 10px 18px 0; font-size: 12.5px; color: var(--text-2); }
+.leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+.leyenda i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.ejes text { font: 500 11px var(--mono); fill: var(--text-3); letter-spacing: 0; }
+.ejes text.sel { fill: var(--text); }
+.tip { position: fixed; z-index: 2000; pointer-events: none; min-width: 150px; padding: 9px 11px; border-radius: 10px; background: var(--surface); box-shadow: var(--shadow-md);
+  font-size: 12.5px; color: var(--text-2); opacity: 0; transform: translateY(2px); transition: opacity 120ms var(--ease-out), transform 120ms var(--ease-out); }
+.tip[data-visible] { opacity: 1; transform: none; }
+.tip b { display: block; color: var(--text); font-size: 13px; margin-bottom: 4px; }
+.tip .fila { display: flex; align-items: center; gap: 8px; }
+.tip .fila i { width: 12px; height: 2px; border-radius: 1px; flex: none; }
+.tip .fila strong { color: var(--text); font-weight: 600; margin-right: 2px; }
+
+.abajo { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.bloque { padding: 16px 18px 18px; display: grid; gap: 12px; }
+.bloque h2 { font-size: 16px; font-weight: 600; letter-spacing: -.02em; }
+.bloque > p { font-size: 13px; color: var(--text-2); margin-top: -6px; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th { text-align: left; font-size: 12px; font-weight: 500; color: var(--text-3); padding: 0 8px 8px 0; }
+td { padding: 9px 8px 9px 0; border-top: 1px solid var(--line); vertical-align: middle; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+tr.fila-celda { cursor: pointer; transition: background-color 120ms ease; }
+@media (hover: hover) and (pointer: fine) { tr.fila-celda:hover { background: var(--sunken); } }
+tr.fila-celda[aria-selected="true"] { background: var(--sunken); }
+.celda-nombre { font: 600 13px var(--mono); letter-spacing: 0; }
+.metro { width: 72px; height: 6px; border-radius: 3px; background: #f3d6da; overflow: hidden; }
+.metro i { display: block; height: 100%; border-radius: 3px; background: var(--sigatoka); }
+.racha { font-size: 12.5px; color: var(--text-2); }
+.racha.fuerte { color: #a8172b; font-weight: 500; }
+.vuelos { list-style: none; margin: 0; padding: 0; display: grid; }
+.vuelos li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+.vuelos li:first-child { border-top: 0; padding-top: 0; }
+.vuelos b { font-size: 14px; font-weight: 600; }
+.vuelos small { display: block; font-size: 12.5px; color: var(--text-2); }
+.vuelos .botones { display: flex; gap: 4px; }
+.vuelos .btn { height: 32px; font-size: 13px; padding: 0 10px; }
+.vuelos li[aria-current="true"] b::after { content: "· viendo"; margin-left: 6px; font-weight: 500; font-size: 12px; color: var(--text-3); }
+details.tabla { padding: 14px 18px; }
+details.tabla summary { cursor: pointer; font-size: 14px; font-weight: 500; }
+details.tabla .marco { overflow-x: auto; margin-top: 12px; }
+details.tabla table { min-width: 720px; }
+.mensaje { font-size: 13.5px; }
+.mensaje.bien { color: #1d5c2a; font-weight: 500; }
+.mensaje.error { color: #b4192d; font-weight: 500; }
+
+@media (max-width: 1023px) {
+  .encabezado { padding: 10px 16px 6px; height: auto; min-height: 56px; flex-wrap: wrap; row-gap: 8px; }
+  .pagina { padding: 12px 16px 48px; gap: 16px; }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .principal, .abajo { grid-template-columns: minmax(0, 1fr); }
+  .mapa-marco { height: 360px; margin: 12px 12px 0; }
+  .selector { top: 4px; }
+}
+@media (max-width: 520px) {
+  .pestanas { width: 100%; }
+  .pestanas a { flex: 1; justify-content: center; padding: 0 6px; }
+  .largo { display: none; }
+  .kpi { padding: 12px 14px; }
+  .kpi .valor { font-size: 28px; }
+  .selector .cual small { display: block; margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn, tr.fila-celda, .tip { transition-property: background-color, opacity; transform: none; }
+}
+</style>
+</head>
+<body>
+<header class="encabezado">
+  <a class="marca" href="./"><span class="logo" data-ico="hoja"></span>Dron Sigatoka</a>
+  <nav class="pestanas" aria-label="Secciones">
+    <a href="./">Revisar<span class="largo">&nbsp;una hoja</span></a>
+    <a href="historial.html" aria-current="page">Historial</a>
+    <a href="entrenar.html">Mejorar<span class="largo">&nbsp;el modelo</span></a>
+  </nav>
+</header>
+
+<main class="pagina">
+  <section class="intro">
+    <div>
+      <h1>Cómo va tu lote.</h1>
+      <p>Cada vuelo que analizas se guarda aquí, en tu navegador. Compara vuelo con vuelo y mira dónde avanza o retrocede la Sigatoka.</p>
+    </div>
+    <div class="acciones">
+      <a class="btn btn-primario" href="./#vuelo"><span data-ico="dron"></span>Analizar un vuelo</a>
+      <button class="btn btn-secundario" type="button" data-accion="agregar"><span data-ico="archivo"></span>Agregar vuelos (.geojson)</button>
+    </div>
+  </section>
+  <p class="aviso-ejemplo" id="aviso-ejemplo" hidden>Ejemplo con datos inventados: así se ve un lote después de seis vuelos.
+    <button class="btn btn-secundario" type="button" data-accion="salir-ejemplo">Salir del ejemplo</button></p>
+  <p class="mensaje" id="msg" aria-live="polite" hidden></p>
+
+  <section class="tarjeta vacio" id="vacio" hidden>
+    <span class="circulo" data-ico="mapa"></span>
+    <h2>Todavía no hay vuelos en tu historial</h2>
+    <p>Cada vez que analizas las fotos de un vuelo, se guarda aquí solo. Con dos vuelos o más ves cómo cambia tu lote. También puedes agregar mapas (.geojson) que te mandaron.</p>
+    <div class="acciones">
+      <a class="btn btn-primario" href="./#vuelo"><span data-ico="dron"></span>Analizar un vuelo</a>
+      <button class="btn btn-secundario" type="button" data-accion="agregar">Agregar vuelos (.geojson)</button>
+      <button class="btn btn-fantasma" type="button" data-accion="ejemplo">Ver un ejemplo</button>
+    </div>
+  </section>
+
+  <div id="contenido" hidden>
+    <div class="pagina" style="padding:0">
+      <div class="selector" role="group" aria-label="Elegir el vuelo">
+        <span class="etiqueta">Vuelo</span>
+        <button class="btn btn-secundario btn-icono" type="button" data-accion="anterior" aria-label="Vuelo anterior"><span data-ico="izq"></span></button>
+        <input type="range" id="rango" min="0" max="0" step="1" value="0" aria-label="Vuelo">
+        <button class="btn btn-secundario btn-icono" type="button" data-accion="siguiente" aria-label="Vuelo siguiente"><span data-ico="der"></span></button>
+        <button class="btn btn-secundario" type="button" data-accion="reproducir" id="b-reproducir"><span data-ico="play"></span>Ver la evolución</button>
+        <span class="cual" id="cual" aria-live="polite"></span>
+      </div>
+
+      <section class="kpis" id="kpis" aria-label="Indicadores del vuelo elegido"></section>
+
+      <div class="principal">
+        <section class="tarjeta">
+          <div class="cabeza">
+            <h2 id="t-mapa">Mapa de calor</h2>
+            <div class="segmento" role="group" aria-label="Qué muestra el mapa">
+              <button type="button" data-modo="calor" aria-pressed="true">Sigatoka por cuadro</button>
+              <button type="button" data-modo="cambio" aria-pressed="false">Cambio</button>
+            </div>
+            <label class="casilla"><input type="checkbox" id="satelite"> Satélite</label>
+            <p id="sub-mapa">Cuadros de 20 × 20 metros. Toca un cuadro para ver sus números.</p>
+          </div>
+          <div class="mapa-marco"><div class="mapa" id="mapa" aria-label="Mapa de calor del lote"></div><p class="mapa-aviso" id="mapa-aviso" hidden></p></div>
+          <div class="escala" id="escala"></div>
+        </section>
+        <div class="columna">
+          <section class="tarjeta">
+            <div class="cabeza"><h2>Fotos con Sigatoka</h2><p>De las fotos con resultado de cada vuelo. Toca un punto para ir a ese vuelo.</p></div>
+            <div class="grafica" id="tendencia"></div>
+          </section>
+          <section class="tarjeta">
+            <div class="cabeza"><h2>Qué se encontró en cada vuelo</h2></div>
+            <div class="leyenda" id="leyenda-comp"></div>
+            <div class="grafica" id="composicion"></div>
+          </section>
+        </div>
+      </div>
+
+      <div class="abajo">
+        <section class="tarjeta bloque">
+          <h2>Cuadros que preocupan</h2>
+          <p>Los cuadros con Sigatoka en el vuelo elegido; primero los que la tienen desde hace más vuelos. Toca uno para verlo en el mapa.</p>
+          <div id="preocupan"></div>
+        </section>
+        <section class="tarjeta bloque">
+          <h2>Vuelos guardados</h2>
+          <ul class="vuelos" id="vuelos"></ul>
+          <div class="acciones" style="display:flex;flex-wrap:wrap;gap:8px">
+            <button class="btn btn-secundario" type="button" data-accion="descargar"><span data-ico="bajar"></span>Descargar historial</button>
+            <button class="btn btn-fantasma" type="button" data-accion="borrar-todo" data-confirmar="Sí, borrar todo el historial" id="b-borrar-todo">Borrar todo</button>
+          </div>
+        </section>
+      </div>
+
+      <details class="tarjeta tabla">
+        <summary>Ver los números de cada vuelo como tabla</summary>
+        <div class="marco" id="tabla"></div>
+      </details>
+    </div>
+  </div>
+</main>
+<div class="tip" id="tip" role="tooltip"></div>
+<input type="file" id="in-geojson" accept=".geojson,.json,application/geo+json,application/json" multiple hidden>
+<script src="motor.js"></script>
+<script>
+"use strict";
+// Historial: lo que se guardó de cada vuelo analizado (motor.historial, en este navegador).
+// Una sola selección de vuelo arriba manda en todo: indicadores, mapa, gráficas y cuadros.
+const M = Motor;
+const $ = id => document.getElementById(id);
+const NS = "http://www.w3.org/2000/svg";
+const EXTRA = {
+  izq: '<path d="M15 5l-7 7 7 7"/>', der: '<path d="M9 5l7 7-7 7"/>', play: '<path d="M7 5l12 7-12 7Z"/>', pausa: '<path d="M8.5 5.5v13M15.5 5.5v13"/>',
+  sube: '<path d="M12 19V5M6 11l6-6 6 6"/>', baja: '<path d="M12 5v14M6 13l6 6 6-6"/>', igual: '<path d="M5 9.5h14M5 14.5h14"/>',
+};
+const icono = n => EXTRA[n] ? `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${EXTRA[n]}</svg>` : M.icono(n);
+document.querySelectorAll("[data-ico]").forEach(el => { el.innerHTML = icono(el.dataset.ico); });
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const fechaCorta = t => { const d = new Date(String(t).slice(0, 10) + "T12:00:00"); return isNaN(d) ? String(t).slice(0, 10) : d.toLocaleDateString("es-MX", { day: "numeric", month: "short" }); };
+const fechaLarga = t => { const d = new Date(String(t).slice(0, 10) + "T12:00:00"); return isNaN(d) ? String(t).slice(0, 10) : d.toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" }); };
+const pctTxt = x => x == null ? "—" : `${Math.round(x * 100)} %`;
+const METROS = 20;
+
+// ------------------------------------------------ datos: cuadros de 20 m comunes a todos los vuelos
+let VUELOS = [], ejemplo = false, sel = 0, modo = "calor", celdaElegida = null;
+function preparar(lista) {
+  const conGps = lista.flatMap(v => v.fotos.filter(f => f.lat != null && f.lon != null));
+  const lat0 = conGps.length ? conGps.reduce((a, f) => a + f.lat, 0) / conGps.length : 0;
+  // Latitud de referencia redondeada: así los cuadros caen en el mismo lugar aunque se agreguen vuelos.
+  const latRef = Math.round(lat0 * 10) / 10, dLat = METROS / 111320, dLon = METROS / (111320 * Math.cos(latRef * Math.PI / 180));
+  const tipo = f => f.dudoso ? "dudoso" : f.clave === "sigatoka" ? "sig" : f.clave === "otra_condicion" ? "otra" : f.clave === "sana" ? "sana" : "sinHoja";
+  const vuelos = lista.map(v => {
+    const cuenta = { sig: 0, otra: 0, sana: 0, dudoso: 0, sinHoja: 0 }, celdas = new Map();
+    v.fotos.forEach(f => {
+      const t = tipo(f); cuenta[t]++;
+      if (f.lat == null || f.lon == null) return;
+      const i = Math.floor(f.lat / dLat), j = Math.floor(f.lon / dLon), k = `${i}|${j}`;
+      const c = celdas.get(k) || { i, j, k, sig: 0, otra: 0, sana: 0, dudoso: 0, sinHoja: 0, n: 0 };
+      c[t]++; if (t === "sig" || t === "otra" || t === "sana") c.n++;
+      celdas.set(k, c);
+    });
+    celdas.forEach(c => { c.pct = c.n ? c.sig / c.n : null; });
+    const res = cuenta.sig + cuenta.otra + cuenta.sana, total = v.fotos.length;
+    return { ...v, cuenta, celdas, total, conResultado: res, pct: res ? cuenta.sig / res : null,
+             conSig: [...celdas.values()].filter(c => c.sig > 0).length, visitadas: [...celdas.values()].filter(c => c.n > 0).length,
+             hectareas: celdas.size * METROS * METROS / 10000 };
+  });
+  const todas = vuelos.flatMap(v => [...v.celdas.values()]);
+  const iMax = Math.max(...todas.map(c => c.i)), jMin = Math.min(...todas.map(c => c.j));
+  const letra = n => { let s = ""; n++; while (n > 0) { const r = (n - 1) % 26; s = String.fromCharCode(65 + r) + s; n = Math.floor((n - 1) / 26); } return s; };
+  const nombre = c => `${letra(c.j - jMin)}${iMax - c.i + 1}`;   // columnas A, B, C… de oeste a este; filas 1, 2, 3… de norte a sur
+  vuelos.forEach((v, n) => {
+    const antes = vuelos[n - 1];
+    v.celdas.forEach(c => {
+      c.nombre = nombre(c);
+      const p = antes?.celdas.get(c.k);
+      c.antes = p && p.n ? p.pct : null;
+      let racha = 0;
+      for (let m = n; m >= 0; m--) { const x = vuelos[m].celdas.get(c.k); if (x && x.sig > 0) racha++; else break; }
+      c.racha = racha;
+      c.nueva = c.sig > 0 && !(p && p.sig > 0);
+    });
+    v.nuevas = n ? [...v.celdas.values()].filter(c => c.nueva).length : null;
+  });
+  return { vuelos, dLat, dLon };
+}
+
+// Ejemplo: un lote de 10 × 7 cuadros, seis vuelos; la Sigatoka crece desde una esquina y luego retrocede.
+function historialDeEjemplo() {
+  let s = 21;
+  const azar = () => { s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const dLat = METROS / 111320, dLon = METROS / (111320 * Math.cos(17.9 * Math.PI / 180));
+  const lat0 = Math.floor(17.9 / dLat) * dLat, lon0 = Math.floor(-93 / dLon) * dLon;
+  const fechas = ["2026-09-01", "2026-09-15", "2026-09-29", "2026-10-13", "2026-10-27", "2026-11-09"];
+  const radio = [1.1, 1.9, 2.8, 3.6, 2.9, 2.1];
+  return fechas.map((fecha, t) => {
+    const fotos = [];
+    for (let i = 0; i < 7; i++) for (let j = 0; j < 10; j++) for (let k = 0; k < 2; k++) {
+      const d1 = Math.hypot(i - 5.6, j - 1.2), d2 = Math.hypot(i - 1, j - 8);
+      const borde = (d, r) => 1 / (1 + Math.exp((d - r) * 2.6));   // dentro del foco casi seguro; afuera, casi nada
+      const p = Math.max(.92 * borde(d1, radio[t]), t >= 3 ? .8 * borde(d2, [0, 0, 0, .8, 1.5, 1.2][t]) : 0);
+      const r = azar();
+      let clave = r < p ? "sigatoka" : "sana";
+      if (clave === "sana" && i <= 1 && j >= 1 && j <= 3 && azar() < .45) clave = "otra_condicion";
+      if (azar() < .03) clave = "sin_hoja";
+      const dudoso = clave !== "sin_hoja" && azar() < .06;
+      fotos.push({ lat: lat0 + (i + .15 + azar() * .7) * dLat, lon: lon0 + (j + .15 + azar() * .7) * dLon, clave, dudoso, conf: dudoso ? .5 + azar() * .13 : .72 + azar() * .27,
+                   fecha: `${fecha}T${String(9 + Math.floor(fotos.length / 60)).padStart(2, "0")}:${String(fotos.length % 60).padStart(2, "0")}:00`, archivo: `ejemplo_${t + 1}_${fotos.length + 1}.jpg` });
+    }
+    return { id: `ejemplo-${t}`, nombre: `Vuelo ${t + 1} (ejemplo)`, fecha, origen: "ejemplo", fotos };
+  });
+}
+
+// ------------------------------------------------ cargar y pintar
+let DATOS = null;
+async function cargar(conEjemplo = ejemplo) {
+  ejemplo = conEjemplo;
+  let lista = [];
+  if (ejemplo) lista = historialDeEjemplo();
+  else try { lista = await M.historial.todos(); } catch (e) { mensaje("Este navegador no deja guardar el historial (¿modo privado?).", true); }
+  lista = lista.filter(v => v.fotos?.length).sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)));
+  $("aviso-ejemplo").hidden = !ejemplo;
+  $("vacio").hidden = lista.length > 0; $("contenido").hidden = !lista.length;
+  if (!lista.length) { VUELOS = []; return; }
+  DATOS = preparar(lista); VUELOS = DATOS.vuelos;
+  sel = VUELOS.length - 1; celdaElegida = null;
+  $("rango").max = VUELOS.length - 1;
+  mapaListo = false;
+  pintar();
+}
+function mensaje(texto, error) { const m = $("msg"); m.hidden = !texto; m.textContent = texto || ""; m.className = "mensaje" + (error ? " error" : " bien"); }
+
+function pintar() {
+  $("rango").value = sel;
+  const v = VUELOS[sel];
+  $("cual").innerHTML = `${fechaLarga(v.fecha)}<small>vuelo ${sel + 1} de ${VUELOS.length} · ${v.total} fotos</small>`;
+  document.querySelector('[data-accion="anterior"]').disabled = sel === 0;
+  document.querySelector('[data-accion="siguiente"]').disabled = sel === VUELOS.length - 1;
+  pintarKpis(); pintarMapa(); pintarTendencia(); pintarComposicion(); pintarPreocupan(); pintarVuelos(); pintarTabla();
+}
+
+function delta(actual, antes, [uno, varios], subirEsMalo = true) {
+  if (antes == null || actual == null) return `<span class="delta">${sel ? "Sin comparación" : "Primer vuelo guardado"}</span>`;
+  const d = Math.round(actual - antes);
+  if (!d) return `<span class="delta">${icono("igual")}Igual que el vuelo anterior</span>`;
+  const malo = subirEsMalo ? d > 0 : d < 0;
+  return `<span class="delta ${malo ? "peor" : "mejor"}">${icono(d > 0 ? "sube" : "baja")}${Math.abs(d)} ${Math.abs(d) === 1 ? uno : varios} ${d > 0 ? "más" : "menos"} que el ${fechaCorta(VUELOS[sel - 1].fecha)}</span>`;
+}
+function pintarKpis() {
+  const v = VUELOS[sel], a = VUELOS[sel - 1];
+  $("kpis").innerHTML = `
+    <div class="tarjeta kpi"><span class="nombre">Fotos con Sigatoka</span><span class="valor">${pctTxt(v.pct)}</span>
+      <span class="delta">${v.cuenta.sig} de ${v.conResultado} fotos con resultado</span>${delta(v.pct != null ? v.pct * 100 : null, a?.pct != null ? a.pct * 100 : null, ["punto", "puntos"])}</div>
+    <div class="tarjeta kpi"><span class="nombre">Cuadros con Sigatoka</span><span class="valor">${v.conSig}<small>de ${v.visitadas}</small></span>
+      ${delta(v.conSig, a ? a.conSig : null, ["cuadro", "cuadros"])}</div>
+    <div class="tarjeta kpi"><span class="nombre">Cuadros con Sigatoka nueva</span><span class="valor">${v.nuevas == null ? "—" : v.nuevas}</span>
+      <span class="delta">${v.nuevas == null ? "Hace falta un vuelo anterior" : "Donde el vuelo anterior no la vio"}</span></div>
+    <div class="tarjeta kpi"><span class="nombre">Fotos revisadas</span><span class="valor">${v.total}</span>
+      <span class="delta">${v.hectareas.toFixed(1)} ha cubiertas${v.cuenta.dudoso ? ` · ${v.cuenta.dudoso} sin confirmar` : ""}</span></div>`;
+}
+
+// ------------------------------------------------ mapa de calor (Leaflet, sin fondo por omisión)
+let mapa = null, capa = null, satelite = null, mapaListo = false, rects = new Map();
+const PASOS = [[.25, "--r1", "1 a 24 %"], [.5, "--r2", "25 a 49 %"], [.75, "--r3", "50 a 74 %"], [1.01, "--r4", "75 a 100 %"]];
+const colorCalor = p => p === 0 ? css("--cero") : css(PASOS.find(([h]) => p < h)[1]);
+const CAMBIO = [[25, "--peor2", "Empeoró mucho (+25 o más)"], [10, "--peor1", "Empeoró (+10 a +24)"], [-9, "--igual", "Casi igual (±9)"], [-24, "--mejor1", "Mejoró (−10 a −24)"], [-1e9, "--mejor2", "Mejoró mucho (−25 o más)"]];
+const colorCambio = d => css(CAMBIO.find(([h]) => d >= h)[1]);
+async function pintarMapa() {
+  const L = await M.leaflet();
+  if (!mapa) {
+    const tactil = matchMedia("(pointer: coarse)").matches;
+    mapa = L.map($("mapa"), { zoomControl: false, attributionControl: true, zoomSnap: .25, scrollWheelZoom: !tactil, dragging: !tactil });
+    L.control.zoom({ position: "topright" }).addTo(mapa);
+    satelite = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 20, maxNativeZoom: 19, attribution: "Imágenes © Esri" });
+    capa = L.layerGroup().addTo(mapa);
+    if (tactil) {   // un dedo mueve la página; dos, el mapa
+      $("mapa").addEventListener("touchstart", e => { if (e.touches.length >= 2) mapa.dragging.enable(); }, { passive: true });
+      $("mapa").addEventListener("touchend", e => { if (!e.touches.length) mapa.dragging.disable(); }, { passive: true });
+    }
+  }
+  const v = VUELOS[sel], antes = VUELOS[sel - 1];
+  $("t-mapa").textContent = modo === "calor" ? "Mapa de calor" : "Cómo cambió";
+  $("sub-mapa").textContent = modo === "calor" ? "% de fotos con Sigatoka en cada cuadro de 20 × 20 metros. Toca un cuadro para ver sus números."
+    : `Puntos de diferencia en % de fotos con Sigatoka contra el vuelo del ${antes ? fechaCorta(antes.fecha) : "—"}.`;
+  capa.clearLayers(); rects = new Map();
+  const { dLat, dLon } = DATOS;
+  v.celdas.forEach(c => {
+    if (!c.n) return;
+    const limites = [[c.i * dLat, c.j * dLon], [(c.i + 1) * dLat, (c.j + 1) * dLon]];
+    let estilo, txt;
+    const base = `<b>Cuadro ${c.nombre}</b><br>${c.sig} de ${c.n} fotos con Sigatoka (${pctTxt(c.pct)})`;
+    if (modo === "calor") {
+      estilo = { fillColor: colorCalor(c.pct), fillOpacity: satelite && mapa.hasLayer(satelite) ? .82 : 1, color: "#ffffff", weight: 1.5 };
+      txt = base + (c.racha > 1 ? `<br>${c.racha} vuelos seguidos con Sigatoka` : c.nueva && sel ? "<br>Nueva: el vuelo anterior no la vio" : "");
+    } else if (c.antes == null) {
+      estilo = { fillColor: "#ffffff", fillOpacity: 0, color: "#9aa1a6", weight: 1.5 };
+      txt = base + "<br>Sin comparar: el vuelo anterior no pasó por aquí";
+    } else {
+      const d = Math.round((c.pct - c.antes) * 100);
+      estilo = { fillColor: colorCambio(d), fillOpacity: satelite && mapa.hasLayer(satelite) ? .82 : 1, color: "#ffffff", weight: 1.5 };
+      txt = base + `<br>Antes ${pctTxt(c.antes)} → ahora ${pctTxt(c.pct)} (${d > 0 ? "+" : ""}${d} puntos)`;
+    }
+    if (celdaElegida === c.k) { estilo.color = "#0a0a0a"; estilo.weight = 3; }
+    const r = L.rectangle(limites, estilo).bindTooltip(txt, { sticky: true }).addTo(capa);
+    r.on("click", () => { celdaElegida = c.k; pintarMapa(); pintarPreocupan(); });
+    rects.set(c.k, r);
+  });
+  $("mapa-aviso").hidden = !(modo === "cambio" && !antes);
+  $("mapa-aviso").textContent = "Es el primer vuelo guardado: todavía no hay con qué compararlo.";
+  if (!mapaListo) {   // se encuadra una vez con todos los cuadros de todos los vuelos, para que no brinque al cambiar de vuelo
+    const todas = VUELOS.flatMap(x => [...x.celdas.values()]);
+    if (todas.length) mapa.fitBounds(L.latLngBounds(todas.flatMap(c => [[c.i * dLat, c.j * dLon], [(c.i + 1) * dLat, (c.j + 1) * dLon]])), { padding: [24, 24], maxZoom: 19 });
+    mapaListo = true;
+  }
+  mapa.invalidateSize();
+  $("escala").innerHTML = modo === "calor"
+    ? `<span><i style="background:${css("--cero")}"></i>Sin Sigatoka</span>` + PASOS.map(([, c, t]) => `<span><i style="background:${css(c)}"></i>${t}</span>`).join("")
+    : CAMBIO.map(([, c, t]) => `<span><i style="background:${css(c)}"></i>${t}</span>`).join("") + `<span><i class="vacia"></i>Sin comparar</span>`;
+}
+
+// ------------------------------------------------ gráficas (SVG a mano)
+const tip = $("tip");
+function mostrarTip(html, x, y) {
+  tip.innerHTML = html; tip.setAttribute("data-visible", "");
+  const r = tip.getBoundingClientRect();
+  tip.style.left = `${Math.min(innerWidth - r.width - 8, Math.max(8, x + 14))}px`;
+  tip.style.top = `${Math.max(8, y - r.height - 12)}px`;
+}
+const ocultarTip = () => tip.removeAttribute("data-visible");
+const el = (n, a = {}, padre) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); padre?.append(e); return e; };
+function ancho(id) { return Math.max(260, $(id).clientWidth - 24); }
+
+// Tendencia: % de fotos con Sigatoka por vuelo. Una sola serie (el título la nombra): línea de 2 px, marcas con anillo.
+function pintarTendencia() {
+  const W = ancho("tendencia"), H = 210, m = { l: 40, r: 50, t: 14, b: 26 }, w = W - m.l - m.r, h = H - m.t - m.b;
+  const pts = VUELOS.map((v, n) => ({ n, t: Date.parse(String(v.fecha).slice(0, 10)), p: v.pct }));
+  const t0 = Math.min(...pts.map(p => p.t)), t1 = Math.max(...pts.map(p => p.t));
+  const x = t => t1 === t0 ? m.l + w / 2 : m.l + (t - t0) / (t1 - t0) * w;
+  const maxP = Math.max(...pts.map(p => p.p || 0)) * 100, techo = maxP <= 20 ? 20 : maxP <= 40 ? 40 : maxP <= 60 ? 60 : 100;
+  const y = p => m.t + h - (p * 100) / techo * h;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img", tabindex: 0,
+    "aria-label": `Fotos con Sigatoka por vuelo: ${VUELOS.map(v => `${fechaCorta(v.fecha)} ${pctTxt(v.pct)}`).join(", ")}. Flechas izquierda y derecha cambian de vuelo.` });
+  const ejes = el("g", { class: "ejes" }, svg);
+  for (let k = 0; k <= 4; k++) {
+    const val = techo * k / 4, yy = m.t + h - h * k / 4;
+    el("line", { x1: m.l, x2: m.l + w, y1: yy, y2: yy, stroke: css("--grid"), "stroke-width": 1 }, ejes);
+    el("text", { x: m.l - 8, y: yy + 3.5, "text-anchor": "end" }, ejes).textContent = `${val}%`;
+  }
+  const muchas = pts.length > 6;
+  pts.forEach(p => { if (!muchas || p.n === 0 || p.n === pts.length - 1 || p.n === sel)
+    el("text", { x: x(p.t), y: H - 6, "text-anchor": "middle", class: p.n === sel ? "sel" : "" }, ejes).textContent = fechaCorta(VUELOS[p.n].fecha); });
+  const validos = pts.filter(p => p.p != null);
+  if (validos.length > 1) {
+    const linea = validos.map((p, k) => `${k ? "L" : "M"}${x(p.t).toFixed(1)} ${y(p.p).toFixed(1)}`).join("");
+    el("path", { d: `${linea}L${x(validos.at(-1).t).toFixed(1)} ${m.t + h}L${x(validos[0].t).toFixed(1)} ${m.t + h}Z`, fill: css("--sigatoka"), "fill-opacity": .1 }, svg);
+    el("path", { d: linea, fill: "none", stroke: css("--sigatoka"), "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
+  }
+  const cruz = el("line", { y1: m.t, y2: m.t + h, stroke: "#c9c9c5", "stroke-width": 1, visibility: "hidden" }, svg);
+  validos.forEach(p => el("circle", { cx: x(p.t), cy: y(p.p), r: p.n === sel ? 6 : 4, fill: css("--sigatoka"), stroke: "#fff", "stroke-width": 2 }, svg));
+  const ultimo = validos.at(-1);
+  if (ultimo) el("text", { x: x(ultimo.t) + 10, y: y(ultimo.p) + 4, "font-size": 12.5, "font-weight": 600, fill: css("--text") }, svg).textContent = pctTxt(ultimo.p);
+  const zona = el("rect", { x: m.l - 10, y: 0, width: w + 20, height: H, fill: "transparent", style: "cursor:pointer" }, svg);
+  const cercano = ex => pts.reduce((a, p) => Math.abs(x(p.t) - ex) < Math.abs(x(a.t) - ex) ? p : a);
+  const enX = e => { const r = svg.getBoundingClientRect(); return (e.clientX - r.left) * W / r.width; };
+  zona.addEventListener("pointermove", e => {
+    const p = cercano(enX(e)), v = VUELOS[p.n];
+    cruz.setAttribute("x1", x(p.t)); cruz.setAttribute("x2", x(p.t)); cruz.setAttribute("visibility", "visible");
+    mostrarTip(`<b>${fechaLarga(v.fecha)}</b><div class="fila"><i style="background:${css("--sigatoka")}"></i><strong>${pctTxt(v.pct)}</strong>con Sigatoka</div>` +
+      `<div>${v.cuenta.sig} de ${v.conResultado} fotos · ${v.conSig} cuadros</div>`, e.clientX, e.clientY);
+  });
+  zona.addEventListener("pointerleave", () => { cruz.setAttribute("visibility", "hidden"); ocultarTip(); });
+  zona.addEventListener("click", e => { elegir(cercano(enX(e)).n); });
+  svg.addEventListener("keydown", e => { if (e.key === "ArrowLeft") { e.preventDefault(); elegir(sel - 1, true); } if (e.key === "ArrowRight") { e.preventDefault(); elegir(sel + 1, true); } });
+  const hueco = $("tendencia"), enfocado = document.activeElement?.closest?.("#tendencia");
+  hueco.replaceChildren(svg);
+  if (enfocado) svg.focus({ preventScroll: true });
+}
+
+// Composición: columnas apiladas al 100 % por vuelo. Sigatoka abajo (en la base se compara mejor), con huecos de 2 px.
+const PARTES = [["sig", "Sigatoka", "--sigatoka"], ["otra", "Otro problema", "--otra"], ["sana", "Sana", "--sana"], ["sin", "Sin resultado", "--sin"]];
+function pintarComposicion() {
+  $("leyenda-comp").innerHTML = PARTES.map(([, t, c]) => `<span><i style="background:${css(c)}"></i>${t}</span>`).join("");
+  const W = ancho("composicion"), H = 190, m = { l: 40, r: 10, t: 10, b: 26 }, w = W - m.l - m.r, h = H - m.t - m.b;
+  const n = VUELOS.length, banda = w / n, bw = Math.min(24, banda * .62);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img", "aria-label": "Qué se encontró en cada vuelo, en porcentaje de sus fotos. Los números están en la tabla de abajo." });
+  const ejes = el("g", { class: "ejes" }, svg);
+  [0, 50, 100].forEach(val => { const yy = m.t + h - h * val / 100;
+    el("line", { x1: m.l, x2: m.l + w, y1: yy, y2: yy, stroke: css("--grid"), "stroke-width": 1 }, ejes);
+    el("text", { x: m.l - 8, y: yy + 3.5, "text-anchor": "end" }, ejes).textContent = `${val}%`; });
+  VUELOS.forEach((v, k) => {
+    const cx = m.l + banda * k + banda / 2, x0 = cx - bw / 2;
+    const val = { sig: v.cuenta.sig, otra: v.cuenta.otra, sana: v.cuenta.sana, sin: v.cuenta.dudoso + v.cuenta.sinHoja }, tot = v.total || 1;
+    let base = m.t + h;
+    const visibles = PARTES.filter(([key]) => val[key] > 0);
+    visibles.forEach(([key, nombre, color], idx) => {
+      const alto = val[key] / tot * h, arriba = idx === visibles.length - 1;
+      const yTop = base - alto + (arriba ? 0 : 2), hh = Math.max(0, alto - (arriba ? 0 : 2));   // 2 px de hueco hacia el siguiente
+      const r = Math.min(4, hh, bw / 2);
+      const d = arriba && r > 0 ? `M${x0} ${base}V${yTop + r}Q${x0} ${yTop} ${x0 + r} ${yTop}H${x0 + bw - r}Q${x0 + bw} ${yTop} ${x0 + bw} ${yTop + r}V${base}Z`
+                              : `M${x0} ${base}V${yTop}H${x0 + bw}V${base}Z`;
+      const p = el("path", { d, fill: css(color), opacity: k === sel ? 1 : .55 }, svg);
+      const hit = el("rect", { x: cx - banda / 2, y: base - alto, width: banda, height: alto, fill: "transparent", style: "cursor:pointer" }, svg);
+      hit.addEventListener("pointermove", e => mostrarTip(`<b>${fechaLarga(v.fecha)}</b><div class="fila"><i style="background:${css(color)}"></i><strong>${Math.round(val[key] / tot * 100)} %</strong>${nombre}</div><div>${val[key]} de ${v.total} fotos</div>`, e.clientX, e.clientY));
+      hit.addEventListener("pointerleave", ocultarTip);
+      hit.addEventListener("click", () => elegir(k));
+      base -= alto;
+    });
+    if (n <= 8 || k === 0 || k === n - 1 || k === sel)
+      el("text", { x: cx, y: H - 6, "text-anchor": "middle", class: k === sel ? "sel" : "" }, ejes).textContent = fechaCorta(v.fecha);
+  });
+  $("composicion").replaceChildren(svg);
+}
+
+// ------------------------------------------------ cuadros que preocupan y vuelos
+function pintarPreocupan() {
+  const v = VUELOS[sel], lista = [...v.celdas.values()].filter(c => c.sig > 0).sort((a, b) => b.racha - a.racha || b.pct - a.pct || a.nombre.localeCompare(b.nombre));
+  if (!lista.length) { $("preocupan").innerHTML = `<p class="mensaje bien">En este vuelo ningún cuadro tiene Sigatoka.</p>`; return; }
+  const filas = lista.slice(0, 8).map(c => `<tr class="fila-celda" data-celda="${c.k}" tabindex="0" aria-selected="${celdaElegida === c.k}">
+      <td><span class="celda-nombre">${c.nombre}</span></td>
+      <td class="n">${c.sig} de ${c.n}</td>
+      <td><div class="metro" title="${pctTxt(c.pct)}"><i style="width:${Math.round(c.pct * 100)}%"></i></div></td>
+      <td><span class="racha${c.racha >= 3 ? " fuerte" : ""}">${c.racha > 1 ? `${c.racha} vuelos seguidos` : sel ? "Nueva" : "En este vuelo"}</span></td></tr>`).join("");
+  $("preocupan").innerHTML = `<table><thead><tr><th>Cuadro</th><th class="n">Fotos con Sigatoka</th><th>%</th><th>Desde</th></tr></thead><tbody>${filas}</tbody></table>` +
+    (lista.length > 8 ? `<p class="racha" style="margin-top:8px">Y ${lista.length - 8} cuadros más en el mapa.</p>` : "");
+}
+function irACelda(k) {
+  celdaElegida = k; pintarPreocupan(); pintarMapa();
+  // se acerca dejando ver los cuadros vecinos, para ubicarlo en el lote
+  const r = rects.get(k); if (r) { mapa.flyToBounds(r.getBounds().pad(2), { maxZoom: 19, duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : .6 }); r.openTooltip(); }
+  $("mapa").closest(".tarjeta").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+function pintarVuelos() {
+  $("vuelos").innerHTML = [...VUELOS].reverse().map(v => { const n = VUELOS.indexOf(v);
+    return `<li aria-current="${n === sel}"><div><b>${fechaLarga(v.fecha)}</b><small>${M.esc(v.nombre)} · ${v.total} fotos · ${pctTxt(v.pct)} con Sigatoka${v.origen === "archivo" ? " · de un archivo" : ""}</small></div>
+      <div class="botones"><button class="btn btn-fantasma" type="button" data-ver="${n}">Ver</button>${ejemplo ? "" : `<button class="btn btn-fantasma" type="button" data-borrar="${v.id}" data-confirmar="Sí, borrar">Borrar</button>`}</div></li>`; }).join("");
+  $("b-borrar-todo").hidden = ejemplo;
+}
+function pintarTabla() {
+  const filas = VUELOS.map((v, n) => `<tr${n === sel ? ' style="font-weight:600"' : ""}><td>${fechaLarga(v.fecha)}</td><td class="n">${v.total}</td><td class="n">${v.conResultado}</td>
+    <td class="n">${pctTxt(v.pct)}</td><td class="n">${v.conResultado ? pctTxt(v.cuenta.otra / v.conResultado) : "—"}</td><td class="n">${v.conResultado ? pctTxt(v.cuenta.sana / v.conResultado) : "—"}</td>
+    <td class="n">${v.cuenta.dudoso + v.cuenta.sinHoja}</td><td class="n">${v.conSig} de ${v.visitadas}</td><td class="n">${v.nuevas ?? "—"}</td></tr>`).join("");
+  $("tabla").innerHTML = `<table><thead><tr><th>Vuelo</th><th class="n">Fotos</th><th class="n">Con resultado</th><th class="n">Sigatoka</th><th class="n">Otro problema</th>
+    <th class="n">Sana</th><th class="n">Sin resultado</th><th class="n">Cuadros con Sigatoka</th><th class="n">Nuevos</th></tr></thead><tbody>${filas}</tbody></table>`;
+}
+
+// ------------------------------------------------ elegir vuelo, reproducir, importar, descargar, borrar
+function elegir(n, desdeTeclado) {
+  if (!VUELOS.length) return;
+  sel = Math.max(0, Math.min(VUELOS.length - 1, n)); celdaElegida = null;
+  pintar();
+  if (desdeTeclado) $("tendencia").querySelector("svg")?.focus({ preventScroll: true });
+}
+let reloj = null;
+function reproducir() {
+  if (reloj) return parar();
+  if (sel >= VUELOS.length - 1) elegir(0);
+  $("b-reproducir").innerHTML = `${icono("pausa")}Pausa`;
+  reloj = setInterval(() => { if (sel >= VUELOS.length - 1) return parar(); elegir(sel + 1); }, 1300);
+}
+function parar() { clearInterval(reloj); reloj = null; $("b-reproducir").innerHTML = `${icono("play")}Ver la evolución`; }
+
+async function importar(archivos) {
+  let vuelos = 0, malos = 0;
+  for (const f of archivos) {
+    try {
+      const fotos = M.leerGeojson(await f.text()), grupos = new Map();
+      fotos.forEach(x => { const k = x.vuelo && x.vuelo !== "ejemplo" ? x.vuelo : String(x.fecha || "").slice(0, 10) || f.name; grupos.set(k, [...(grupos.get(k) || []), x]); });
+      for (const [k, lista] of grupos) { await M.historial.guardar({ nombre: /^\d{4}-\d\d-\d\d$/.test(k) ? "" : k, fotos: lista, origen: "archivo" }); vuelos++; }
+    } catch (e) { malos++; }
+  }
+  await cargar(false);
+  mensaje(vuelos ? `Listo: ${vuelos} ${vuelos === 1 ? "vuelo agregado" : "vuelos agregados"} a tu historial.${malos ? ` ${malos} archivo(s) no eran mapas del dron.` : ""}` : "Esos archivos no son mapas del dron (.geojson).", !vuelos);
+}
+function descargar() {
+  const features = VUELOS.flatMap(v => JSON.parse(M.geojsonDeVuelo(v.fotos, v.nombre)).features);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify({ type: "FeatureCollection", features })], { type: "application/geo+json" }));
+  a.download = `historial-dron-sigatoka-${new Date().toISOString().slice(0, 10)}.geojson`;
+  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+
+function armar(b) { b.dataset.original = b.innerHTML; b.classList.add("confirmando"); b.textContent = b.dataset.confirmar; b._t = setTimeout(() => desarmar(b), 4000); }
+function desarmar(b) { clearTimeout(b._t); if (b.classList.contains("confirmando")) { b.classList.remove("confirmando"); b.innerHTML = b.dataset.original; } }
+const ACCIONES = {
+  agregar: () => $("in-geojson").click(),
+  ejemplo: () => cargar(true),
+  "salir-ejemplo": () => { parar(); cargar(false); },
+  anterior: () => { parar(); elegir(sel - 1); },
+  siguiente: () => { parar(); elegir(sel + 1); },
+  reproducir,
+  descargar,
+  async "borrar-todo"() { await M.historial.borrarTodo(); parar(); await cargar(false); mensaje("Se borró el historial de este navegador."); },
+};
+document.addEventListener("click", async e => {
+  const ver = e.target.closest("[data-ver]");
+  if (ver) { parar(); elegir(+ver.dataset.ver); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+  const fila = e.target.closest("[data-celda]");
+  if (fila) return irACelda(fila.dataset.celda);
+  const borrar = e.target.closest("[data-borrar]");
+  if (borrar) {
+    if (!borrar.classList.contains("confirmando")) return armar(borrar);
+    desarmar(borrar); await M.historial.borrar(+borrar.dataset.borrar); await cargar(false); mensaje("Se borró ese vuelo."); return;
+  }
+  const b = e.target.closest("[data-accion]");
+  if (!b || b.disabled) return;
+  if (b.dataset.confirmar && !b.classList.contains("confirmando")) return armar(b);
+  desarmar(b);
+  await ACCIONES[b.dataset.accion]?.(b);
+});
+document.addEventListener("keydown", e => { const f = e.target.closest?.("[data-celda]"); if (f && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); irACelda(f.dataset.celda); } });
+$("rango").addEventListener("input", e => { parar(); elegir(+e.target.value); });
+document.querySelectorAll("[data-modo]").forEach(b => b.addEventListener("click", () => {
+  modo = b.dataset.modo; document.querySelectorAll("[data-modo]").forEach(x => x.setAttribute("aria-pressed", String(x === b))); pintarMapa();
+}));
+$("satelite").addEventListener("change", e => { if (!mapa) return; if (e.target.checked) satelite.addTo(mapa); else satelite.remove(); pintarMapa(); });
+$("in-geojson").addEventListener("change", e => { const a = [...e.target.files]; e.target.value = ""; if (a.length) importar(a); });
+let espera = null;
+let anchoAntes = 0;
+new ResizeObserver(([e]) => {   // solo cuando cambia el ancho (las gráficas se dibujan a la medida)
+  const a = Math.round(e.contentRect.width); if (a === anchoAntes) return; anchoAntes = a;
+  clearTimeout(espera); espera = setTimeout(() => { if (VUELOS.length) { pintarTendencia(); pintarComposicion(); mapa?.invalidateSize(); } }, 120);
+}).observe(document.querySelector(".principal"));
+
+cargar(new URLSearchParams(location.search).has("ejemplo"));
+</script>
+</body>
+</html>

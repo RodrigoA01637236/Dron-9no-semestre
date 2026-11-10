@@ -387,6 +387,7 @@ a { color: inherit; }
   .escena[data-panel] .telefono, .escena[data-panel] .tarjeta { visibility: visible; }
   .leyenda-flota { width: 220px; }
 }
+@media (max-width: 520px) { .largo { display: none; } }
 @media (prefers-reduced-motion: reduce) {
   .hoja, .panel { transition: opacity 200ms ease; }
   .hoja:not([data-abierta]) { opacity: 0; }
@@ -404,8 +405,9 @@ a { color: inherit; }
 <header class="encabezado">
   <a class="marca" href="./"><span class="logo" data-ico="hoja"></span>Dron Sigatoka</a>
   <nav class="pestanas" aria-label="Secciones">
-    <a href="./" aria-current="page">Revisar una hoja</a>
-    <a href="entrenar.html">Mejorar el modelo</a>
+    <a href="./" aria-current="page">Revisar<span class="largo">&nbsp;una hoja</span></a>
+    <a href="historial.html">Historial</a>
+    <a href="entrenar.html">Mejorar<span class="largo">&nbsp;el modelo</span></a>
   </nav>
   <span class="ancla">
     <button class="btn btn-fantasma" type="button" data-pop="pop-como" aria-expanded="false" aria-controls="pop-como">Cómo funciona</button>
@@ -897,7 +899,8 @@ function abrirPanel(tipo, desde) {
   if (ancho.matches && document.startViewTransition && !quieto.matches && origen) {
     origen.style.viewTransitionName = "panel";
     const t = document.startViewTransition(() => { origen.style.viewTransitionName = ""; panel.style.viewTransitionName = "panel"; aplicar(); });
-    t.finished.finally(() => { panel.style.viewTransitionName = ""; despuesDeAbrir(tipo); });
+    t.ready.catch(() => {});   // si el navegador cancela la transición (p. ej. al cargar), el panel se abre igual
+    t.finished.catch(() => {}).then(() => { panel.style.viewTransitionName = ""; despuesDeAbrir(tipo); });
   } else {
     aplicar();
     if (!ancho.matches) { void panel.offsetWidth; panel.setAttribute("data-abierto", ""); velo.setAttribute("data-visible", ""); }
@@ -913,7 +916,8 @@ function cerrarPanel(sinAnimar) {
   if (ancho.matches && document.startViewTransition && !quieto.matches && origen) {
     panel.style.viewTransitionName = "panel";
     const t = document.startViewTransition(() => { panel.style.viewTransitionName = ""; origen.style.viewTransitionName = "panel"; quitar(); });
-    t.finished.finally(() => { origen.style.viewTransitionName = ""; });
+    t.ready.catch(() => {});
+    t.finished.catch(() => {}).then(() => { origen.style.viewTransitionName = ""; });
   } else if (!ancho.matches) {
     panel.removeAttribute("data-abierto"); panel.style.transform = "";
     if (!hoja.hasAttribute("data-abierta")) velo.removeAttribute("data-visible");
@@ -960,6 +964,10 @@ async function analizarVuelo(lista) {
     if (performance.now() - antes > 600) { dibujarVuelo(v, !v.encuadrado); antes = performance.now(); }
   }
   v.terminado = true;
+  if (!v.detenido && v.registros.length) {
+    try { const g = await M.historial.guardar({ nombre: v.nombre, fotos: v.registros }); v.guardado = g.reemplazado ? "actualizado" : "guardado"; }
+    catch (e) { v.guardado = null; }
+  }
   if (vuelo === v) { dibujarVuelo(v, true); mostrarVuelo(v); }
 }
 function dibujarVuelo(v, encuadrar) {
@@ -984,6 +992,7 @@ function mostrarVuelo(v) {
   $("nota-vuelo").hidden = !v.terminado;
   $("nota-vuelo").textContent = `${v.detenido ? `Detenido: ${v.hechas} de ${v.total}` : `${v.registros.length}`} ${v.registros.length === 1 && !v.detenido ? "foto revisada" : "fotos revisadas"}` +
     (sinGps ? ` · ${sinGps} sin GPS (no salen en el mapa; sí en la tabla)` : "") + (v.malas ? ` · ${v.malas} no se pudieron leer` : "") + ".";
+  if (v.guardado) $("nota-vuelo").insertAdjacentHTML("beforeend", ` <a href="historial.html">${v.guardado === "actualizado" ? "Se actualizó" : "Se guardó"} en tu historial</a>.`);
   $("acciones-vuelo").hidden = !v.terminado || !v.registros.length;
 }
 function bajarArchivo(texto, nombre, tipo) {
@@ -1068,7 +1077,7 @@ $("conectar").addEventListener("submit", e => {
 $("lectura-dron").addEventListener("click", e => { if (e.target.closest("[data-desconectar]")) dron.desconectar(); });
 $("video").addEventListener("error", () => { if (dron.conectado()) setTimeout(() => { if (dron.conectado()) $("video").src = dron.video(); }, 2000); });
 if (dron.inicial) { abrirPanel("dron"); dron.conectar(dron.inicial); }
-else if (location.hash === "#mapa" || location.hash === "#dron") abrirPanel(location.hash.slice(1));   // enlaces de las páginas de antes
+else if (location.hash === "#mapa" || location.hash === "#dron" || location.hash === "#vuelo") abrirPanel(location.hash === "#dron" ? "dron" : "mapa");   // enlaces de otras pestañas y de las páginas de antes
 
 // ------------------------------------------------ ventanitas (salen de su botón; Esc o clic afuera las cierra)
 function cerrarPops(excepto) {

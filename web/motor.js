@@ -521,6 +521,39 @@ const Motor = (() => {
     return "\ufeff" + filas.map(r => r.map(q).join(",")).join("\r\n");
   }
 
+  // ------------------------------------------------------------------ historial de vuelos
+  // Cada vuelo analizado se guarda en este navegador (IndexedDB) para ver cómo va el lote con el tiempo.
+  // Nada se sube. Solo se guarda lo necesario para las métricas y el mapa (sin fotos).
+  const historial = (() => {
+    let db = null;
+    const abrir = () => (db ??= new Promise((ok, mal) => {
+      const r = indexedDB.open("dron-sigatoka-historial", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("vuelos", { keyPath: "id", autoIncrement: true });
+      r.onsuccess = () => ok(r.result); r.onerror = () => mal(r.error);
+    }));
+    async function tx(modo, fn) {
+      const t = (await abrir()).transaction("vuelos", modo), r = fn(t.objectStore("vuelos"));
+      return new Promise((ok, mal) => { t.oncomplete = () => ok(r?.result); t.onerror = () => mal(t.error); });
+    }
+    const limpio = f => ({ lat: f.lat ?? null, lon: f.lon ?? null, alt: f.alt ?? null, clave: f.clave || null, dudoso: !!f.dudoso,
+                           conf: f.conf ?? null, fecha: f.fecha || "", archivo: f.archivo || "" });
+    return {
+      async todos() { return (await tx("readonly", s => s.getAll())).sort((a, b) => String(a.fecha).localeCompare(String(b.fecha))); },
+      // { nombre, fotos, origen }. Si ya hay uno con la misma firma (mismas fotos), lo reemplaza.
+      async guardar({ nombre = "", fotos, origen = "analizado aquí" }) {
+        const lista = fotos.map(limpio), fechas = lista.map(f => f.fecha).filter(Boolean).sort();
+        const firma = [lista.length, fechas[0], fechas[fechas.length - 1], lista.map(f => f.archivo).sort().slice(0, 3).join("|")].join("·");
+        const previo = (await this.todos()).find(v => v.firma === firma);
+        const vuelo = { ...(previo ? { id: previo.id } : {}), nombre: nombre || `Vuelo del ${(fechas[0] || "").slice(0, 10)}`, fecha: fechas[0] || new Date().toISOString(),
+                        creado: new Date().toISOString(), origen, firma, fotos: lista };
+        const id = await tx("readwrite", s => s.put(vuelo));
+        return { ...vuelo, id, reemplazado: !!previo };
+      },
+      borrar: id => tx("readwrite", s => s.delete(id)),
+      borrarTodo: () => tx("readwrite", s => s.clear()),
+    };
+  })();
+
   // ------------------------------------------------------------------ mapa del lote
   const NO_DIAGNOSTICA = new Set(["sin_hoja"]);
   const PRIORIDAD = ["sigatoka", "otra_condicion", "sana"];   // en un empate, la zona toma lo más grave
@@ -794,5 +827,5 @@ const Motor = (() => {
   }
 
   return { CAT, cat, GRIS, LECTURAS, esc, plural, pct, icono, qr, SITIO, modelo, modeloListo, diagnosticar, lectura, precargar,
-           hablar, callar, puedeHablar, mensaje, cabeza, entrenarCabeza, aciertos, aplicarCabeza, leerExif, juntarVuelo, analizarFotoDeVuelo, geojsonDeVuelo, csvDeVuelo, compartir, fotoConResultado, leerGeojson, ejemplo, crearMapa, resumen, zonas, cuantas, dron };
+           hablar, callar, puedeHablar, mensaje, cabeza, entrenarCabeza, aciertos, aplicarCabeza, leerExif, juntarVuelo, analizarFotoDeVuelo, geojsonDeVuelo, csvDeVuelo, historial, leaflet, compartir, fotoConResultado, leerGeojson, ejemplo, crearMapa, resumen, zonas, cuantas, dron };
 })();

@@ -12,6 +12,16 @@ Todo está en una sola página, `index.html`, pensada para productores (palabras
 | Mapa del lote | Cuadros de 20 × 20 m y qué revisar primero. Además del vuelo, abre un `.geojson` (de la estación o descargado de aquí) o un ejemplo. Todo se lee **en el navegador**: no se sube a ningún lado |
 | Dron en vivo | Video, GPS y revisión en vivo de la Jetson (`jetson/zed_right.py`) a través de un túnel https |
 
+`historial.html` (pestaña *Historial*): cada vuelo analizado en la página principal se guarda solo en
+el navegador (IndexedDB `dron-sigatoka-historial`, sin fotos); también se pueden agregar `.geojson`.
+Un selector de vuelo arriba (con *Ver la evolución*, que los recorre en orden) manda en todo: 4
+indicadores (% de fotos con Sigatoka y su cambio, cuadros con Sigatoka, cuadros con Sigatoka nueva,
+fotos y hectáreas), mapa de calor por cuadro de 20 m (rojos de un solo tono, validados) o de cambio
+contra el vuelo anterior (rojo empeoró, azul mejoró, gris igual), tendencia del % con Sigatoka,
+qué se encontró en cada vuelo (columnas al 100 %), cuadros que preocupan (nombre tipo C4: columnas de
+oeste a este, filas de norte a sur; primero los que llevan más vuelos seguidos con Sigatoka) y la
+tabla con todos los números. `historial.html?ejemplo` muestra seis vuelos inventados.
+
 `entrenar.html` (pestaña *Mejorar el modelo*): cada persona marca fotos de su lote (sana, Sigatoka u
 otro problema) y **su computadora** reentrena la última capa del modelo en segundos, sin subir nada.
 Al cargar el modelo, `motor.js` le agrega una salida con los rasgos de la foto (1280 números, mismos
