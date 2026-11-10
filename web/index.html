@@ -246,6 +246,12 @@ a { color: inherit; }
   .al-celular { margin-top: 0; padding: 8px 14px 8px 8px; }
   .al-celular .qr { width: 64px; height: 64px; }
   .al-celular small { display: none; }
+  .cuerpo-mapa .elegir-mapa { padding: 8px; }
+  /* .cuerpo-mapa delante: estas reglas van antes que las del selector y deben ganarles */
+  .cuerpo-mapa .elegir-mapa > div { padding: 16px 18px; gap: 8px; }
+  .cuerpo-mapa .elegir-mapa .btn-grande { height: 42px; }
+  .cuerpo-mapa .elegir-mapa h3 { font-size: 16.5px; }
+  .cuerpo-mapa .elegir-mapa .circulo, .cuerpo-mapa .elegir-mapa .pista { display: none; }
 }
 .cuerpo-hoja .btn-grande { width: 100%; }
 .progreso { height: 6px; border-radius: 3px; background: var(--sunken); overflow: hidden; }
@@ -267,7 +273,7 @@ a { color: inherit; }
 .leyenda b { margin-left: auto; font: 500 12.5px var(--mono); }
 .leyenda-flota .error { margin-top: 10px; font-size: 12.5px; }
 /* antes de mostrar un lote, la pregunta: ¿tienes tu mapa o quieres ver el ejemplo? */
-.elegir-mapa { position: absolute; inset: 0; z-index: 700; display: grid; place-items: center; padding: 20px;
+.elegir-mapa { position: absolute; inset: 0; z-index: 700; display: grid; place-items: center; padding: 20px; overflow-y: auto;
   background: rgba(250, 250, 250, .62); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); transition: opacity 200ms ease; }
 .elegir-mapa[hidden] { display: grid !important; opacity: 0; pointer-events: none; visibility: hidden; transition: opacity 160ms ease, visibility 0s 160ms; }
 .elegir-mapa > div { width: min(100%, 380px); display: grid; gap: 12px; justify-items: center; text-align: center; padding: 24px; border-radius: 20px; background: var(--surface); box-shadow: var(--shadow-lg); }
@@ -276,12 +282,28 @@ a { color: inherit; }
 .elegir-mapa p { font-size: 13.5px; color: var(--text-2); text-wrap: balance; }
 .elegir-mapa .botones { display: grid; gap: 8px; width: 100%; margin-top: 4px; }
 .elegir-mapa .btn { width: 100%; }
+.elegir-mapa .otras { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; margin-top: 2px; }
+.elegir-mapa .otras .btn { width: auto; height: 36px; font-size: 13.5px; }
+.elegir-mapa .pista { font-size: 12.5px; color: var(--text-3); }
+/* revisando las fotos de un vuelo: el avance flota arriba y el mapa se va llenando debajo */
+.analisis { position: absolute; z-index: 650; top: 12px; left: 50%; transform: translateX(-50%); width: min(calc(100% - 24px), 380px); display: grid; gap: 8px;
+  padding: 14px 16px; border-radius: 16px; background: rgba(255, 255, 255, .92); -webkit-backdrop-filter: blur(16px) saturate(1.8); backdrop-filter: blur(16px) saturate(1.8); box-shadow: var(--shadow-md); }
+.analisis .fila { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.analisis b { font-size: 14px; font-weight: 600; letter-spacing: -.015em; }
+.analisis .num { font: 500 12.5px var(--mono); color: var(--text-2); letter-spacing: 0; white-space: nowrap; }
+.analisis p { font-size: 12.5px; color: var(--text-2); }
+.analisis .btn { justify-self: start; height: 32px; font-size: 13px; padding: 0 12px; }
+.leyenda-nota { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-2); }
+.leyenda-acciones { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.leyenda-acciones .btn { height: 30px; padding: 0 10px; font-size: 12.5px; border-radius: 8px; }
+.mapa-ficha img { display: block; width: 200px; max-width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 8px; margin-bottom: 8px; background: var(--sunken); }   /* tamaño fijo: así el globo cabe al abrir */
 .leaflet-control-scale { display: none; }
 .segmento { display: inline-flex; padding: 3px; gap: 2px; border-radius: 10px; background: var(--sunken); }
 .segmento button { height: 30px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer; transition: background-color 150ms ease, color 150ms ease; }
 .segmento button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
 .mapa-ficha b { display: flex; align-items: center; gap: 7px; font-weight: 600; } .mapa-ficha i { width: 9px; height: 9px; border-radius: 50%; }
 .mapa-ficha span { display: block; color: var(--text-2); font-size: 12.5px; }
+.mapa-ficha span + span { margin-top: 2px; }
 .leaflet-container { font-family: var(--font); background: #f1f2ef; }
 .leaflet-touch .leaflet-bar { border: 0; border-radius: 10px; overflow: hidden; box-shadow: var(--shadow-md); }
 .leaflet-bar a { width: 34px !important; height: 34px !important; line-height: 34px !important; color: var(--text) !important; }
@@ -404,12 +426,12 @@ a { color: inherit; }
 <main class="portada">
   <div class="texto">
     <h1>Detecta la Sigatoka con una foto.</h1>
-    <p>Una inteligencia artificial revisa la hoja de plátano y te dice qué hacer. Tu foto no se sube a internet: se revisa aquí.</p>
+    <p>Una inteligencia artificial revisa las hojas de plátano, una foto o todo un vuelo del dron, y te dice qué hacer. Tus fotos no se suben a internet: se revisan aquí.</p>
     <div class="botones">
       <button class="btn btn-primario btn-grande" type="button" data-tomar><span data-ico="imagen"></span>Elegir la foto de la hoja</button>
-      <button class="btn btn-secundario btn-grande" type="button" data-abrir="mapa">Ver el mapa de un lote</button>
+      <button class="btn btn-secundario btn-grande" type="button" data-abrir="mapa">Analizar un vuelo</button>
     </div>
-    <p class="arrastra solo-ancho">También puedes arrastrar la foto a esta ventana.</p>
+    <p class="arrastra solo-ancho">También puedes arrastrar a esta ventana una foto o la carpeta de un vuelo.</p>
     <div class="al-celular solo-ancho">
       <span id="qr"></span>
       <div><b>¿La foto está en tu celular?</b><span>Escanea este código con la cámara del celular y revisa la hoja ahí mismo.</span><small>dron-sigatoka.netlify.app</small></div>
@@ -460,7 +482,7 @@ a { color: inherit; }
       <div class="panel-cabeza" id="panel-cabeza">
         <h2 id="t-panel">Mapa del lote</h2>
         <div class="segmento" data-solo="mapa" role="group" aria-label="Ver el mapa por"><button type="button" data-vista="zonas" aria-pressed="true">Cuadros</button><button type="button" data-vista="fotos" aria-pressed="false">Cada foto</button></div>
-        <button class="btn btn-secundario" type="button" data-solo="mapa" id="b-archivo"><span data-ico="archivo"></span>Abrir mi mapa</button>
+        <button class="btn btn-secundario" type="button" data-solo="mapa" id="b-archivo"><span data-ico="archivo"></span>Abrir otro</button>
         <button class="btn btn-fantasma btn-icono" type="button" id="b-cerrar" aria-label="Cerrar"><span data-ico="cerrar"></span></button>
       </div>
       <div class="cuerpo-hoja" data-solo="hoja">
@@ -470,16 +492,30 @@ a { color: inherit; }
       <div class="cuerpo-mapa" data-solo="mapa">
         <div class="mapa" id="mapa" aria-label="Mapa del lote"></div>
         <span class="pildora etiqueta" id="etiqueta">Ejemplo: no es tu lote</span>
-        <div class="leyenda-flota"><p class="leyenda-frase" id="frase-mapa"></p><p class="leyenda-titulo" id="titulo-leyenda"></p><ul class="leyenda" id="leyenda"></ul><p class="error" id="error-mapa" hidden></p></div>
+        <div class="leyenda-flota"><p class="leyenda-frase" id="frase-mapa"></p><p class="leyenda-titulo" id="titulo-leyenda"></p><ul class="leyenda" id="leyenda"></ul>
+          <p class="leyenda-nota" id="nota-vuelo" hidden></p>
+          <div class="leyenda-acciones" id="acciones-vuelo" hidden><button class="btn btn-secundario" type="button" data-bajar="geojson"><span data-ico="bajar"></span>Mapa</button><button class="btn btn-secundario" type="button" data-bajar="csv"><span data-ico="bajar"></span>Tabla</button></div>
+          <p class="error" id="error-mapa" hidden></p></div>
+        <div class="analisis" id="analisis" hidden aria-live="polite">
+          <div class="fila"><b id="an-titulo">Revisando las fotos del vuelo…</b><span class="num" id="an-cuenta"></span></div>
+          <div class="progreso"><i id="an-barra" style="width:0%"></i></div>
+          <p id="an-detalle"></p>
+          <button class="btn btn-secundario" type="button" id="b-detener">Detener</button>
+        </div>
         <div class="elegir-mapa" id="elegir-mapa" hidden>
           <div>
-            <span class="circulo" data-ico="mapa"></span>
-            <h3>¿Tu técnico te mandó el mapa de tu lote?</h3>
-            <p>Es un archivo que termina en .geojson. Se abre aquí y no se sube a internet.</p>
+            <span class="circulo" data-ico="dron"></span>
+            <h3>Arma el mapa con las fotos de un vuelo</h3>
+            <p>Elige todas las fotos que tomó el dron. Se revisan una por una aquí, sin subirlas, y cada foto con GPS se vuelve un punto del mapa.</p>
             <div class="botones">
-              <button class="btn btn-primario btn-grande" type="button" id="b-mi-mapa"><span data-ico="archivo"></span>Sí, abrir mi mapa</button>
-              <button class="btn btn-secundario btn-grande" type="button" id="b-ejemplo">No, ver un ejemplo</button>
+              <button class="btn btn-primario btn-grande" type="button" id="b-vuelo"><span data-ico="imagen"></span>Elegir las fotos del vuelo</button>
+              <button class="btn btn-secundario btn-grande solo-ancho" type="button" id="b-carpeta"><span data-ico="archivo"></span>Elegir la carpeta del vuelo</button>
+              <div class="otras">
+                <button class="btn btn-fantasma" type="button" id="b-mi-mapa">Abrir un mapa (.geojson)</button>
+                <button class="btn btn-fantasma" type="button" id="b-ejemplo">Ver un ejemplo</button>
+              </div>
             </div>
+            <p class="pista solo-ancho">También puedes arrastrar la carpeta o las fotos a esta ventana.</p>
           </div>
         </div>
       </div>
@@ -505,6 +541,8 @@ a { color: inherit; }
 <input type="file" id="in-camara" accept="image/*" capture="environment" hidden>
 <input type="file" id="in-galeria" accept="image/*" hidden>
 <input type="file" id="in-mapa" accept=".geojson,.json,application/geo+json,application/json" hidden>
+<input type="file" id="in-vuelo" accept="image/*,.json" multiple hidden>
+<input type="file" id="in-carpeta" webkitdirectory multiple hidden>
 <script src="motor.js"></script>
 <script>
 "use strict";
@@ -575,22 +613,42 @@ addEventListener("dragenter", e => {
   if (!conArchivos(e)) return;
   e.preventDefault();
   if (arrastres++ === 0) {
-    const tipo = e.dataTransfer.items?.[0]?.type || "";
-    soltar.querySelector("b").textContent = tipo.startsWith("image/") ? "Suelta la foto aquí"
-      : /json/.test(tipo) || contenido === "mapa" ? "Suelta el mapa aquí" : "Suelta aquí la foto o el mapa";
+    const items = e.dataTransfer.items || [], tipo = items[0]?.type || "";
+    soltar.querySelector("b").textContent = items.length > 1 ? "Suelta las fotos del vuelo aquí"
+      : tipo.startsWith("image/") ? "Suelta la foto aquí" : /json/.test(tipo) ? "Suelta el mapa aquí" : "Suelta aquí la carpeta del vuelo";
     soltar.setAttribute("data-visible", "");
   }
 });
 addEventListener("dragover", e => { if (conArchivos(e)) { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; } });
 addEventListener("dragleave", e => { if (conArchivos(e) && --arrastres <= 0) { arrastres = 0; soltar.removeAttribute("data-visible"); } });
-addEventListener("drop", e => {
+// Lo soltado, con su ruta (las carpetas se recorren completas).
+async function archivosSoltados(dt) {
+  const entradas = [...(dt.items || [])].map(i => i.webkitGetAsEntry?.()).filter(Boolean);   // se piden ya: después del evento no se puede
+  if (!entradas.some(x => x.isDirectory)) return [...dt.files].map(f => ({ archivo: f, ruta: f.name }));
+  const lista = [];
+  const leer = (x, ruta) => new Promise(ok => {
+    if (x.isFile) return x.file(f => { lista.push({ archivo: f, ruta: ruta + f.name }); ok(); }, () => ok());
+    const lector = x.createReader(), hijos = [];
+    const tanda = () => lector.readEntries(async es => {
+      if (es.length) { hijos.push(...es); return tanda(); }
+      for (const h of hijos) await leer(h, ruta + x.name + "/");
+      ok();
+    }, () => ok());
+    tanda();
+  });
+  for (const x of entradas) await leer(x, "");
+  return lista;
+}
+const esFoto = x => (x.archivo.type || "").startsWith("image/") || /\.(jpe?g|png|webp)$/i.test(x.ruta);
+addEventListener("drop", async e => {
   if (!conArchivos(e)) return;
   e.preventDefault(); arrastres = 0; soltar.removeAttribute("data-visible");
-  const archivos = [...e.dataTransfer.files];
-  const foto = archivos.find(f => f.type.startsWith("image/")), lote = archivos.find(esMapa);
-  if (foto) revisar(foto);
-  else if (lote) abrirMapa(lote);
-  else if (archivos.length) pintarError("Ese archivo no es una foto. Usa una foto JPG o PNG de la hoja.", true);
+  const lista = await archivosSoltados(e.dataTransfer);
+  const fotos = lista.filter(esFoto), lote = lista.find(x => esMapa(x.archivo));
+  if (fotos.length > 1 || lista.some(x => x.ruta.includes("/"))) analizarVuelo(lista);
+  else if (fotos.length) revisar(fotos[0].archivo);
+  else if (lote) abrirMapa(lote.archivo);
+  else if (lista.length) pintarError("Ese archivo no es una foto. Usa una foto JPG o PNG de la hoja.", true);
 });
 
 // La voz solo habla cuando la persona lo pide; un segundo toque la calla.
@@ -823,7 +881,7 @@ async function despuesDeAbrir(tipo) {
   if (tipo === "mapa") {
     await prepararMapa(); mapa.invalidar();
     if (pendiente) { const f = pendiente; pendiente = null; cargarMapa(f); }
-    else if (!loteVisto) $("b-mi-mapa").focus({ preventScroll: true });
+    else if (!loteVisto) $("b-vuelo").focus({ preventScroll: true });
   } else if (tipo === "dron") $("dir-dron").focus({ preventScroll: true });
 }
 function abrirPanel(tipo, desde) {
@@ -869,15 +927,86 @@ arrastrable(panel, $("panel-asa"), cerrarPanel);
 ancho.addEventListener("change", () => { cerrarPanel(true); cerrarHoja(); });   // al cambiar de tamaño, vuelve a la portada
 
 // ------------------------------------------------ el mapa: primero la pregunta, luego el lote
-let vistaMapa = "zonas", resumenMapa = null, lote = null;
-function verLote(fotos, ejemplo) {
-  lote = { fotos, ejemplo };
+let vistaMapa = "zonas", resumenMapa = null, lote = null, vuelo = null;
+function verLote(fotos, ejemplo, { encuadrar = true, deVuelo = null } = {}) {
+  lote = { fotos, ejemplo, deVuelo };
+  if (!deVuelo) mostrarVuelo(null);
   // La leyenda tapa una esquina: si el mapa es bajo y ancho, se le deja espacio a la izquierda; si no, abajo.
   const el = $("mapa"), aLado = el.clientHeight < 560 && el.clientWidth >= 560;
-  resumenMapa = mapa.mostrar(fotos, { conSatelite: !ejemplo, relleno: aLado ? [52, 24, 24, 256] : [52, 24, 236, 24] });
+  resumenMapa = mapa.mostrar(fotos, { conSatelite: !ejemplo, relleno: aLado ? [52, 24, 24, 256] : [52, 24, 260, 24], encuadrar });
   $("etiqueta").hidden = !ejemplo;
   pintarLeyenda();
 }
+
+// ------------------------------------------------ analizar todas las fotos de un vuelo y armar el mapa
+// Cada foto se revisa aquí con el modelo (el mejorado, si la persona lo eligió); su GPS sale del EXIF
+// o del .json gemelo. El mapa se va llenando mientras tanto. Las fotos sin GPS cuentan, pero no salen.
+async function analizarVuelo(lista) {
+  const items = M.juntarVuelo(lista);
+  if (!items.length) { abrirPanel("mapa"); $("error-mapa").textContent = "No encontré fotos en lo que elegiste."; $("error-mapa").hidden = false; return; }
+  if (vuelo && !vuelo.terminado) vuelo.detenido = true;
+  const v = vuelo = { registros: [], total: items.length, hechas: 0, detenido: false, terminado: false, encuadrado: false, avance: M.modeloListo() ? 1 : 0,
+                      nombre: (lista.find(x => x.ruta.includes("/"))?.ruta.split("/")[0]) || "" };
+  loteVisto = true; $("error-mapa").hidden = true;
+  abrirPanel("mapa"); $("elegir-mapa").hidden = true;
+  await prepararMapa();
+  mostrarVuelo(v);
+  let antes = 0;
+  for (const it of items) {
+    if (v.detenido) break;
+    try { v.registros.push(await M.analizarFotoDeVuelo(it, x => { v.avance = x; mostrarVuelo(v); })); } catch (e) { v.malas = (v.malas || 0) + 1; }
+    v.hechas++;
+    mostrarVuelo(v);
+    if (performance.now() - antes > 600) { dibujarVuelo(v, !v.encuadrado); antes = performance.now(); }
+  }
+  v.terminado = true;
+  if (vuelo === v) { dibujarVuelo(v, true); mostrarVuelo(v); }
+}
+function dibujarVuelo(v, encuadrar) {
+  if (vuelo !== v) return;
+  const conGps = v.registros.filter(r => r.lat != null);
+  verLote(conGps, false, { encuadrar: encuadrar && conGps.length > 0, deVuelo: v });
+  if (encuadrar && conGps.length) v.encuadrado = true;
+}
+function mostrarVuelo(v) {
+  const caja = $("analisis");
+  if (!v || vuelo !== v) { caja.hidden = true; if (!v) { $("nota-vuelo").hidden = $("acciones-vuelo").hidden = true; } return; }
+  const conGps = v.registros.filter(r => r.lat != null).length, sinGps = v.registros.length - conGps;
+  caja.hidden = v.terminado;
+  if (!v.terminado) {
+    const preparando = v.avance < 1 && v.hechas === 0;
+    $("an-titulo").textContent = preparando ? "Preparando, solo la primera vez…" : "Revisando las fotos del vuelo…";
+    $("an-cuenta").textContent = preparando ? `${Math.round(v.avance * 100)} %` : `${v.hechas} de ${v.total}`;
+    $("an-barra").style.width = `${preparando ? v.avance * 100 : v.hechas / v.total * 100}%`;
+    $("an-detalle").textContent = preparando ? "La página baja lo que necesita para revisar. Puede tardar un minuto."
+      : `${conGps} en el mapa${sinGps ? ` · ${sinGps} sin GPS` : ""}${M.cabeza.leer() ? " · con tu modelo mejorado" : ""}`;
+  }
+  $("nota-vuelo").hidden = !v.terminado;
+  $("nota-vuelo").textContent = `${v.detenido ? `Detenido: ${v.hechas} de ${v.total}` : `${v.registros.length}`} ${v.registros.length === 1 && !v.detenido ? "foto revisada" : "fotos revisadas"}` +
+    (sinGps ? ` · ${sinGps} sin GPS (no salen en el mapa; sí en la tabla)` : "") + (v.malas ? ` · ${v.malas} no se pudieron leer` : "") + ".";
+  $("acciones-vuelo").hidden = !v.terminado || !v.registros.length;
+}
+function bajarArchivo(texto, nombre, tipo) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([texto], { type: tipo })); a.download = nombre;
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+$("acciones-vuelo").addEventListener("click", e => {
+  const b = e.target.closest("[data-bajar]"), v = lote?.deVuelo;
+  if (!b || !v) return;
+  const base = `vuelo-${(v.nombre || new Date().toISOString().slice(0, 10)).replace(/[^\w-]+/g, "_")}`;
+  if (b.dataset.bajar === "geojson") bajarArchivo(M.geojsonDeVuelo(v.registros, v.nombre), `${base}.geojson`, "application/geo+json");
+  else bajarArchivo(M.csvDeVuelo(v.registros), `${base}.csv`, "text/csv;charset=utf-8");
+});
+$("b-detener").addEventListener("click", () => { if (vuelo) vuelo.detenido = true; });
+$("b-vuelo").addEventListener("click", () => { M.modelo().catch(() => {}); $("in-vuelo").click(); });
+$("b-carpeta").addEventListener("click", () => { M.modelo().catch(() => {}); $("in-carpeta").click(); });
+["in-vuelo", "in-carpeta"].forEach(id => $(id).addEventListener("change", e => {
+  const lista = [...e.target.files].map(f => ({ archivo: f, ruta: f.webkitRelativePath || f.name }));
+  e.target.value = "";
+  if (lista.length) analizarVuelo(lista);
+}));
 function pintarLeyenda() {
   const res = resumenMapa;
   if (!res) return;
@@ -885,7 +1014,9 @@ function pintarLeyenda() {
   $("frase-mapa").textContent = !cuadros ? (res.porClase.sigatoka ? "Revisa primero donde están los puntos rojos." : "Ninguna foto tiene Sigatoka.")
     : rojos ? `Revisa primero ${rojos === 1 ? "el cuadro rojo" : `los ${rojos} cuadros rojos`}.` + (borde > 0 ? ` Luego ${borde === 1 ? "el de" : `los ${borde} de`} borde rojo.` : "")
     : res.conSig ? `Revisa primero ${res.conSig === 1 ? "el cuadro" : `los ${res.conSig} cuadros`} de borde rojo.`
-    : res.zonas ? "No se vio Sigatoka en este lote." : "El archivo no trae fotos revisadas.";
+    : res.zonas ? "No se vio Sigatoka en este lote."
+    : lote?.deVuelo ? (lote.deVuelo.terminado ? "Ninguna foto trae GPS: no se pueden poner en el mapa. La tabla trae el resultado de cada una." : "Todavía no hay fotos con GPS.")
+    : "El archivo no trae fotos revisadas.";
   $("titulo-leyenda").textContent = cuadros ? "Cada cuadro mide 20 × 20 metros" : "Cada punto es una foto del dron";
   const nombres = cuadros ? { sigatoka: "Con Sigatoka", otra_condicion: "Otro problema", sana: "Sanos" } : { sigatoka: "Sigatoka", otra_condicion: "Otro problema", sana: "Sana" };
   const cuenta = cuadros ? res.zonasPor : res.porClase;
@@ -897,7 +1028,7 @@ function pintarLeyenda() {
 }
 async function cargarMapa(f) {
   await prepararMapa();
-  try { verLote(M.leerGeojson(await f.text()), false); $("error-mapa").hidden = true; loteVisto = true; }
+  try { const fotos = M.leerGeojson(await f.text()); if (vuelo) vuelo.detenido = true; vuelo = null; verLote(fotos, false); $("error-mapa").hidden = true; loteVisto = true; }
   catch (err) { $("error-mapa").textContent = "Ese archivo no es un mapa del dron. Pídele a tu técnico el archivo que termina en .geojson."; $("error-mapa").hidden = false; }
   $("elegir-mapa").hidden = true;
 }
@@ -905,14 +1036,14 @@ function abrirMapa(f) {   // desde el botón o arrastrado a la ventana
   if (contenido === "mapa" && mapa) return cargarMapa(f);
   pendiente = f; abrirPanel("mapa");
 }
-$("b-archivo").addEventListener("click", () => $("in-mapa").click());
+$("b-archivo").addEventListener("click", () => { $("elegir-mapa").hidden = false; $("b-vuelo").focus({ preventScroll: true }); });
 $("b-mi-mapa").addEventListener("click", () => $("in-mapa").click());
-$("b-ejemplo").addEventListener("click", () => { loteVisto = true; $("elegir-mapa").hidden = true; });
+$("b-ejemplo").addEventListener("click", () => { loteVisto = true; $("elegir-mapa").hidden = true; if (lote?.deVuelo || !lote?.ejemplo) { if (vuelo) vuelo.detenido = true; vuelo = null; verLote(EJEMPLO, true); } });
 $("in-mapa").addEventListener("change", e => { const f = e.target.files[0]; e.target.value = ""; if (f) abrirMapa(f); });
 panel.querySelectorAll("[data-vista]").forEach(b => b.addEventListener("click", () => {
   panel.querySelectorAll("[data-vista]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
   vistaMapa = b.dataset.vista;
-  if (mapa && lote) { mapa.vista(vistaMapa); verLote(lote.fotos, lote.ejemplo); }   // vuelve a encuadrar todo el lote
+  if (mapa && lote) { mapa.vista(vistaMapa); verLote(lote.fotos, lote.ejemplo, { deVuelo: lote.deVuelo, encuadrar: lote.fotos.length > 0 }); }   // vuelve a encuadrar todo el lote
 }));
 
 // ------------------------------------------------ el dron

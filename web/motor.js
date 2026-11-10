@@ -408,6 +408,119 @@ const Motor = (() => {
     return new File([blob], `hoja-${L.clave === "otra_condicion" ? "otro-problema" : L.clave}-${fecha}.jpg`, { type: "image/jpeg" });
   }
 
+  // ------------------------------------------------------------------ fotos de un vuelo
+  // El dron (jetson/zed_right.py) guarda en el EXIF de cada foto el GPS, la hora y un comentario
+  // con lo que vio a bordo ("AnalisisYOLO=sigatoka; ConfianzaYOLO=0.820; ..."), y una copia sin
+  // letras encima en sin_texto/. La captura de vision/capture.py deja un .json gemelo con el GPS.
+  async function leerExif(archivo) {
+    const v = new DataView(await archivo.slice(0, 256 * 1024).arrayBuffer());
+    if (v.byteLength < 4 || v.getUint16(0) !== 0xFFD8) return {};
+    for (let p = 2; p + 10 <= v.byteLength;) {
+      const marca = v.getUint16(p), largo = v.getUint16(p + 2);
+      if (marca === 0xFFE1 && v.getUint32(p + 4) === 0x45786966) return exifTiff(v, p + 10);   // "Exif"
+      if ((marca & 0xFF00) !== 0xFF00 || marca === 0xFFDA) break;
+      p += 2 + largo;
+    }
+    return {};
+  }
+  function exifTiff(v, t) {
+    const le = v.getUint16(t) === 0x4949, fin = v.byteLength - t;
+    const u16 = o => v.getUint16(t + o, le), u32 = o => v.getUint32(t + o, le);
+    const ifd = o => {
+      const e = {};
+      if (!o || o + 2 > fin) return e;
+      for (let i = 0, n = u16(o); i < n && o + 2 + i * 12 + 12 <= fin; i++) { const b = o + 2 + i * 12; e[u16(b)] = { tipo: u16(b + 2), n: u32(b + 4), b }; }
+      return e;
+    };
+    const TAM = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8 };
+    const bytes = x => { const o = x.n * (TAM[x.tipo] || 1) > 4 ? u32(x.b + 8) : x.b + 8; return new Uint8Array(v.buffer, v.byteOffset + t + o, Math.min(x.n * (TAM[x.tipo] || 1), fin - o)); };
+    const texto = x => x ? new TextDecoder("latin1").decode(bytes(x)).replace(/\0+$/, "").trim() : "";
+    const racionales = x => { const o = u32(x.b + 8); return Array.from({ length: x.n }, (_, i) => u32(o + 8 * i) / (u32(o + 8 * i + 4) || 1)); };
+    const cero = ifd(u32(4)), exif = cero[0x8769] ? ifd(u32(cero[0x8769].b + 8)) : {}, gps = cero[0x8825] ? ifd(u32(cero[0x8825].b + 8)) : {};
+    const out = {};
+    if (gps[2] && gps[4]) {
+      const grados = x => { const [g, m, s] = racionales(x); return g + (m || 0) / 60 + (s || 0) / 3600; };
+      out.lat = grados(gps[2]) * (texto(gps[1]) === "S" ? -1 : 1);
+      out.lon = grados(gps[4]) * (texto(gps[3]) === "W" ? -1 : 1);
+      if (gps[6]) out.alt = racionales(gps[6])[0] * (gps[5] && bytes(gps[5])[0] === 1 ? -1 : 1);
+    }
+    const fecha = texto(exif[0x9003]) || texto(cero[0x0132]);
+    if (/^\d{4}:\d\d:\d\d \d\d:\d\d:\d\d/.test(fecha)) out.fecha = fecha.slice(0, 10).replace(/:/g, "-") + "T" + fecha.slice(11, 19);
+    if (exif[0x9286]) {   // UserComment: 8 bytes de juego de caracteres y luego el texto
+      const b = bytes(exif[0x9286]), cab = new TextDecoder("latin1").decode(b.subarray(0, 8)), resto = b.subarray(8);
+      let c = cab.startsWith("UNICODE") ? new TextDecoder("utf-16be").decode(resto) : new TextDecoder("utf-8").decode(resto);
+      if (cab.startsWith("UNICODE") && !/[=;]/.test(c)) c = new TextDecoder("utf-16le").decode(resto);
+      out.comentario = c.replace(/\0+$/, "");
+      const d = Object.fromEntries(out.comentario.split(";").map(x => x.split("=")).filter(x => x.length >= 2).map(([k, ...r]) => [k.trim(), r.join("=").trim()]));
+      if (d.AnalisisYOLO && d.AnalisisYOLO !== "NO_REALIZADO")
+        out.abordo = { clase: d.AnalisisYOLO, confianza: d.ConfianzaYOLO != null ? +d.ConfianzaYOLO : null,
+                       parches: d.AnalisisParches || null, hojas: d.Hojas != null ? +d.Hojas : null, hojasConSintomas: d.HojasConSintomas != null ? +d.HojasConSintomas : null };
+    }
+    return out;
+  }
+
+  // [{ archivo, ruta }] -> fotos a revisar, cada una con su .json gemelo si lo hay.
+  // Si viene la copia limpia de sin_texto/, se usa esa en lugar de la que trae letras encima.
+  function juntarVuelo(lista) {
+    const dir = r => r.includes("/") ? r.slice(0, r.lastIndexOf("/")) : "";
+    const base = r => r.slice(r.lastIndexOf("/") + 1).replace(/\.[^.]+$/, "").toLowerCase();
+    const enSinTexto = r => /(^|\/)sin_texto\/[^/]+$/i.test(r);
+    const jsons = new Map();
+    lista.filter(x => /\.json$/i.test(x.ruta)).forEach(x => jsons.set(`${dir(x.ruta)}|${base(x.ruta)}`, x.archivo));
+    const fotos = lista.filter(x => /\.(jpe?g|png|webp)$/i.test(x.ruta) || (x.archivo.type || "").startsWith("image/"));
+    const limpias = new Set(fotos.filter(x => enSinTexto(x.ruta)).map(x => base(x.ruta)));
+    return fotos.filter(x => enSinTexto(x.ruta) || !limpias.has(base(x.ruta))).map(x => {
+      const d = dir(x.ruta), padre = d.replace(/(^|\/)?sin_texto$/i, "");
+      return { archivo: x.archivo, nombre: x.ruta.slice(x.ruta.lastIndexOf("/") + 1),
+               json: jsons.get(`${d}|${base(x.ruta)}`) || jsons.get(`${padre}|${base(x.ruta)}`) || null };
+    }).sort((a, b) => a.nombre.localeCompare(b.nombre, "es", { numeric: true }));
+  }
+
+  async function miniatura(archivo, lado = 220) {
+    const img = await createImageBitmap(archivo), k = lado / Math.max(img.width, img.height);
+    const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); img.close();
+    return URL.createObjectURL(await new Promise(ok => c.toBlob(ok, "image/jpeg", .78)));
+  }
+
+  // Todo lo que se sabe de una foto del vuelo: dónde y cuándo, qué ve el modelo aquí y qué vio a bordo.
+  async function analizarFotoDeVuelo(item, alProgreso) {
+    let exif = {}, gemelo = null;
+    try { exif = await leerExif(item.archivo); } catch (e) {}
+    if (item.json) { try { gemelo = JSON.parse(await item.json.text()); } catch (e) {} }
+    let lat = null, lon = null, alt = null;
+    if (gemelo && gemelo.gps_ok !== false && gemelo.lat != null && gemelo.lon != null) { lat = +gemelo.lat; lon = +gemelo.lon; alt = gemelo.alt_rel_m ?? gemelo.alt ?? null; }
+    else if (Number.isFinite(exif.lat) && Number.isFinite(exif.lon) && (exif.lat || exif.lon)) { lat = exif.lat; lon = exif.lon; alt = exif.alt ?? null; }
+    const r = await diagnosticar(item.archivo, alProgreso), L = lectura(r);
+    return { archivo: item.nombre, lat, lon, alt: alt != null ? +alt : null,
+             fecha: gemelo?.ts || exif.fecha || new Date(item.archivo.lastModified).toISOString().slice(0, 19),
+             clave: L.sinHoja ? "sin_hoja" : r.clase, dudoso: !r.seguro && !L.sinHoja, conf: r.confianza, probs: r.probs, umbral: r.umbral,
+             calidad: r.calidad, mejorado: r.mejorado, abordo: exif.abordo || null, mini: await miniatura(item.archivo).catch(() => null), humano: false, revisor: "" };
+  }
+
+  // Para el técnico o la estación: el mismo .geojson que abre la página (Abrir otro > mapa)…
+  function geojsonDeVuelo(registros, vuelo = "") {
+    const r3 = x => x == null ? null : Math.round(x * 1000) / 1000;
+    return JSON.stringify({ type: "FeatureCollection", features: registros.filter(f => f.lat != null).map(f => ({ type: "Feature",
+      geometry: { type: "Point", coordinates: f.alt != null ? [f.lon, f.lat, r3(f.alt)] : [f.lon, f.lat] },
+      properties: { archivo: f.archivo, fecha: f.fecha, vuelo, clave: f.clave, diagnostico: cat(f.clave).nombre, color: cat(f.clave).color,
+                    dudoso: f.dudoso, confianza_modelo: r3(f.conf), umbral: f.umbral, fuente: f.mejorado ? "modelo mejorado en el navegador" : "modelo en el navegador",
+                    prob_sana: r3(f.probs?.sana), prob_sigatoka: r3(f.probs?.sigatoka), prob_otra_condicion: r3(f.probs?.otra_condicion),
+                    a_bordo: f.abordo?.clase ?? null, confianza_a_bordo: f.abordo?.confianza ?? null } })) });
+  }
+  // …y una tabla con todo, también las fotos sin GPS (se abre en Excel).
+  function csvDeVuelo(registros) {
+    const q = x => x == null ? "" : /[",\n]/.test(String(x)) ? `"${String(x).replace(/"/g, '""')}"` : String(x);
+    const n = x => x == null ? "" : Math.round(x * 100);
+    const filas = [["archivo", "fecha", "latitud", "longitud", "altitud_m", "diagnostico", "que_tan_seguro_de_100", "seguro", "sin_hoja",
+                    "sana_de_100", "sigatoka_de_100", "otro_problema_de_100", "a_bordo", "a_bordo_de_100", "a_bordo_por_hojas", "hojas_con_sintomas", "modelo"]];
+    registros.forEach(f => filas.push([f.archivo, f.fecha, f.lat?.toFixed(7), f.lon?.toFixed(7), f.alt?.toFixed(1), f.dudoso ? "Sin confirmar" : cat(f.clave).nombre,
+      n(f.conf), f.dudoso ? "no" : "sí", f.clave === "sin_hoja" ? "sí" : "no", n(f.probs?.sana), n(f.probs?.sigatoka), n(f.probs?.otra_condicion),
+      f.abordo?.clase ? cat(f.abordo.clase).nombre : "", n(f.abordo?.confianza), f.abordo?.parches ? cat(f.abordo.parches).nombre : "", f.abordo?.hojasConSintomas ?? "",
+      f.mejorado ? "mejorado" : "original"]));
+    return "\ufeff" + filas.map(r => r.map(q).join(",")).join("\r\n");
+  }
+
   // ------------------------------------------------------------------ mapa del lote
   const NO_DIAGNOSTICA = new Set(["sin_hoja"]);
   const PRIORIDAD = ["sigatoka", "otra_condicion", "sana"];   // en un empate, la zona toma lo más grave
@@ -540,7 +653,10 @@ const Motor = (() => {
     function ficha(f) {
       const c = f.dudoso ? { nombre: "Sin confirmar", color: GRIS } : cat(f.clave);
       const fuente = f.humano ? `Revisada${f.revisor ? " por " + esc(f.revisor) : ""}` : f.conf != null ? `Qué tan seguro: ${Math.round(f.conf * 100)} de 100` : "Sin revisar";
-      return `<div class="mapa-ficha"><b><i style="background:${c.color}"></i>${esc(c.nombre)}</b><span>${fuente}${f.archivo ? ` · ${esc(f.archivo)}` : ""}</span></div>`;
+      const hora = f.fecha && f.fecha !== "Ejemplo" ? String(f.fecha).replace("T", " ").slice(0, 19) : "";
+      const abordo = f.abordo?.clase ? `A bordo del dron: ${esc(cat(f.abordo.clase).nombre)}${f.abordo.confianza != null ? ` (${Math.round(f.abordo.confianza * 100)} de 100)` : ""}` : "";
+      return `<div class="mapa-ficha">${f.mini ? `<img src="${f.mini}" alt="">` : ""}<b><i style="background:${c.color}"></i>${esc(c.nombre)}</b><span>${fuente}${f.archivo ? ` · ${esc(f.archivo)}` : ""}</span>` +
+        `${hora ? `<span>${esc(hora)}${f.alt != null ? ` · ${Math.round(f.alt)} m de altura` : ""}</span>` : ""}${abordo ? `<span>${abordo}</span>` : ""}</div>`;
     }
     function dibujar() {
       capa.clearLayers();
@@ -565,7 +681,7 @@ const Motor = (() => {
     return {
       mapa,
       // relleno: [arriba, derecha, abajo, izquierda] en px que tapan otros paneles encima del mapa.
-      mostrar(lista, { conSatelite = true, relleno = null } = {}) {
+      mostrar(lista, { conSatelite = true, relleno = null, encuadrar = true } = {}) {
         fotos = lista;
         mapa.invalidateSize();   // por si el contenedor cambió de tamaño desde que se creó
         if (conSatelite) satelite.addTo(mapa); else satelite.remove();
@@ -575,7 +691,7 @@ const Motor = (() => {
         const zs = zonas(fotos, metros);
         const esquinas = zs.length ? zs.flatMap(z => [[z.i * z.dLat, z.j * z.dLon], [(z.i + 1) * z.dLat, (z.j + 1) * z.dLon]]) : fotos.map(f => [f.lat, f.lon]);
         const [ar, de, ab, iz] = relleno || [20, 20, 20, 20];
-        mapa.fitBounds(L.latLngBounds(esquinas), { paddingTopLeft: [iz, ar], paddingBottomRight: [de, ab], maxZoom: 19 });
+        if (encuadrar && esquinas.length) mapa.fitBounds(L.latLngBounds(esquinas), { paddingTopLeft: [iz, ar], paddingBottomRight: [de, ab], maxZoom: 19 });
         return resumen(fotos, metros);
       },
       vista(v) { vista = v; dibujar(); },
@@ -678,5 +794,5 @@ const Motor = (() => {
   }
 
   return { CAT, cat, GRIS, LECTURAS, esc, plural, pct, icono, qr, SITIO, modelo, modeloListo, diagnosticar, lectura, precargar,
-           hablar, callar, puedeHablar, mensaje, cabeza, entrenarCabeza, aciertos, aplicarCabeza, compartir, fotoConResultado, leerGeojson, ejemplo, crearMapa, resumen, zonas, cuantas, dron };
+           hablar, callar, puedeHablar, mensaje, cabeza, entrenarCabeza, aciertos, aplicarCabeza, leerExif, juntarVuelo, analizarFotoDeVuelo, geojsonDeVuelo, csvDeVuelo, compartir, fotoConResultado, leerGeojson, ejemplo, crearMapa, resumen, zonas, cuantas, dron };
 })();

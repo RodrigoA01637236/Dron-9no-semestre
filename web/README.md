@@ -8,7 +8,8 @@ Todo está en una sola página, `index.html`, pensada para productores (palabras
 | Parte | Qué hace |
 | --- | --- |
 | Revisar una hoja | Toma o elige una foto y el modelo `sigatoka_cls_v1.onnx` la revisa **en el navegador** (onnxruntime-web). La foto no sale del dispositivo. Dice qué tan seguro está (de 0 a 100), avisa si quedó casi en el límite y qué hacer. *Mandar al técnico* comparte la foto con el resultado escrito encima (en la computadora: WhatsApp Web, la foto en Descargas y en el portapapeles) |
-| Mapa del lote | Primero pregunta si el técnico mandó el mapa (`.geojson` de la estación) o si se quiere ver un ejemplo. Muestra cuadros de 20 × 20 m y qué revisar primero. El archivo se lee **en el navegador**: no se sube a ningún lado |
+| Analizar un vuelo | Se eligen o arrastran **todas las fotos de un vuelo** (o la carpeta completa). Cada foto se revisa en el navegador y su GPS sale del EXIF que escribe la Jetson (`jetson/zed_right.py`) o del `.json` gemelo de `vision/capture.py`; si viene `sin_texto/`, se usa esa copia limpia. También se lee lo que el dron vio a bordo (comentario del EXIF). El mapa se va llenando mientras revisa; al final se descargan el mapa (`.geojson`) y una tabla (`.csv`) con todo, incluidas las fotos sin GPS |
+| Mapa del lote | Cuadros de 20 × 20 m y qué revisar primero. Además del vuelo, abre un `.geojson` (de la estación o descargado de aquí) o un ejemplo. Todo se lee **en el navegador**: no se sube a ningún lado |
 | Dron en vivo | Video, GPS y revisión en vivo de la Jetson (`jetson/zed_right.py`) a través de un túnel https |
 
 `entrenar.html` (pestaña *Mejorar el modelo*): cada persona marca fotos de su lote (sana, Sigatoka u
