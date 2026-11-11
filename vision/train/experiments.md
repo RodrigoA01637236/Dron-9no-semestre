@@ -16,3 +16,4 @@ Regla: **cada corrida de entrenamiento agrega una fila aquí**, aunque haya sali
 - **Notas:** qué se cambió respecto a la corrida anterior y los 2–3 patrones de error
   principales vistos al revisar las imágenes mal clasificadas.
 | noche | 2026-11-10 | v2_publico (otra_condicion 6388, sana 6386, sigatoka 6436, sin_hoja 8675 fotos en train) | yolo11s-cls por parches | 384 | 3.5 h | 64 | **0.956** (fotos) | otra_condicion=0.96, sana=0.93, sigatoka=0.97, sin_hoja=0.96 (recall) | 0.5 | runs/noche/ | entrenar_noche.py; T=1.55; ver sigatoka_cls_v2_evaluacion.md |
+| noche | 2026-11-11 | v2_publico (otra_condicion 6405, sana 8597, sigatoka 8728, sin_hoja 8675 fotos en train) | yolo11n-cls por parches | 384 | 1.25 h | 128 | **0.946** (fotos) | otra_condicion=0.94, sana=0.93, sigatoka=0.97, sin_hoja=0.94 (recall) | 0.7 | runs/noche/ | entrenar_noche.py; T=1.05; ver sigatoka_cls_v2_evaluacion.md |
