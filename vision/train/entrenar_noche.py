@@ -13,6 +13,8 @@ correr el mismo comando y sigue donde se quedó):
  Total: ~7-8 h.
  6. Resumen: el mejor se copia a vision/models/sigatoka_cls_v2.* y se anota en
     vision/train/experiments.md. Revisa el reporte antes de subirlo.
+ 7. Filtro "¿esto es hoja de plátano?" para fotos de objetos cotidianos (filtro_hoja.py,
+    baja 900 fotos de COCO la primera vez). Si falla, el modelo queda sin filtro.  ~15-30 min
 
 Uso (desde la raíz del repo, con el venv activo y la laptop conectada a la corriente):
     python vision/train/entrenar_noche.py
@@ -216,6 +218,16 @@ def main() -> None:
     cumple = r.get("exactitud", 0) >= args.meta
     log(f"Elegido: yolo11{elegido}-cls -> vision/models/sigatoka_cls_v2.onnx "
         f"(exactitud test {r.get('exactitud', 0):.1%}, meta {args.meta:.0%}: {'CUMPLE' if cumple else 'NO CUMPLE'})")
+
+    # 7. Filtro de hoja: sin él, una foto de una mesa o una mano puede salir como hoja enferma.
+    log("7. Filtro de hoja (fotos de objetos cotidianos)")
+    try:
+        correr(log, "filtro_hoja.py", "--modelo", str(MODELOS / "sigatoka_cls_v2.onnx"),
+               "--hojas", str(datos / "train"), "--objetos", str(datos / "train" / "sin_hoja"), "--coco", "900")
+    except SystemExit as e:
+        log(f"   {e}")
+        log("   El modelo queda sin filtro de hoja. Para agregarlo después (con internet):")
+        log("   python vision/train/filtro_hoja.py --hojas data/dataset_v2/train --coco 900")
 
     # Fila en experiments.md
     resumen = json.loads((datos / "resumen.json").read_text(encoding="utf-8")) if (datos / "resumen.json").exists() else {}

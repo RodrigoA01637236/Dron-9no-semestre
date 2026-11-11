@@ -192,7 +192,7 @@ def cargar_modelo():
 
     nombre_modelo = onnx.stem
     print(f"[MODELO] {onnx.name} cargado; clases {modelo.clases}; fotos por parches: "
-          f"{'sí' if ANALIZAR_FOTOS else 'no'}")
+          f"{'sí' if ANALIZAR_FOTOS else 'no'}; filtro de hoja: {'sí' if getattr(modelo, 'filtro', None) else 'no'}")
     return modelo
 
 

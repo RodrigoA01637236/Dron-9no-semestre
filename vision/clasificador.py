@@ -22,8 +22,10 @@ import onnxruntime as ort
 
 try:
     from vision import parches as P
+    from vision import rasgos as R
 except ImportError:  # al correrlo desde dentro de vision/
     import parches as P
+    import rasgos as R
 
 
 def leer_imagen(ruta) -> np.ndarray | None:
@@ -54,7 +56,20 @@ class Clasificador:
         self.modo: str = meta.get("modo_defecto", "imagen")
         self.cfg_parches: dict = P.config(meta.get("parches"))
         self.meta = meta
-        self._sess = ort.InferenceSession(str(self.ruta), providers=_proveedores())
+        # Filtro "¿esto es hoja de plátano?" (vision/rasgos.py): necesita los rasgos de la
+        # penúltima capa, así que se le agrega esa salida al modelo. Si algo falla, sin filtro.
+        self.filtro = None
+        self._sess = None
+        if meta.get("filtro_hoja") and "sin_hoja" in self.clases:
+            try:
+                datos, _, W, _ = R.con_rasgos(self.ruta.read_bytes())
+                self.filtro = R.FiltroHoja(meta, W.shape[1])
+                self._sess = ort.InferenceSession(datos, providers=_proveedores())
+            except Exception as e:  # noqa: BLE001
+                print(f"[Clasificador] sin filtro de hoja: {e}")
+                self.filtro = None
+        if self._sess is None:
+            self._sess = ort.InferenceSession(str(self.ruta), providers=_proveedores())
         entrada = self._sess.get_inputs()[0]
         self._entrada = entrada.name
         # Exportado con dynamic=True el lote es libre; el de v1 es fijo en 1.
@@ -70,17 +85,30 @@ class Clasificador:
         """Probabilidades (N x clases) de una lista de imágenes BGR, ya calibradas.
         La foto completa usa INTER_LINEAR (el resize verificado del v1); los parches usan
         INTER_AREA, igual que hacer_parches.py al guardarlos."""
-        filas = []
+        return self._correr(imgs_bgr, interp)[0]
+
+    def _correr(self, imgs_bgr: list[np.ndarray], interp: int, filtrar: bool = False):
+        """(probabilidades calibradas, ¿es hoja de plátano? o None si no se filtra)."""
+        filas, hojas = [], []
+        filtrar = filtrar and self.filtro is not None
         for i in range(0, len(imgs_bgr), self._lote):
             x = np.stack([self._tensor(im, interp) for im in imgs_bgr[i:i + self._lote]])
-            filas.append(self._sess.run(None, {self._entrada: x})[0].astype(np.float64))
+            salida = self._sess.run(None, {self._entrada: x})
+            filas.append(salida[0].astype(np.float64))
+            if filtrar:
+                hojas.append(self.filtro.es_hoja(salida[1], [R.color_hoja(t) for t in x]))
         p = np.concatenate(filas) if filas else np.zeros((0, len(self.clases)))
         if len(p) and not np.allclose(p.sum(axis=1), 1.0, atol=0.01):
             p = _softmax(p)  # por si el export no trae softmax
         if self.temperatura != 1.0 and len(p):
             # log(p) = logits + constante, así que esto es escalar los logits por 1/T.
             p = _softmax(np.log(np.clip(p, 1e-12, 1.0)) / self.temperatura)
-        return p
+        if not filtrar:
+            return p, None
+        es = np.concatenate(hojas) if hojas else np.zeros(0, bool)
+        p[~es] = 0.0  # el filtro dice que no es hoja de plátano: cuenta como sin_hoja
+        p[~es, self.clases.index("sin_hoja")] = 1.0
+        return p, es
 
     def _resultado(self, probs: np.ndarray) -> dict:
         top = int(probs.argmax())
@@ -114,8 +142,10 @@ class Clasificador:
                      ancho=ancho, alto=alto, aviso="No encontré hoja en la foto; usé la foto completa.")
             return r
 
-        probs = self.probabilidades([P.recortar(img_bgr, c) for c in usar], cv2.INTER_AREA)
+        probs, es = self._correr([P.recortar(img_bgr, c) for c in usar], cv2.INTER_AREA, filtrar=True)
         r = P.agregar(probs, self.clases, cfg, self.umbral)
+        if es is not None:
+            r["n_filtrados"] = int((~es).sum())
         ignorar = set(cfg.get("ignorar") or [])
         lista = []
         for c, p in zip(usar, probs):

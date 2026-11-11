@@ -136,6 +136,7 @@ Lo que hace, en orden (cada paso se salta si ya está hecho):
 | 4 | Entrena `yolo11n-cls` | 1.25 h |
 | 5 | Calibra y evalúa los dos contra el v1, con fotos completas | 45–60 min |
 | 6 | Copia el mejor a `vision\models\sigatoka_cls_v2.*` y anota la corrida en `experiments.md` | — |
+| 7 | Entrena el filtro "¿esto es hoja de plátano?" para fotos de objetos (`filtro_hoja.py`; baja 900 fotos de COCO la primera vez) | 15–30 min |
 
 Al empezar imprime la hora aproximada en que termina. Todo queda en `runs\noche\`
 (log completo: `runs\noche\noche.log`).
@@ -151,6 +152,11 @@ Al empezar imprime la hora aproximada en que termina. Todo queda en `runs\noche\
   y vuelve a correr el comando; si sigue, `--workers 0`. Ayuda también subir la memoria
   virtual: Windows + R → `SystemPropertiesPerformance` → Advanced → Virtual memory → Change →
   quita "Automatically manage...", elige C:, Custom size 16384 / 32768, Set, OK y reinicia.
+- **Paso 7 sin internet:** el modelo queda sin filtro de hoja (funciona, pero una foto de una
+  mesa o una mano puede salir como hoja). Con internet, agrégalo después:
+  `python vision\train\filtro_hoja.py --hojas data\dataset_v2\train --objetos data\dataset_v2\train\sin_hoja --coco 900`.
+  Si tienes fotos propias de cosas que no son hoja (la mesa, el piso, manos, la camioneta),
+  ponlas en `data\raw\propias\sin_hoja` y agrégalas a `--objetos`: es lo que más lo mejora.
 - **Menos tiempo:** `--horas-s 2 --horas-n 1`, o solo el principal con `--solo-s`.
 - **Empezar de cero** (por ejemplo, después de agregar fuentes): borra `runs\noche`,
   `data\dataset_v2` y `data\parches_v2`.

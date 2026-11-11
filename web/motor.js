@@ -193,10 +193,14 @@ const Motor = (() => {
       sesion ??= await ort.InferenceSession.create(bytes, { executionProviders: ["wasm"] });
       avisarAvance(1);
       const modo = meta.modo_defecto === "parches" ? "parches" : "imagen";
+      // Filtro "¿esto es hoja de plátano?" (vision/rasgos.py): una sonda sobre los rasgos de cada cuadro.
+      const fh = meta.filtro_hoja, filtro = ultima && fh?.w?.length === ultima.W0.length / ultima.b0.length && meta.classes.includes("sin_hoja")
+        ? { w: Float32Array.from(fh.w), b: fh.b, umbral: fh.umbral, umbralVerde: fh.umbral_verde ?? fh.umbral, verdeMin: fh.verde_min ?? 1.01 }
+        : null;
       return { sesion, entrada: sesion.inputNames[0], salida: sesion.outputNames.find(n => n !== ultima?.rasgos), clases: meta.classes,
                umbral: meta.umbral_confianza ?? 0.65, lado: meta.input[meta.input.length - 1], acierto: meta.top1_test,
                nombre: meta.model || nombre, temperatura: meta.temperatura ?? 1, modo,
-               cfg: { ...PARCHES, ...(meta.parches || {}) }, lote: modo === "parches" ? 8 : 1,
+               cfg: { ...PARCHES, ...(meta.parches || {}) }, lote: modo === "parches" ? 8 : 1, filtro,
                ...(ultima || {}), rasgos: ultima ? ultima.rasgos : null };
     })();
     promesaModelo.catch(() => { promesaModelo = null; avisarAvance(0); });   // si falla, el siguiente intento lo vuelve a bajar
@@ -340,9 +344,32 @@ const Motor = (() => {
     }
   }
 
+  // Fracción de pixeles con color de hoja (verde, o amarillo saturado) en un cuadro ya preparado
+  // (x en CHW, 0-1, desde o), mirando uno de cada 4 x 4. Copia de color_hoja() en vision/rasgos.py.
+  function colorHoja(x, o, L) {
+    const N = L * L;
+    let si = 0, n = 0;
+    for (let yy = 0; yy < L; yy += 4) for (let xx = 0; xx < L; xx += 4) {
+      const k = o + yy * L + xx, r = x[k] * 255, g = x[k + N] * 255, b = x[k + 2 * N] * 255;
+      const mx = Math.max(r, g, b), d = mx - Math.min(r, g, b) + 1e-6, s = mx > 0 ? (d - 1e-6) / (mx + 1e-6) : 0;
+      let h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      h = (h < 0 ? h + 6 : h) * 60;
+      if ((h >= 60 && h <= 190 && s >= .2 && mx >= 40) || (h >= 36 && h < 60 && s >= .39 && mx >= 80)) si++;
+      n++;
+    }
+    return si / n;
+  }
+  // ¿El cuadro es hoja de plátano? Más estricto si casi no tiene color de hoja (una mesa, una mano).
+  function esHoja(filtro, f, color) {
+    let s = filtro.b;
+    for (let i = 0; i < f.length; i++) s += filtro.w[i] * f[i];
+    return s >= (color >= filtro.verdeMin ? filtro.umbralVerde : filtro.umbral);
+  }
+
   // Cada cuadro se pasa a 384 x 384 como lo hizo hacer_parches.py al entrenar (cv2 INTER_AREA):
   // al reducir lo hace el navegador con suavizado; al agrandar, agrandarComoOpenCV. Se revisan
-  // de 8 en 8. alRevisar(hechos, total) avisa el avance.
+  // de 8 en 8. alRevisar(hechos, total) avisa el avance. Los cuadros que el filtro de hoja
+  // descarta cuentan como "sin_hoja" (probabilidad 1).
   async function revisarCuadros(m, archivo, alRevisar) {
     const img = await createImageBitmap(archivo);
     const alto = img.height, ancho = img.width, L = m.lado, N = L * L, K = m.clases.length;
@@ -351,7 +378,8 @@ const Motor = (() => {
     const ctx = lienzo.getContext("2d", { willReadFrequently: true });
     ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
     const chico = document.createElement("canvas"), cctx = chico.getContext("2d", { willReadFrequently: true });
-    const probs = [], rasgos = [];
+    const probs = [], rasgos = [], sinHoja = m.clases.indexOf("sin_hoja");
+    let filtrados = 0;
     try {
       for (let i = 0; i < lista.length; i += m.lote) {
         const grupo = lista.slice(i, i + m.lote), x = new Float32Array(grupo.length * 3 * N);
@@ -376,24 +404,29 @@ const Motor = (() => {
         const P = salida[m.salida].data, F = m.rasgos ? salida[m.rasgos].data : null, D = F ? F.length / grupo.length : 0;
         for (let b = 0; b < grupo.length; b++) {
           const f = F ? Float32Array.from(F.subarray(b * D, (b + 1) * D)) : null;
-          probs.push(calibrar(c && f ? aplicarCabeza(c, f) : Array.from(P.subarray(b * K, (b + 1) * K)), m.temperatura));
+          if (m.filtro && f && !esHoja(m.filtro, f, colorHoja(x, b * 3 * N, L))) {
+            probs.push(m.clases.map((_, k) => (k === sinHoja ? 1 : 0)));
+            filtrados++;
+          } else {
+            probs.push(calibrar(c && f ? aplicarCabeza(c, f) : Array.from(P.subarray(b * K, (b + 1) * K)), m.temperatura));
+          }
           rasgos.push(f);
         }
         alRevisar?.(Math.min(lista.length, i + m.lote), lista.length);
       }
     } finally { img.close(); }
-    return { lista, probs, rasgos, alto, ancho, mejorado: !!(c && rasgos[0]) };
+    return { lista, probs, rasgos, alto, ancho, filtrados, mejorado: !!(c && rasgos[0]) };
   }
 
   async function diagnosticarPorCuadros(m, archivo, revision, inicio, opciones) {
-    const { lista, probs, rasgos, alto, ancho, mejorado } = await revisarCuadros(m, archivo, opciones.alRevisar);
+    const { lista, probs, rasgos, alto, ancho, filtrados, mejorado } = await revisarCuadros(m, archivo, opciones.alRevisar);
     const r = agregar(probs, m.clases, m.cfg, m.umbral), ignorar = new Set(m.cfg.ignorar || []);
     const parches = lista.map((q, k) => { const i = masAlto(probs[k]); return { ...q, clase: m.clases[i], confianza: probs[k][i] }; });
     // Para mejorar el modelo: los rasgos y las probabilidades de los cuadros con hoja de plátano.
     let muestras = parches.map((q, k) => ({ f: rasgos[k], p: probs[k], hoja: !ignorar.has(q.clase) })).filter(s => s.f);
     if (muestras.some(s => s.hoja)) muestras = muestras.filter(s => s.hoja);
     return { clase: r.clase, confianza: r.confianza, seguro: r.confianza >= m.umbral, umbral: m.umbral, probs: r.probs, votos: r.votos,
-             modo: "parches", parches, ancho, alto, n_parches: r.n_hoja, n_cuadros: lista.length, modelo: m.nombre,
+             modo: "parches", parches, ancho, alto, n_parches: r.n_hoja, n_cuadros: lista.length, n_filtrados: filtrados, modelo: m.nombre,
              ms: Math.round(performance.now() - inicio), calidad: revision, mejorado,
              rasgos: muestras.length ? muestras.map(({ f, p }) => ({ f, p })) : null, rasgosEspejo: null };
   }
