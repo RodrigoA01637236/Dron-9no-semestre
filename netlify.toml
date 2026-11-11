@@ -3,7 +3,7 @@
   command = "bash web/preparar.sh"
   publish = "web"
 
-# El modelo cambia poco y pesa 5.5 MB: que el navegador lo revalide en vez de bajarlo cada vez.
+# El modelo cambia poco y pesa unos 6 MB: que el navegador lo revalide en vez de bajarlo cada vez.
 [[headers]]
   for = "/modelo/*"
   [headers.values]

@@ -83,7 +83,14 @@ const Motor = (() => {
   // ------------------------------------------------------------------ modelo en el navegador
   // La primera vez baja unos 20 MB (motor de WebAssembly + modelo). Se avisa el avance a quien
   // escuche con alProgreso(0..1), para mostrar una barra en vez de una espera muda.
-  const TAMANOS = { wasm: 14239897, onnx: 5784396 };   // bytes sin comprimir, para estimar el avance
+  const TAMANOS = { wasm: 14239897, sigatoka_cls_v1: 5784396, sigatoka_cls_v2: 6221675 };   // bytes sin comprimir, para estimar el avance
+  // El v2 revisa la foto por cuadros y es el que se usa si está publicado. Con ?modelo=v1 en la
+  // dirección se usa el anterior (foto completa), para comparar los dos con la misma foto.
+  const MODELOS = (() => {
+    let pedido = null;
+    try { pedido = new URLSearchParams(location.search).get("modelo"); } catch (e) {}
+    return pedido === "v1" ? ["sigatoka_cls_v1"] : ["sigatoka_cls_v2", "sigatoka_cls_v1"];
+  })();
   let promesaModelo = null, avance = 0;
   const oyentes = new Set();
   const avisarAvance = v => { avance = v; oyentes.forEach(f => f(v)); };
@@ -106,11 +113,11 @@ const Motor = (() => {
   }
 
   // ------------------------------------------------------------------ rasgos y última capa
-  // El modelo termina en: rasgos (1280 números) -> una capa lineal (3 x 1280) -> softmax.
+  // El modelo termina en: rasgos (1280 números) -> una capa lineal (clases x 1280) -> softmax.
   // Para mejorar esa última capa en el navegador, al cargarlo se le agrega una salida con los
   // rasgos (mismo modelo, mismos pesos; se edita el protobuf del .onnx aquí mismo) y se leen
   // los pesos de la capa. Si algo falla, el modelo funciona igual, solo sin poder mejorarse.
-  const RASGOS = "/model.9/Flatten_output_0", PESO = "model.9.linear.weight", SESGO = "model.9.linear.bias";
+  // La capa es el último Gemm del grafo (model.9 en el v1, model.10 en el v2).
   function varint(buf, p) { let x = 0, f = 1, b; do { b = buf[p++]; x += (b & 127) * f; f *= 128; } while (b & 128); return [x, p]; }
   function codificar(x) { const o = []; while (x > 127) { o.push((x % 128) | 128); x = Math.floor(x / 128); } o.push(x); return o; }
   function campos(buf, ini, fin) {
@@ -133,10 +140,16 @@ const Motor = (() => {
   function conRasgos(bytes) {
     const grafo = campos(bytes, 0, bytes.length).find(c => c.campo === 7 && c.tipo === 2);
     const enGrafo = campos(bytes, grafo.a, grafo.b);
+    const texto = c => new TextDecoder().decode(bytes.subarray(c.a, c.b));
+    // NodeProto: entradas en el campo 1, tipo de operación en el 4.
+    const gemm = enGrafo.filter(c => c.campo === 1 && c.tipo === 2).map(c => campos(bytes, c.a, c.b))
+      .filter(n => n.some(x => x.campo === 4 && texto(x) === "Gemm")).pop();
+    if (!gemm) throw new Error("no encontré la última capa");
+    const [RASGOS, PESO, SESGO] = gemm.filter(x => x.campo === 1).map(texto);
     const leer = (nombre) => {   // TensorProto float guardado en raw_data
       for (const c of enGrafo.filter(c => c.campo === 5)) {
         const t = campos(bytes, c.a, c.b), n = t.find(x => x.campo === 8);
-        if (n && new TextDecoder().decode(bytes.subarray(n.a, n.b)) === nombre) {
+        if (n && texto(n) === nombre) {
           const r = t.find(x => x.campo === 9);
           return new Float32Array(bytes.slice(r.a, r.b).buffer);
         }
@@ -144,7 +157,8 @@ const Motor = (() => {
       throw new Error("no encontré " + nombre);
     };
     const W0 = leer(PESO), b0 = leer(SESGO);
-    const forma = largo(2, [...largo(1, entero(1, 1)), ...largo(1, entero(1, W0.length / b0.length))]);
+    // Forma [n, rasgos]: n libre, porque el v2 revisa varios cuadros a la vez.
+    const forma = largo(2, [...largo(1, largo(2, [...new TextEncoder().encode("n")])), ...largo(1, entero(1, W0.length / b0.length))]);
     const salida = largo(12, largo(1, [...new TextEncoder().encode(RASGOS)]).concat(largo(2, largo(1, [...entero(1, 1), ...forma]))));
     const nuevoGrafo = new Uint8Array(grafo.b - grafo.a + salida.length);
     nuevoGrafo.set(bytes.subarray(grafo.a, grafo.b)); nuevoGrafo.set(salida, grafo.b - grafo.a);
@@ -152,30 +166,38 @@ const Motor = (() => {
     const todo = new Uint8Array(grafo.k0 + cabeza.length + nuevoGrafo.length + bytes.length - grafo.b);
     todo.set(bytes.subarray(0, grafo.k0)); todo.set(cabeza, grafo.k0);
     todo.set(nuevoGrafo, grafo.k0 + cabeza.length); todo.set(bytes.subarray(grafo.b), grafo.k0 + cabeza.length + nuevoGrafo.length);
-    return { bytes: todo, W0, b0 };
+    return { bytes: todo, W0, b0, rasgos: RASGOS };
   }
 
   function modelo(alProgreso) {
     if (alProgreso) { oyentes.add(alProgreso); alProgreso(avance); }
     promesaModelo ??= (async () => {
-      const total = TAMANOS.wasm + TAMANOS.onnx;
+      let meta = null, nombre = null;
+      for (const n of MODELOS) {
+        const r = await fetch(RAIZ + `modelo/${n}.json`).catch(() => null);
+        if (r?.ok) { meta = await r.json(); nombre = n; break; }
+      }
+      if (!meta) throw new Error("No encontré el modelo en esta página. Recarga e intenta otra vez.");
+      const tam = TAMANOS[nombre] || 6e6, total = TAMANOS.wasm + tam;
       if (!window.ort) await cargarScript(RAIZ + "vendor/ort.wasm.min.js");
       ort.env.wasm.wasmPaths = RAIZ + "vendor/";
       ort.env.wasm.numThreads = 1;   // sin aislamiento entre orígenes el navegador no da hilos
       ort.env.wasm.wasmBinary = (await bajar(RAIZ + "vendor/ort-wasm-simd-threaded.wasm", TAMANOS.wasm, 0, total)).buffer;
-      const meta = await (await fetch(RAIZ + "modelo/sigatoka_cls_v1.json")).json();
-      const bytes = await bajar(RAIZ + "modelo/sigatoka_cls_v1.onnx", TAMANOS.onnx, TAMANOS.wasm, total);
+      const bytes = await bajar(RAIZ + `modelo/${nombre}.onnx`, tam, TAMANOS.wasm, total);
       let sesion = null, ultima = null;
       try {
         const c = conRasgos(bytes);
         sesion = await ort.InferenceSession.create(c.bytes, { executionProviders: ["wasm"] });
-        if (sesion.outputNames.includes(RASGOS)) ultima = { W0: c.W0, b0: c.b0 }; else sesion = null;
+        if (sesion.outputNames.includes(c.rasgos)) ultima = { W0: c.W0, b0: c.b0, rasgos: c.rasgos }; else sesion = null;
       } catch (e) { sesion = null; }
       sesion ??= await ort.InferenceSession.create(bytes, { executionProviders: ["wasm"] });
       avisarAvance(1);
-      return { sesion, entrada: sesion.inputNames[0], salida: sesion.outputNames.find(n => n !== RASGOS), clases: meta.classes,
+      const modo = meta.modo_defecto === "parches" ? "parches" : "imagen";
+      return { sesion, entrada: sesion.inputNames[0], salida: sesion.outputNames.find(n => n !== ultima?.rasgos), clases: meta.classes,
                umbral: meta.umbral_confianza ?? 0.65, lado: meta.input[meta.input.length - 1], acierto: meta.top1_test,
-               nombre: meta.model || "sigatoka_cls_v1", rasgos: ultima ? RASGOS : null, ...(ultima || {}) };
+               nombre: meta.model || nombre, temperatura: meta.temperatura ?? 1, modo,
+               cfg: { ...PARCHES, ...(meta.parches || {}) }, lote: modo === "parches" ? 8 : 1,
+               ...(ultima || {}), rasgos: ultima ? ultima.rasgos : null };
     })();
     promesaModelo.catch(() => { promesaModelo = null; avisarAvance(0); });   // si falla, el siguiente intento lo vuelve a bajar
     const quitar = () => { if (alProgreso) oyentes.delete(alProgreso); };
@@ -221,13 +243,178 @@ const Motor = (() => {
     return new ort.Tensor("float32", x, [1, 3, lado, lado]);
   }
 
+  // ------------------------------------------------------------------ revisar por cuadros (modelo v2)
+  // Lo mismo que vision/parches.py y vision/clasificador.py: la foto se recorre en cuadros de
+  // 384 px a resolución completa (en fotos grandes, 30 % del lado corto), con 20 % de solape,
+  // cada cuadro se clasifica solo y el veredicto sale de los cuadros. Así se ven las manchas
+  // chicas que desaparecen al reducir la foto entera. El JSON del modelo trae los valores.
+  // No se calcula la máscara de hoja: el v2 usa min_hoja 0 y su clase "sin_hoja" hace ese papel.
+  // Tampoco se separan las hojas (eso lo hacen la estación y el dron); aquí basta el veredicto.
+  const PARCHES = { lado_px: 384, lado_min_rel: .3, solape: .2, min_parches: 1, top_k: 2, max_parches: 64, ignorar: [] };
+  const masAlto = p => p.indexOf(Math.max(...p));
+  const media = a => a.reduce((s, v) => s + v, 0) / Math.max(1, a.length);
+
+  function posiciones(total, lado, solape) {   // inicios sobre un eje; el último toca el borde
+    if (total <= lado) return [0];
+    const paso = lado * (1 - solape), n = Math.ceil((total - lado) / paso) + 1;
+    return Array.from({ length: n }, (_, i) => Math.round(i * (total - lado) / (n - 1)));
+  }
+  function cuadros(alto, ancho, cfg) {
+    const lado = Math.min(Math.max(cfg.lado_px, Math.floor(cfg.lado_min_rel * Math.min(alto, ancho))), Math.max(alto, ancho));
+    let solape = cfg.solape, xs = posiciones(ancho, lado, solape), ys = posiciones(alto, lado, solape);
+    while (xs.length * ys.length > cfg.max_parches && solape > -1) {   // demasiados: se agranda el paso
+      solape -= .1; xs = posiciones(ancho, lado, solape); ys = posiciones(alto, lado, solape);
+    }
+    return ys.flatMap(y => xs.map(x => ({ x, y, w: Math.min(lado, ancho - x), h: Math.min(lado, alto - y) })));
+  }
+  // Softmax si el export no lo trae, y la temperatura del JSON (escala los logits por 1/T).
+  function calibrar(p, T) {
+    const s = p.reduce((a, b) => a + b, 0);
+    let z = s >= .99 && s <= 1.01 ? p.map(v => Math.log(Math.max(v, 1e-12))) : p.slice();
+    if (T !== 1) z = z.map(v => v / T); else if (s >= .99 && s <= 1.01) return p;
+    const mx = Math.max(...z), e = z.map(v => Math.exp(v - mx)), t = e.reduce((a, b) => a + b, 0);
+    return e.map(v => v / t);
+  }
+  // El veredicto de la foto con las probabilidades de sus cuadros: copia de agregar() en vision/parches.py.
+  // Si al menos min_parches cuadros dicen con seguridad la misma enfermedad, la foto la tiene;
+  // si no, es sana solo si la hoja en promedio se ve sana. Los cuadros "sin_hoja" no cuentan.
+  function agregar(probs, clases, cfg, umbral) {
+    const ignorar = new Set(cfg.ignorar || []), gana = probs.map(masAlto);
+    const hoja = probs.filter((p, k) => !ignorar.has(clases[gana[k]]));
+    const promedio = i => media(probs.map(p => p[i]));
+    if (!hoja.length) {
+      let i = -1;
+      clases.forEach((c, j) => { if (ignorar.has(c) && (i < 0 || promedio(j) > promedio(i))) i = j; });
+      return { clase: clases[i], confianza: promedio(i), probs: Object.fromEntries(clases.map((c, j) => [c, promedio(j)])), votos: {}, n_hoja: 0 };
+    }
+    const n = hoja.length, topK = Math.max(1, cfg.top_k | 0), minimo = Math.max(1, Math.min(cfg.min_parches | 0, n));
+    const ganaH = hoja.map(masAlto), seguro = hoja.map(p => Math.max(...p) >= umbral);
+    const puntajes = {}, votos = {};
+    clases.forEach((c, i) => {
+      if (ignorar.has(c)) return;
+      const col = hoja.map(p => p[i]).sort((a, b) => b - a);
+      votos[c] = ganaH.filter((g, k) => g === i && seguro[k]).length;
+      const k = Math.min(n, Math.max(minimo, Math.min(topK, votos[c])));
+      puntajes[c] = c === "sana" ? media(col) : media(col.slice(0, k));
+    });
+    const enfermedades = Object.keys(puntajes).filter(c => c !== "sana");
+    const marcadas = enfermedades.filter(c => votos[c] >= minimo && puntajes[c] >= umbral);
+    let clase, confianza;
+    if (marcadas.length) {
+      clase = marcadas.reduce((a, c) => votos[c] > votos[a] || (votos[c] === votos[a] && puntajes[c] > puntajes[a]) ? c : a);
+      confianza = puntajes[clase];
+    } else {
+      clase = Object.keys(puntajes).reduce((a, c) => puntajes[c] > puntajes[a] ? c : a);
+      confianza = puntajes[clase];
+      // seguro en pocos cuadros, menos que min_parches: queda justo bajo el umbral, para revisión humana
+      if (enfermedades.includes(clase) && confianza >= umbral) confianza = Math.min(confianza, umbral * .99);
+    }
+    return { clase, confianza, probs: puntajes, votos, n_hoja: n };
+  }
+
+  // Agrandar un cuadro como cv2.resize(..., INTER_AREA) de OpenCV, que al agrandar no interpola
+  // como el navegador: copia cada pixel y solo mezcla en el borde entre dos (casi como vecino
+  // más cercano). Pasa en fotos chicas, de menos de 384 px de lado. Escribe en x (CHW, /255).
+  function ejeComoOpenCV(origen, destino) {
+    const escala = origen / destino, inv = destino / origen, i0 = new Int32Array(destino), f = new Float32Array(destino);
+    for (let d = 0; d < destino; d++) {
+      let s = Math.floor(d * escala), w = (d + 1) - (s + 1) * inv;
+      w = w <= 0 ? 0 : w - Math.floor(w);
+      if (s >= origen - 1) { s = origen - 1; w = 0; }
+      i0[d] = s; f[d] = w;
+    }
+    return { i0, f };
+  }
+  function agrandarComoOpenCV(px, w, h, L, x, o) {
+    const ex = ejeComoOpenCV(w, L), ey = ejeComoOpenCV(h, L), N = L * L;
+    for (let dy = 0; dy < L; dy++) {
+      const y0 = ey.i0[dy], y1 = Math.min(h - 1, y0 + 1), fy = ey.f[dy];
+      for (let dx = 0; dx < L; dx++) {
+        const x0 = ex.i0[dx], x1 = Math.min(w - 1, x0 + 1), fx = ex.f[dx], k = dy * L + dx;
+        const a = 4 * (y0 * w + x0), b = 4 * (y0 * w + x1), c = 4 * (y1 * w + x0), d = 4 * (y1 * w + x1);
+        for (let ch = 0; ch < 3; ch++) {
+          const v = (1 - fy) * ((1 - fx) * px[a + ch] + fx * px[b + ch]) + fy * ((1 - fx) * px[c + ch] + fx * px[d + ch]);
+          x[o + ch * N + k] = Math.round(v) / 255;
+        }
+      }
+    }
+  }
+
+  // Cada cuadro se pasa a 384 x 384 como lo hizo hacer_parches.py al entrenar (cv2 INTER_AREA):
+  // al reducir lo hace el navegador con suavizado; al agrandar, agrandarComoOpenCV. Se revisan
+  // de 8 en 8. alRevisar(hechos, total) avisa el avance.
+  async function revisarCuadros(m, archivo, alRevisar) {
+    const img = await createImageBitmap(archivo);
+    const alto = img.height, ancho = img.width, L = m.lado, N = L * L, K = m.clases.length;
+    const lista = cuadros(alto, ancho, m.cfg), c = m.rasgos ? cabeza.leer(m) : null;
+    const lienzo = document.createElement("canvas"); lienzo.width = lienzo.height = L;
+    const ctx = lienzo.getContext("2d", { willReadFrequently: true });
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
+    const chico = document.createElement("canvas"), cctx = chico.getContext("2d", { willReadFrequently: true });
+    const probs = [], rasgos = [];
+    try {
+      for (let i = 0; i < lista.length; i += m.lote) {
+        const grupo = lista.slice(i, i + m.lote), x = new Float32Array(grupo.length * 3 * N);
+        grupo.forEach((q, b) => {
+          const o = b * 3 * N;
+          if (q.w < L || q.h < L) {
+            chico.width = q.w; chico.height = q.h;
+            cctx.drawImage(img, q.x, q.y, q.w, q.h, 0, 0, q.w, q.h);
+            agrandarComoOpenCV(cctx.getImageData(0, 0, q.w, q.h).data, q.w, q.h, L, x, o);
+            return;
+          }
+          ctx.drawImage(img, q.x, q.y, q.w, q.h, 0, 0, L, L);
+          const { data } = ctx.getImageData(0, 0, L, L);
+          for (let k = 0; k < N; k++) { x[o + k] = data[4 * k] / 255; x[o + N + k] = data[4 * k + 1] / 255; x[o + 2 * N + k] = data[4 * k + 2] / 255; }
+        });
+        let salida;
+        try { salida = await m.sesion.run({ [m.entrada]: new ort.Tensor("float32", x, [grupo.length, 3, L, L]) }); }
+        catch (e) {
+          if (m.lote > 1) { m.lote = 1; img.close(); return revisarCuadros(m, archivo, alRevisar); }   // modelo con lote fijo
+          throw e;
+        }
+        const P = salida[m.salida].data, F = m.rasgos ? salida[m.rasgos].data : null, D = F ? F.length / grupo.length : 0;
+        for (let b = 0; b < grupo.length; b++) {
+          const f = F ? Float32Array.from(F.subarray(b * D, (b + 1) * D)) : null;
+          probs.push(calibrar(c && f ? aplicarCabeza(c, f) : Array.from(P.subarray(b * K, (b + 1) * K)), m.temperatura));
+          rasgos.push(f);
+        }
+        alRevisar?.(Math.min(lista.length, i + m.lote), lista.length);
+      }
+    } finally { img.close(); }
+    return { lista, probs, rasgos, alto, ancho, mejorado: !!(c && rasgos[0]) };
+  }
+
+  async function diagnosticarPorCuadros(m, archivo, revision, inicio, opciones) {
+    const { lista, probs, rasgos, alto, ancho, mejorado } = await revisarCuadros(m, archivo, opciones.alRevisar);
+    const r = agregar(probs, m.clases, m.cfg, m.umbral), ignorar = new Set(m.cfg.ignorar || []);
+    const parches = lista.map((q, k) => { const i = masAlto(probs[k]); return { ...q, clase: m.clases[i], confianza: probs[k][i] }; });
+    // Para mejorar el modelo: los rasgos y las probabilidades de los cuadros con hoja de plátano.
+    let muestras = parches.map((q, k) => ({ f: rasgos[k], p: probs[k], hoja: !ignorar.has(q.clase) })).filter(s => s.f);
+    if (muestras.some(s => s.hoja)) muestras = muestras.filter(s => s.hoja);
+    return { clase: r.clase, confianza: r.confianza, seguro: r.confianza >= m.umbral, umbral: m.umbral, probs: r.probs, votos: r.votos,
+             modo: "parches", parches, ancho, alto, n_parches: r.n_hoja, n_cuadros: lista.length, modelo: m.nombre,
+             ms: Math.round(performance.now() - inicio), calidad: revision, mejorado,
+             rasgos: muestras.length ? muestras.map(({ f, p }) => ({ f, p })) : null, rasgosEspejo: null };
+  }
+
   // Devuelve { clase, confianza, seguro, umbral, probs, ms, mejorado, rasgos, rasgosEspejo }.
-  // opciones.espejo: también los rasgos de la foto volteada (para mejorar el modelo).
+  // Con el v2 también { modo: "parches", parches: [{ x, y, w, h, clase, confianza }], ancho, alto, votos };
+  // ahí rasgos es una lista [{ f, p }] con un elemento por cuadro de hoja.
+  // opciones.espejo: también los rasgos de la foto volteada (para mejorar el v1).
+  // opciones.alRevisar(hechos, total): avance de los cuadros revisados (v2).
   async function diagnosticar(archivo, alProgreso, opciones = {}) {
     const m = await modelo(alProgreso);
     const inicio = performance.now();
     let revision = null;
     try { revision = await calidad(archivo); } catch (e) {}
+    if (m.modo === "parches") {
+      try { return await diagnosticarPorCuadros(m, archivo, revision, inicio, opciones); }
+      catch (e) {
+        if (e instanceof DOMException || /decode|image|source/i.test(e.message)) throw new Error("No pude leer esa foto. Prueba con una foto JPG o PNG.");
+        throw e;
+      }
+    }
     let p, rasgos = null, rasgosEspejo = null, mejorado = false;
     try {
       const salida = await m.sesion.run({ [m.entrada]: await tensorDe(archivo, m.lado) });
@@ -250,7 +437,7 @@ const Motor = (() => {
     const top = p.indexOf(Math.max(...p));
     return { clase: m.clases[top], confianza: p[top], seguro: p[top] >= m.umbral && !revision?.sinHoja, umbral: m.umbral,
              probs: Object.fromEntries(m.clases.map((c, i) => [c, p[i]])), ms: Math.round(performance.now() - inicio), calidad: revision,
-             mejorado, rasgos, rasgosEspejo };
+             mejorado, rasgos, rasgosEspejo, modo: "imagen", modelo: m.nombre };
   }
 
   // ------------------------------------------------------------------ mejorar la última capa aquí mismo
@@ -282,6 +469,7 @@ const Motor = (() => {
   async function entrenarCabeza(muestras, { vueltas = 400, ancla = 0.1, alProgreso } = {}) {
     const m = await modelo();
     if (!m.rasgos) throw new Error("Este navegador no pudo preparar el modelo para mejorarlo.");
+    if (!muestras.length) throw new Error("Todavía no hay fotos listas para aprender. Espera a que termine de prepararlas.");
     const K = m.b0.length, D = m.W0.length / K, N = muestras.length;
     const W = Float32Array.from(m.W0), b = Float32Array.from(m.b0);
     const porClase = new Array(K).fill(0); muestras.forEach(s => porClase[s.y]++);
@@ -312,30 +500,42 @@ const Motor = (() => {
     alProgreso?.(1);
     return { W, b };
   }
-  // Aciertos de una cabeza (o del modelo original, si es null) con [{ f, y }].
+  // Aciertos de una cabeza (o del modelo original, si es null) con [{ f, y }], una por foto.
+  // Con el v2 cada foto trae { grupo: [rasgos de sus cuadros], y }: se juzga el veredicto de la
+  // foto completa, con la misma regla que usa la página.
   async function aciertos(c, muestras) {
     const m = await modelo();
     const usar = c || { W: m.W0, b: m.b0 };
-    return muestras.reduce((a, s) => { const p = aplicarCabeza(usar, s.f); return a + (p.indexOf(Math.max(...p)) === s.y); }, 0);
+    return muestras.reduce((a, s) => {
+      if (s.grupo) {
+        const r = agregar(s.grupo.map(f => calibrar(aplicarCabeza(usar, f), m.temperatura)), m.clases, m.cfg, m.umbral);
+        return a + (r.clase === m.clases[s.y]);
+      }
+      const p = aplicarCabeza(usar, s.f);
+      return a + (p.indexOf(Math.max(...p)) === s.y);
+    }, 0);
   }
 
   // Lo que la interfaz dice de una lectura: palabra, título, color, pasos, frase de confianza y voz.
   function lectura(r) {
     const clave = r.seguro ? r.clase : "dudoso";
-    const sinHoja = !r.seguro && r.calidad?.sinHoja;
+    // El v2 tiene su propia clase para "no hay hoja de plátano" (suelo, cielo, otras plantas).
+    const porModelo = r.seguro && r.clase === "sin_hoja";
+    const sinHoja = porModelo || (!r.seguro && r.calidad?.sinHoja);
     let L = LECTURAS[clave] || { palabra: cat(r.clase).nombre, titulo: `Parece ${cat(r.clase).nombre}`, pasos: LECTURAS.dudoso.pasos.slice(2) };
-    if (sinHoja) L = { palabra: "No veo hoja", titulo: "No veo una hoja", pasos: [
+    if (sinHoja) L = { palabra: "No veo hoja", titulo: porModelo ? "No veo hojas de plátano" : "No veo una hoja", pasos: [
       ["hoja", "Usa una foto donde una hoja de plátano llene el cuadro."], LECTURAS.dudoso.pasos[1]] };
     const luz = r.calidad?.oscura ? " La foto salió muy oscura." : r.calidad?.quemada ? " La foto salió con demasiada luz." : "";
     const n = Math.round(r.confianza * 100), minimo = Math.round(r.umbral * 100);
-    const confianza = (sinHoja ? "Casi no hay verde en la foto, así que no la reviso."
+    const confianza = (porModelo ? "En ningún cuadro de la foto encontré hojas de plátano."
+      : sinHoja ? "Casi no hay verde en la foto, así que no la reviso."
       : r.seguro ? `Qué tan seguro: ${n} de 100. Necesita ${minimo} para dar un resultado.`
       : `Lo más parecido es ${cat(r.clase).nombre.toLowerCase()}, pero solo ${n} de 100: necesita ${minimo} para decirlo.`) + luz;
     const cerca = r.seguro && n - minimo < 10 ? "Está cerca del límite: que lo confirme tu técnico. " : "";
     // Sana pero casi en el límite: no decir "se ve sana" ni "no se ven manchas"; pedir que el técnico la vea.
     if (cerca && clave === "sana") L = { ...L, titulo: "Parece sana", pasos: [
       ["telefono", "Manda la foto a tu técnico para que lo confirme."], L.pasos[1]] };
-    const voz = (r.seguro ? `${L.titulo}. Qué tan seguro: ${n} de 100. ${cerca}` : sinHoja ? "No veo una hoja en la foto. " : "No estoy seguro de lo que veo. ") +
+    const voz = (r.seguro && !porModelo ? `${L.titulo}. Qué tan seguro: ${n} de 100. ${cerca}` : porModelo ? "No veo hojas de plátano en la foto. " : sinHoja ? "No veo una hoja en la foto. " : "No estoy seguro de lo que veo. ") +
       L.pasos.map(p => p[1]).join(" ");
     return { clave, ...L, color: r.seguro ? cat(r.clase).color : GRIS, nombre: r.seguro ? cat(r.clase).nombre : "Sin confirmar",
              porcentaje: n, minimo, confianza, voz, sinHoja: !!sinHoja, cercaDelLimite: !!cerca };
@@ -382,6 +582,9 @@ const Motor = (() => {
     return "whatsapp";
   }
 
+  // Los cuadros que el v2 vio enfermos con seguridad: los que se marcan sobre la foto.
+  const marcados = r => (r?.parches || []).filter(q => q.clase !== "sana" && q.clase !== "sin_hoja" && q.confianza >= r.umbral);
+
   // La foto con el resultado escrito abajo, para mandarla al técnico o guardarla. Devuelve un File JPG.
   async function fotoConResultado(r, archivo) {
     const L = lectura(r);
@@ -390,6 +593,13 @@ const Motor = (() => {
     const c = document.createElement("canvas"); c.width = W; c.height = H + banda;
     const ctx = c.getContext("2d");
     ctx.drawImage(img, 0, 0, W, H); img.close();
+    const k = r.ancho ? W / r.ancho : 1;   // los cuadros vienen en pixeles de la foto original
+    marcados(r).forEach(q => {
+      ctx.lineWidth = Math.max(3, 4 * s);
+      ctx.strokeStyle = "rgba(255,255,255,.9)"; ctx.strokeRect(q.x * k, q.y * k, q.w * k, q.h * k);
+      ctx.lineWidth = Math.max(2, 2.5 * s);
+      ctx.strokeStyle = cat(q.clase).color; ctx.strokeRect(q.x * k, q.y * k, q.w * k, q.h * k);
+    });
     ctx.fillStyle = "#ffffff"; ctx.fillRect(0, H, W, banda);
     try { await Promise.all(["600 52px Geist", "400 30px Geist"].map(f => document.fonts.load(f))); } catch (e) {}
     const letra = (peso, px) => `${peso} ${Math.round(px * s)}px Geist, system-ui, sans-serif`;
@@ -826,6 +1036,6 @@ const Motor = (() => {
     if ("requestIdleCallback" in window) requestIdleCallback(ir, { timeout: 2500 }); else setTimeout(ir, 1200);
   }
 
-  return { CAT, cat, GRIS, LECTURAS, esc, plural, pct, icono, qr, SITIO, modelo, modeloListo, diagnosticar, lectura, precargar,
+  return { CAT, cat, GRIS, LECTURAS, esc, plural, pct, icono, qr, SITIO, modelo, modeloListo, diagnosticar, lectura, precargar, marcados,
            hablar, callar, puedeHablar, mensaje, cabeza, entrenarCabeza, aciertos, aplicarCabeza, leerExif, juntarVuelo, analizarFotoDeVuelo, geojsonDeVuelo, csvDeVuelo, historial, leaflet, compartir, fotoConResultado, leerGeojson, ejemplo, crearMapa, resumen, zonas, cuantas, dron };
 })();

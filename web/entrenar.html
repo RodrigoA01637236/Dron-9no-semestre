@@ -261,7 +261,8 @@ const todas = () => tienda("readonly", s => s.getAll());
 const guardar = f => tienda("readwrite", s => s.put(f));
 const quitar = id => tienda("readwrite", s => s.delete(id));
 
-let FOTOS = [], candidato = null, preparando = null, entrenando = null;
+let FOTOS = [], candidato = null, preparando = null, entrenando = null, MODELO = null;
+const V1 = "sigatoka_cls_v1.onnx";   // las fotos guardadas antes del v2 no traen el nombre del modelo
 let avisoFotos = "", errorEntrenar = "", estadoUso = "";   // mensajes de los pasos 1, 2 y 3
 
 // Una copia de hasta 1600 px (para descargarla después) y una miniatura.
@@ -281,14 +282,36 @@ async function agregar(archivos) {
       const foto = await reducir(archivos[i], 1600), mini = await reducir(archivos[i], 360, .8);
       const r = await M.diagnosticar(foto, v => { preparando.avance = v; pintarPaso1(); }, { espejo: true });
       if (!r.rasgos) throw new Error("sin rasgos");
-      const L = M.lectura(r);
-      await guardar({ etiqueta: null, apartada: null, foto, mini, nombre: archivos[i].name, fecha: Date.now(), rasgos: r.rasgos, rasgosEspejo: r.rasgosEspejo,
-                      sugerida: { clase: r.clase, nombre: L.nombre, porcentaje: L.porcentaje, color: L.color, sinHoja: L.sinHoja } });
+      await guardar({ etiqueta: null, apartada: null, foto, mini, nombre: archivos[i].name, fecha: Date.now(), ...lo(r) });
     } catch (e) { malas++; }
   }
   preparando = null; candidato = null; estadoUso = "";
   FOTOS = await todas();
   avisoFotos = malas ? `${malas === 1 ? "Una foto no se pudo leer" : `${malas} fotos no se pudieron leer`}; usa fotos JPG o PNG.` : "";
+  pintar();
+}
+
+// Lo que se guarda de lo que vio el modelo: rasgos para aprender y su sugerencia para marcar.
+function lo(r) {
+  const L = M.lectura(r);
+  return { rasgos: r.rasgos, rasgosEspejo: r.rasgosEspejo, modelo: r.modelo,
+           sugerida: { clase: r.clase, nombre: L.nombre, porcentaje: L.porcentaje, color: L.color, sinHoja: L.sinHoja } };
+}
+// Cuando cambia el modelo de la página (del v1 al v2), los rasgos guardados ya no le sirven:
+// se vuelven a sacar de la copia de cada foto. Las marcas no se pierden.
+async function ponerAlDia() {
+  MODELO = await M.modelo();
+  if (localStorage.getItem("cabeza-mejorada") && !M.cabeza.leer(MODELO)) {
+    M.cabeza.quitar();
+    estadoUso = "Tu modelo mejorado era para el modelo anterior. Tus fotos marcadas siguen aquí: mejóralo otra vez para usarlo con el nuevo.";
+  }
+  const viejas = FOTOS.filter(f => (f.modelo || V1) !== MODELO.nombre);
+  for (let i = 0; i < viejas.length; i++) {
+    preparando = { hechas: i, total: viejas.length, avance: 1, alDia: true }; pintar();
+    try { Object.assign(viejas[i], lo(await M.diagnosticar(viejas[i].foto, null, { espejo: true }))); await guardar(viejas[i]); }
+    catch (e) {}
+  }
+  if (viejas.length) { preparando = null; candidato = null; FOTOS = await todas(); }
   pintar();
 }
 
@@ -306,11 +329,20 @@ async function marcar(f, etiqueta) {
 // ------------------------------------------------ entrenar y comparar
 const indice = async clave => (await M.modelo()).clases.indexOf(clave);
 async function muestras(apartadas) {
-  const lista = [];
-  for (const f of FOTOS.filter(x => x.etiqueta && !!x.apartada === apartadas)) {
+  const m = await M.modelo(), lista = [];
+  for (const f of FOTOS.filter(x => x.etiqueta && !!x.apartada === apartadas && (x.modelo || V1) === m.nombre)) {
     const y = await indice(f.etiqueta);
-    lista.push({ f: f.rasgos, y });
-    if (!apartadas && f.rasgosEspejo) lista.push({ f: f.rasgosEspejo, y });
+    if (Array.isArray(f.rasgos)) {   // modelo v2: un elemento { f, p } por cuadro de hoja
+      if (apartadas) { lista.push({ grupo: f.rasgos.map(s => s.f), y }); continue; }
+      // En una foto marcada sana, todos sus cuadros son sanos: aprende primero de los que el modelo
+      // veía menos sanos (sus falsas alarmas). En una con Sigatoka u otro problema solo algunos
+      // cuadros tienen las manchas: aprende de los 2 que más se le parecen, como decide la página.
+      const orden = [...f.rasgos].sort((a, b) => f.etiqueta === "sana" ? a.p[y] - b.p[y] : b.p[y] - a.p[y]);
+      orden.slice(0, f.etiqueta === "sana" ? 16 : 2).forEach(s => lista.push({ f: s.f, y }));
+    } else {
+      lista.push({ f: f.rasgos, y });
+      if (!apartadas && f.rasgosEspejo) lista.push({ f: f.rasgosEspejo, y });
+    }
   }
   return lista;
 }
@@ -320,7 +352,7 @@ async function entrenar() {
     const aprende = await muestras(false), prueba = await muestras(true);
     const c = await M.entrenarCabeza(aprende, { alProgreso: v => { entrenando = v; pintarPaso2(); } });
     const m = await M.modelo(), actual = M.cabeza.leer(m);
-    candidato = { ...c, fotos: FOTOS.filter(x => x.etiqueta && !x.apartada).length, prueba: prueba.length,
+    candidato = { ...c, fotos: FOTOS.filter(x => x.etiqueta && !x.apartada).length, prueba: prueba.length, porCuadros: m.modo === "parches",
                   aciertosNuevo: await M.aciertos(c, prueba), aciertosActual: await M.aciertos(actual, prueba), fecha: Date.now() };
     errorEntrenar = "";
   } catch (e) { errorEntrenar = e.message || "No se pudo mejorar el modelo."; }
@@ -343,7 +375,7 @@ function pintarUso() {
          La página principal ya revisa las hojas con él.</p>
        <div class="acciones"><button class="btn btn-secundario" type="button" data-accion="original" data-confirmar="Sí, volver al original">Volver al modelo original</button></div>`
     : `<p class="etiqueta"><i></i>En uso en este navegador</p><b class="titulo">El modelo original</b>
-       <p>En pruebas acertó 9 de cada 10 fotos de internet. Con tus fotos puede acertar más en tu lote.</p>`);
+       <p>En pruebas acertó ${MODELO?.acierto ? Math.round(MODELO.acierto * 100) : 95} de cada 100 fotos de hojas de internet. Con tus fotos puede acertar más en tu lote.</p>`);
 }
 
 function pintarPaso1() {
@@ -354,7 +386,10 @@ function pintarPaso1() {
   let cuerpo;
   if (preparando) {
     const lista = preparando.avance >= 1;
-    cuerpo = `<div class="fase"><b>${lista ? `Preparando tus fotos…` : "Preparando, solo la primera vez…"}</b><span class="num">${lista ? `${preparando.hechas + 1} de ${preparando.total}` : `${Math.round(preparando.avance * 100)} %`}</span></div>
+    cuerpo = preparando.alDia ? `<div class="fase"><b>Pasando tus fotos al modelo nuevo…</b><span class="num">${preparando.hechas + 1} de ${preparando.total}</span></div>
+      <div class="barra"><i style="width:${(preparando.hechas / preparando.total) * 100}%"></i></div>
+      <p>La página ahora revisa cada foto por cuadros. Tus marcas se quedan como estaban.</p>`
+      : `<div class="fase"><b>${lista ? `Preparando tus fotos…` : "Preparando, solo la primera vez…"}</b><span class="num">${lista ? `${preparando.hechas + 1} de ${preparando.total}` : `${Math.round(preparando.avance * 100)} %`}</span></div>
       <div class="barra"><i style="width:${lista ? (preparando.hechas / preparando.total) * 100 : preparando.avance * 100}%"></i></div>
       <p>${lista ? "El modelo mira cada foto para que tú le digas qué tiene." : "La primera vez la página baja lo que necesita. Puede tardar un minuto."}</p>`;
   } else if (pendientes.length) {
@@ -391,7 +426,7 @@ function pintarPaso2() {
   const cuerpo = corriendo
     ? `<div class="fase"><b>Aprendiendo de tus fotos…</b><span class="num">${Math.round(entrenando * 100)} %</span></div>
        <div class="barra"><i style="width:${entrenando * 100}%"></i></div><p>Lo hace tu computadora. Tarda unos segundos.</p>`
-    : candidato ? `<p>Listo: aprendió de ${candidato.fotos} ${candidato.fotos === 1 ? "foto" : "fotos"} (y de cada una volteada).</p>
+    : candidato ? `<p>Listo: aprendió de ${candidato.fotos} ${candidato.fotos === 1 ? "foto" : "fotos"} ${candidato.porCuadros ? "(de los cuadros de cada una)" : "(y de cada una volteada)"}.</p>
        <div class="acciones"><button class="btn btn-fantasma" type="button" data-accion="entrenar">Volver a mejorarlo</button></div>`
     : alDia ? `<p>El modelo que usas ya aprendió de estas fotos. Marca más para mejorarlo otra vez.</p>
        <div class="acciones"><button class="btn btn-fantasma" type="button" data-accion="entrenar">Volver a mejorarlo</button></div>`
@@ -531,7 +566,9 @@ addEventListener("drop", e => { if (!conArchivos(e)) return; e.preventDefault();
   try { FOTOS = await todas(); }
   catch (e) { avisoFotos = "Este navegador no deja guardar fotos (¿modo privado?). Ábrelo en una ventana normal."; }
   pintar();
-  M.precargar();
+  // Si ya usó esta página antes, se carga el modelo para poner al día sus fotos; si no, solo se precarga.
+  if (FOTOS.length || localStorage.getItem("cabeza-mejorada")) ponerAlDia().catch(() => { preparando = null; pintar(); });
+  else M.precargar();
 })();
 </script>
 </body>

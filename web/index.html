@@ -228,6 +228,7 @@ a { color: inherit; }
 .foto-grande.revisando .barrido { opacity: 1; animation: barrer 1.2s linear infinite; }
 .foto-grande.vacio { background: var(--sunken); }
 .foto-grande.vacio img { display: none; }
+.foto-grande.vacio .marcas { display: none; }
 .foto-grande.vacio::after { content: "Sin foto"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--text-3); font-size: 13px; }
 .cuerpo-hoja .res { align-content: start; overflow-y: auto; padding: 6px 2px 4px 0; gap: 14px; }
 .cuerpo-hoja .res-titulo { font-size: 34px; letter-spacing: -.04em; }
@@ -257,6 +258,15 @@ a { color: inherit; }
 .progreso { height: 6px; border-radius: 3px; background: var(--sunken); overflow: hidden; }
 .progreso i { display: block; height: 100%; border-radius: 3px; background: var(--text); transition: width 300ms var(--ease-out); }
 .res-nota { font-size: 13.5px; color: var(--text-2); line-height: 1.5; }
+/* los cuadros que el modelo vio enfermos, encima de la foto (mismo encuadre que la foto) */
+.marcas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; opacity: 1; transition: opacity 200ms ease-out; }
+.marcas[hidden] { display: block; opacity: 0; }
+.marcas rect { fill: none; vector-effect: non-scaling-stroke; }
+.marcas .fondo-marca { stroke: rgba(255, 255, 255, .92); stroke-width: 4; }
+.marcas .marca { stroke-width: 2; }
+.res-cuadros { display: flex; gap: 9px; align-items: flex-start; font-size: 13px; color: var(--text-2); line-height: 1.45; }
+.res-cuadros i { flex: none; width: 13px; height: 13px; margin-top: 3px; border: 2px solid var(--c, var(--gris)); border-radius: 3px; box-shadow: 0 0 0 1px #fff; }
+@media (prefers-reduced-motion: reduce) { .marcas { transition: none; } }
 .cuerpo-hoja .res > * { animation: entrar 320ms var(--ease-out) both; }
 .cuerpo-hoja .res > *:nth-child(2) { animation-delay: 40ms; } .cuerpo-hoja .res > *:nth-child(3) { animation-delay: 80ms; }
 .cuerpo-hoja .res > *:nth-child(4) { animation-delay: 120ms; } .cuerpo-hoja .res > *:nth-child(n+5) { animation-delay: 160ms; }
@@ -415,11 +425,11 @@ a { color: inherit; }
       <h3>Cómo funciona</h3>
       <ol class="pasos">
         <li>El dron toma fotos del platanar y guarda dónde tomó cada una.</li>
-        <li>La página revisa cada hoja: en el dron o aquí, en tu celular o tu computadora.</li>
+        <li>La página divide cada foto en cuadros y revisa cada uno: en el dron o aquí, en tu celular o tu computadora.</li>
         <li>Un técnico confirma las dudosas y el mapa marca a dónde ir.</li>
       </ol>
       <p class="pregunta"><b>¿Qué pasa con mi foto?</b>Se revisa aquí mismo y no se sube a internet. Solo sale si tú la mandas.</p>
-      <p class="letra-chica">En pruebas acertó 9 de cada 10 fotos tomadas de cerca. Todavía no lo probamos en campo: confírmalo con tu técnico.</p>
+      <p class="letra-chica">En pruebas acertó 95 de cada 100 fotos de hojas y 85 de cada 100 fotos tomadas desde un dron, en Colombia. Todavía no lo probamos en nuestro campo: confírmalo con tu técnico.</p>
       <p class="letra-chica">Hecho por estudiantes del Tec de Monterrey (Platanos Machos, MR3002B) · <a href="https://github.com/RodrigoA01637236/Dron-9no-semestre">GitHub</a></p>
     </div>
   </span>
@@ -463,6 +473,7 @@ a { color: inherit; }
             <span class="solo-celular">Toca para tomar la foto.<br>Que la hoja llene el cuadro.</span>
             <span class="solo-ancho"><b>Arrastra aquí la foto</b>o haz clic para elegirla</span></div>
           <img class="foto" id="foto" alt="La hoja que estás revisando" hidden>
+          <svg class="marcas" id="marcas" preserveAspectRatio="xMidYMid slice" aria-hidden="true" hidden></svg>
           <div class="barrido"></div>
           <div class="aviso" id="aviso" hidden><span class="giro"></span><span id="aviso-texto">Revisando…</span></div>
         </div>
@@ -488,7 +499,7 @@ a { color: inherit; }
         <button class="btn btn-fantasma btn-icono" type="button" id="b-cerrar" aria-label="Cerrar"><span data-ico="cerrar"></span></button>
       </div>
       <div class="cuerpo-hoja" data-solo="hoja">
-        <figure class="foto-grande" id="marco"><img class="fondo" id="foto-fondo" alt=""><img class="foto" id="foto-g" alt="La hoja que estás revisando"><div class="barrido"></div></figure>
+        <figure class="foto-grande" id="marco"><img class="fondo" id="foto-fondo" alt=""><img class="foto" id="foto-g" alt="La hoja que estás revisando"><svg class="marcas" id="marcas-g" preserveAspectRatio="xMidYMid meet" aria-hidden="true" hidden></svg><div class="barrido"></div></figure>
         <div class="res" id="res-g" aria-live="polite"></div>
       </div>
       <div class="cuerpo-mapa" data-solo="mapa">
@@ -702,11 +713,14 @@ async function revisar(archivo) {
     visor.classList.add("con-foto", "revisando");
   }
   aviso(M.modeloListo() ? "Revisando la hoja…" : textoAvance(0));
+  pintarMarcas(null);
   try {
-    const r = await M.diagnosticar(archivo, v => { if (yo === turno) { aviso(textoAvance(v)); avanceEspera(v); } });
+    const r = await M.diagnosticar(archivo, v => { if (yo === turno) { aviso(textoAvance(v)); avanceEspera(v); } },
+      { alRevisar: (k, n) => { if (yo === turno && n > 1) aviso(`Revisando la hoja… ${k} de ${n} cuadros`); } });
     if (yo !== turno) return;
     ultimo = { r, archivo, foto: null, png: null };
     pintarResultado(r);
+    pintarMarcas(r);
     if (!tactil.matches && !L_sinHoja(r)) prepararCopia();
     if (!grande) abrirHoja();
   } catch (e) {
@@ -745,11 +759,40 @@ function htmlResultado(r, grande) {
       <div class="barra" role="meter" aria-label="Qué tan seguro" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${L.porcentaje}" aria-valuetext="${L.porcentaje} de 100"><i style="width:${L.porcentaje}%"></i><span class="minimo" style="left:${L.minimo}%" title="Necesita ${L.minimo} para dar un resultado"></span></div>
     </div>`}
     ${L.cercaDelLimite ? `<p class="limite">${M.icono("alerta")}<span>No está seguro: quedó casi en el límite.</span></p>` : ""}
+    ${fraseCuadros(r, L)}
     <ul class="res-pasos">${L.pasos.map(([ico, t]) => `<li>${M.icono(ico)}<span>${M.esc(t)}</span></li>`).join("")}</ul>
     ${grande ? acciones : `<div class="res-acciones">${acciones}</div>`}
     <p class="res-estado" data-estado aria-live="polite"></p>`;
 }
 const L_sinHoja = r => M.lectura(r).sinHoja;
+// Con el modelo v2: en cuántos cuadros se revisó la foto y en cuántos vio la enfermedad.
+function fraseCuadros(r, L) {
+  if (r.modo !== "parches" || !r.n_cuadros) return "";
+  const n = r.n_cuadros, todos = M.plural(n, "cuadro", "cuadros");
+  if (n === 1) return "";   // foto chica: se revisó entera, no hay nada que contar
+  const vistos = M.marcados(r), deLaClase = vistos.filter(q => q.clase === r.clase).length;
+  let texto;
+  if (L.sinHoja) texto = `Revisé la foto en ${todos} y en ninguno vi hojas de plátano.`;
+  else if (r.seguro && r.clase !== "sana" && deLaClase)
+    texto = `Revisé la foto en ${todos}. En ${deLaClase} vi ${r.clase === "sigatoka" ? "Sigatoka" : "otro problema"}: ${deLaClase === 1 ? "está marcado" : "están marcados"} en la foto.`;
+  else if (r.seguro && r.clase === "sana") texto = `Revisé la foto en ${todos} y en ninguno vi manchas seguras.`;
+  else texto = `Revisé la foto en ${todos}${vistos.length ? `; ${vistos.length === 1 ? "el marcado es el que más dudas da" : `los ${vistos.length} marcados son los que más dudas dan`}` : ""}.`;
+  return `<p class="res-cuadros" style="--c:${vistos.length ? M.cat(vistos[0].clase).color : "var(--gris)"}"><i></i><span>${M.esc(texto)}</span></p>`;
+}
+// Los cuadros enfermos encima de la foto, en las dos vistas (celular y computadora).
+function pintarMarcas(r) {
+  const vistos = M.marcados(r);
+  ["marcas", "marcas-g"].forEach(id => {
+    const svg = $(id);
+    if (!svg) return;
+    // en SVG la propiedad .hidden no existe: se pone y quita el atributo
+    if (!vistos.length) { svg.setAttribute("hidden", ""); svg.innerHTML = ""; return; }
+    svg.setAttribute("viewBox", `0 0 ${r.ancho} ${r.alto}`);
+    svg.innerHTML = vistos.map(q => `<rect class="fondo-marca" x="${q.x}" y="${q.y}" width="${q.w}" height="${q.h}" rx="${Math.round(q.w * .03)}"/>` +
+      `<rect class="marca" x="${q.x}" y="${q.y}" width="${q.w}" height="${q.h}" rx="${Math.round(q.w * .03)}" stroke="${M.cat(q.clase).color}"/>`).join("");
+    svg.removeAttribute("hidden");
+  });
+}
 function colores(el, L) {
   el.style.setProperty("--c", L.clave === "dudoso" ? "var(--text)" : L.color);
   el.style.setProperty("--b", L.cercaDelLimite ? "var(--otra)" : L.clave === "dudoso" ? "var(--gris)" : L.color);

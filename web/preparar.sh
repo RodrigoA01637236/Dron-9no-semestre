@@ -10,7 +10,10 @@ WEB="$RAIZ/web"
 mkdir -p "$WEB/modelo" "$WEB/vendor/leaflet"
 # Leaflet para el mapa (la misma copia que usa la estación, sin CDN)
 cp -r "$RAIZ/ui/static/leaflet/." "$WEB/vendor/leaflet/"
-cp "$RAIZ/vision/models/sigatoka_cls_v1.onnx" "$RAIZ/vision/models/sigatoka_cls_v1.json" "$WEB/modelo/"
+# El v2 (por cuadros) es el que usa la página; el v1 queda para comparar con ?modelo=v1.
+for m in sigatoka_cls_v1 sigatoka_cls_v2; do
+    cp "$RAIZ/vision/models/$m.onnx" "$RAIZ/vision/models/$m.json" "$WEB/modelo/"
+done
 
 # onnxruntime-web 1.30.0, solo WebAssembly. Se verifica el sha256 de cada archivo; si ya están, no se bajan.
 python3 - "$WEB/vendor" <<'PY'
