@@ -195,7 +195,8 @@ const Motor = (() => {
       const modo = meta.modo_defecto === "parches" ? "parches" : "imagen";
       // Filtro "¿esto es hoja de plátano?" (vision/rasgos.py): una sonda sobre los rasgos de cada cuadro.
       const fh = meta.filtro_hoja, filtro = ultima && fh?.w?.length === ultima.W0.length / ultima.b0.length && meta.classes.includes("sin_hoja")
-        ? { w: Float32Array.from(fh.w), b: fh.b, umbral: fh.umbral, umbralVerde: fh.umbral_verde ?? fh.umbral, verdeMin: fh.verde_min ?? 1.01 }
+        ? { w: Float32Array.from(fh.w), b: fh.b, umbral: fh.umbral, umbralVerde: fh.umbral_verde ?? fh.umbral, verdeMin: fh.verde_min ?? 1.01,
+            modo: fh.modo || "foto" }
         : null;
       return { sesion, entrada: sesion.inputNames[0], salida: sesion.outputNames.find(n => n !== ultima?.rasgos), clases: meta.classes,
                umbral: meta.umbral_confianza ?? 0.65, lado: meta.input[meta.input.length - 1], acierto: meta.top1_test,
@@ -368,8 +369,10 @@ const Motor = (() => {
 
   // Cada cuadro se pasa a 384 x 384 como lo hizo hacer_parches.py al entrenar (cv2 INTER_AREA):
   // al reducir lo hace el navegador con suavizado; al agrandar, agrandarComoOpenCV. Se revisan
-  // de 8 en 8. alRevisar(hechos, total) avisa el avance. Los cuadros que el filtro de hoja
-  // descarta cuentan como "sin_hoja" (probabilidad 1).
+  // de 8 en 8. alRevisar(hechos, total) avisa el avance. Filtro de hoja, como FiltroHoja.aplicar
+  // en vision/rasgos.py: en modo "foto", si ningún cuadro de hoja pasa, todos cuentan como
+  // "sin_hoja"; si alguno pasa, no se quita ninguno (así no se pierden los cuadros con manchas
+  // cafés). En modo "cuadro", cada cuadro que no pasa cuenta como "sin_hoja".
   async function revisarCuadros(m, archivo, alRevisar) {
     const img = await createImageBitmap(archivo);
     const alto = img.height, ancho = img.width, L = m.lado, N = L * L, K = m.clases.length;
@@ -378,8 +381,7 @@ const Motor = (() => {
     const ctx = lienzo.getContext("2d", { willReadFrequently: true });
     ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
     const chico = document.createElement("canvas"), cctx = chico.getContext("2d", { willReadFrequently: true });
-    const probs = [], rasgos = [], sinHoja = m.clases.indexOf("sin_hoja");
-    let filtrados = 0;
+    const probs = [], rasgos = [], pasa = [], sinHoja = m.clases.indexOf("sin_hoja");
     try {
       for (let i = 0; i < lista.length; i += m.lote) {
         const grupo = lista.slice(i, i + m.lote), x = new Float32Array(grupo.length * 3 * N);
@@ -404,17 +406,20 @@ const Motor = (() => {
         const P = salida[m.salida].data, F = m.rasgos ? salida[m.rasgos].data : null, D = F ? F.length / grupo.length : 0;
         for (let b = 0; b < grupo.length; b++) {
           const f = F ? Float32Array.from(F.subarray(b * D, (b + 1) * D)) : null;
-          if (m.filtro && f && !esHoja(m.filtro, f, colorHoja(x, b * 3 * N, L))) {
-            probs.push(m.clases.map((_, k) => (k === sinHoja ? 1 : 0)));
-            filtrados++;
-          } else {
-            probs.push(calibrar(c && f ? aplicarCabeza(c, f) : Array.from(P.subarray(b * K, (b + 1) * K)), m.temperatura));
-          }
+          probs.push(calibrar(c && f ? aplicarCabeza(c, f) : Array.from(P.subarray(b * K, (b + 1) * K)), m.temperatura));
+          pasa.push(!(m.filtro && f) || esHoja(m.filtro, f, colorHoja(x, b * 3 * N, L)));
           rasgos.push(f);
         }
         alRevisar?.(Math.min(lista.length, i + m.lote), lista.length);
       }
     } finally { img.close(); }
+    let quitar = pasa.map(p => !p);
+    if (m.filtro?.modo === "foto") {
+      const hayHoja = probs.some((p, k) => pasa[k] && masAlto(p) !== sinHoja);
+      quitar = pasa.map(() => !hayHoja);
+    }
+    quitar.forEach((q, k) => { if (q) probs[k] = m.clases.map((_, j) => (j === sinHoja ? 1 : 0)); });
+    const filtrados = quitar.filter(Boolean).length;
     return { lista, probs, rasgos, alto, ancho, filtrados, mejorado: !!(c && rasgos[0]) };
   }
 

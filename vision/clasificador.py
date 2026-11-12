@@ -105,10 +105,7 @@ class Clasificador:
             p = _softmax(np.log(np.clip(p, 1e-12, 1.0)) / self.temperatura)
         if not filtrar:
             return p, None
-        es = np.concatenate(hojas) if hojas else np.zeros(0, bool)
-        p[~es] = 0.0  # el filtro dice que no es hoja de plátano: cuenta como sin_hoja
-        p[~es, self.clases.index("sin_hoja")] = 1.0
-        return p, es
+        return p, (np.concatenate(hojas) if hojas else np.zeros(0, bool))
 
     def _resultado(self, probs: np.ndarray) -> dict:
         top = int(probs.argmax())
@@ -143,9 +140,12 @@ class Clasificador:
             return r
 
         probs, es = self._correr([P.recortar(img_bgr, c) for c in usar], cv2.INTER_AREA, filtrar=True)
-        r = P.agregar(probs, self.clases, cfg, self.umbral)
+        n_filtrados = None
         if es is not None:
-            r["n_filtrados"] = int((~es).sum())
+            probs, n_filtrados = self.filtro.aplicar(probs, es, self.clases.index("sin_hoja"))
+        r = P.agregar(probs, self.clases, cfg, self.umbral)
+        if n_filtrados is not None:
+            r["n_filtrados"] = n_filtrados
         ignorar = set(cfg.get("ignorar") or [])
         lista = []
         for c, p in zip(usar, probs):

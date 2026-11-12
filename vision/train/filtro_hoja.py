@@ -13,16 +13,22 @@ Qué hace:
    un acercamiento simulado (un recorte del 30-60 % agrandado a 2016 x 1512 y algo
    desenfocado), que es lo que sale al apuntar el celular a algo de cerca.
 3. Regresión logística con regularización L2 y clases equilibradas.
-4. Un cuadro cuenta como hoja si w · rasgos + b >= umbral, con dos umbrales: uno permisivo
-   (--umbral-verde, -4) si al menos --verde-min (20 %) del cuadro tiene color de hoja, y uno
-   estricto (--umbral, 0) si no (una mesa, una mano, una pared). Se eligieron dejando fuera
-   una fuente de fotos de hoja a la vez (hojas de Etiopía, Perú, el dron de Colombia...):
-   de 857 fotos de fuentes que el filtro no vio cambió el veredicto de 4, y de 600 fotos de
-   objetos que el filtro tampoco vio, las que el modelo leía como hoja con seguridad bajaron
-   de 82 a 33 (las que quedan son casi todas verdes: pasto, manzanas, plantas). Un umbral
-   verde más alto atrapa más objetos pero empieza a rechazar hojas de fuentes nuevas (con -3,
-   3 de 25 fotos aéreas). El reporte muestra los dos lados con el 20 % de las fotos apartado
-   (al azar, así que de las mismas fuentes: es más optimista que dejar fuera una fuente).
+4. Un cuadro pasa si w · rasgos + b >= umbral (-3). Modo "foto": la foto cuenta como sin hoja
+   solo si ninguno de sus cuadros de hoja pasa; si alguno pasa, el veredicto es el del modelo
+   con todos sus cuadros. Así el filtro nunca le quita a una hoja los cuadros con manchas
+   cafés, que son los de la Sigatoka.
+
+   Cómo se eligió (dejando fuera una fuente de fotos de hoja a la vez, para medir fotos como
+   las de un celular nuevo): de 3986 fotos de hoja de 10 fuentes, con -3 cambiaron 7 (0.2 %);
+   de 760 fotos de objetos que el filtro no vio, el modelo leía 130 como hoja y el filtro atrapa
+   47 de esas (de las casi sin verde, 27 de 56). Lo que se probó
+   y salió peor: quitar cuadro por cuadro, o un umbral más estricto para cuadros o fotos con
+   poco verde. Las lesiones cafés casi no tienen verde, y fuentes nuevas de fotos de Sigatoka
+   perdían hasta 26 de 897 fotos (con la versión de un día antes, 8 de 122 fotos de prueba con
+   Sigatoka salían "sin hoja"). Un umbral más alto (-2) atrapa más objetos pero cambia 30 fotos
+   de hoja; uno más bajo (-4) casi no atrapa objetos.
+   El reporte muestra los dos lados con el 20 % de las fotos apartado (al azar, así que de las
+   mismas fuentes: es más optimista que dejar fuera una fuente).
 
 --coco N baja N fotos al azar de COCO test2017 (escenas y objetos cotidianos, 160 KB cada una)
 a data/raw/objetos_coco/. Hace falta internet una vez; después se reusan.
@@ -158,13 +164,17 @@ def main() -> None:
     ap.add_argument("--carpeta-coco", type=Path, default=RAIZ / "data/raw/objetos_coco")
     ap.add_argument("--max-fotos", type=int, default=1500, help="máximo de fotos de hoja (al azar)")
     ap.add_argument("--max-objetos", type=int, default=2000, help="máximo de fotos de objetos, contando las de COCO")
-    ap.add_argument("--umbral", type=float, default=0.0, help="cuadros casi sin color de hoja")
-    ap.add_argument("--umbral-verde", type=float, default=-4.0, help="cuadros con color de hoja")
+    ap.add_argument("--umbral", type=float, default=-3.0)
+    ap.add_argument("--umbral-verde", type=float, default=None,
+                    help="otro umbral para cuadros con color de hoja (por omisión, el mismo)")
     ap.add_argument("--verde-min", type=float, default=0.2, help="fracción del cuadro con color de hoja")
+    ap.add_argument("--modo", choices=["foto", "cuadro"], default="foto")
     ap.add_argument("--lam", type=float, default=1e-2, help="regularización L2")
     ap.add_argument("--apartar", type=float, default=0.2, help="fracción de fotos para el reporte")
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
+    if args.umbral_verde is None:
+        args.umbral_verde = args.umbral
 
     rnd = random.Random(args.seed)
     R = Rasgos(args.modelo)
@@ -215,7 +225,7 @@ def main() -> None:
           " | objetos apartados que aún se leen como hoja")
     antes = sum(es.any() for _, es, _ in Ote)
     for uv in [-5, -4, -3, -2]:
-        for u in sorted({uv, args.umbral}):
+        for u in sorted({uv, args.umbral} if args.umbral != args.umbral_verde else {uv}):
             pierde = sum(es.any() and not pasa(F, es, col, u, uv).any() for F, es, col in Hte)
             quedan = sum(pasa(F, es, col, u, uv).any() for F, es, col in Ote)
             marca = "  <- elegido" if (uv, u) == (args.umbral_verde, args.umbral) else ""
@@ -227,10 +237,11 @@ def main() -> None:
     ruta_json = args.modelo.with_suffix(".json")
     meta = json.loads(ruta_json.read_text(encoding="utf-8"))
     meta["filtro_hoja"] = {
-        "descripcion": "Sonda lineal sobre los rasgos de cada cuadro: hoja de plátano contra objetos "
-                       "cotidianos. Si w · rasgos + b < umbral, el cuadro cuenta como sin_hoja. "
-                       "Ver vision/train/filtro_hoja.py.",
+        "descripcion": "Sonda lineal sobre los rasgos de cada cuadro: hoja de plátano contra objetos cotidianos. "
+                       "modo foto: si ningún cuadro de hoja tiene w · rasgos + b >= umbral, la foto cuenta como sin hoja; "
+                       "si alguno pasa, el veredicto es el del modelo con todos sus cuadros. Ver vision/train/filtro_hoja.py.",
         "rasgos": R.nombre,
+        "modo": args.modo,
         "umbral": args.umbral,
         "umbral_verde": args.umbral_verde,
         "verde_min": args.verde_min,

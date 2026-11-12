@@ -129,7 +129,13 @@ class FiltroHoja:
 
     Dos umbrales: uno estricto para cuadros casi sin color de hoja (una mesa, una mano, una
     pared) y otro permisivo para cuadros verdes o amarillos, para no rechazar hojas de fotos
-    distintas a las de entrenamiento (otro celular, otra altura de vuelo)."""
+    distintas a las de entrenamiento (otro celular, otra altura de vuelo).
+
+    modo "foto" (por omisión): solo si ningún cuadro de hoja pasa, la foto entera cuenta como
+    sin hoja; si alguno pasa, el veredicto es el del modelo con todos sus cuadros. Así nunca
+    quita de una hoja los cuadros con manchas cafés, que son los que tienen la Sigatoka.
+    modo "cuadro": cada cuadro que no pasa cuenta como sin_hoja (más estricto con objetos,
+    pero en fuentes de fotos nuevas puede quitar cuadros enfermos)."""
 
     def __init__(self, meta: dict, dim: int):
         f = meta.get("filtro_hoja") or {}
@@ -138,6 +144,7 @@ class FiltroHoja:
         self.umbral = float(f.get("umbral", 0.0))
         self.umbral_verde = float(f.get("umbral_verde", self.umbral))
         self.verde_min = float(f.get("verde_min", 1.01))
+        self.modo = f.get("modo", "foto")
         if self.w.shape != (dim,):
             raise ValueError(f"filtro_hoja trae {self.w.size} pesos y el modelo da {dim} rasgos")
 
@@ -147,3 +154,14 @@ class FiltroHoja:
     def es_hoja(self, rasgos: np.ndarray, color: np.ndarray) -> np.ndarray:
         umbral = np.where(np.asarray(color) >= self.verde_min, self.umbral_verde, self.umbral)
         return self.puntajes(rasgos) >= umbral
+
+    def aplicar(self, probs: np.ndarray, es: np.ndarray, k_sin_hoja: int) -> tuple[np.ndarray, int]:
+        """Probabilidades de los cuadros después del filtro y cuántos cuadros quitó."""
+        quitar = ~es
+        if self.modo == "foto":
+            hay_hoja = (es & (probs.argmax(axis=1) != k_sin_hoja)).any()
+            quitar = np.zeros_like(es) if hay_hoja else np.ones_like(es)
+        probs = probs.copy()
+        probs[quitar] = 0.0
+        probs[quitar, k_sin_hoja] = 1.0
+        return probs, int(quitar.sum())
