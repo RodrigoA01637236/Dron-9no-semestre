@@ -29,6 +29,11 @@ Qué hace:
    de hoja; uno más bajo (-4) casi no atrapa objetos.
    El reporte muestra los dos lados con el 20 % de las fotos apartado (al azar, así que de las
    mismas fuentes: es más optimista que dejar fuera una fuente).
+5. Una segunda sonda para la foto completa reducida, que es lo que usa el video en vivo del
+   dron (modo "imagen"): los rasgos de una imagen entera no se parecen a los de un cuadro.
+   Umbral --umbral-imagen (-3). Dejando fuera una fuente a la vez cambiaron 4 de 4192 fotos de
+   hoja (ninguna aérea) y los objetos que el video leía como hoja bajaron de 10 a 4 de 760. En
+   ese modo el modelo ya rechaza casi todos los objetos solo, porque ve la escena completa.
 
 --coco N baja N fotos al azar de COCO test2017 (escenas y objetos cotidianos, 160 KB cada una)
 a data/raw/objetos_coco/. Hace falta internet una vez; después se reusan.
@@ -120,6 +125,11 @@ class Rasgos:
         f = np.concatenate([s[1] for s in partes]).astype(np.float32)
         return f, ~np.isin(p.argmax(1), self.ignorar), np.array([color_hoja(t) for t in x])
 
+    def completa(self, img: np.ndarray) -> tuple[np.ndarray, bool]:
+        """(rasgos D, ¿el modelo la lee como hoja?) de la foto completa reducida (video en vivo)."""
+        p, f = self.sesion.run(None, {self.entrada: self.c._tensor(img, cv2.INTER_LINEAR)[None]})
+        return f[0].astype(np.float32), int(p[0].argmax()) not in self.ignorar
+
 
 def acercamiento(img: np.ndarray, rnd: random.Random) -> np.ndarray:
     h, w = img.shape[:2]
@@ -169,6 +179,7 @@ def main() -> None:
                     help="otro umbral para cuadros con color de hoja (por omisión, el mismo)")
     ap.add_argument("--verde-min", type=float, default=0.2, help="fracción del cuadro con color de hoja")
     ap.add_argument("--modo", choices=["foto", "cuadro"], default="foto")
+    ap.add_argument("--umbral-imagen", type=float, default=-3.0, help="sonda de la foto completa (video en vivo)")
     ap.add_argument("--lam", type=float, default=1e-2, help="regularización L2")
     ap.add_argument("--apartar", type=float, default=0.2, help="fracción de fotos para el reporte")
     ap.add_argument("--seed", type=int, default=0)
@@ -198,7 +209,7 @@ def main() -> None:
             if img is None or img.ndim != 3:
                 continue
             for im in ([img, acercamiento(img, rnd)] if con_acercamiento else [img]):
-                out.append(R.de(im))
+                out.append((R.de(im), R.completa(im)))
             if k % 200 == 0:
                 print(f"  {k}/{len(lista)}", flush=True)
         return out
@@ -209,8 +220,13 @@ def main() -> None:
     Htr, Hte, Otr, Ote = H[:corte_h], H[corte_h:], O[:corte_o], O[corte_o:]
 
     def XY(hs, os_):
-        Xp = np.concatenate([F[es] for F, es, _ in hs])
-        Xn = np.concatenate([F for F, _, _ in os_])
+        Xp = np.concatenate([F[es] for (F, es, _), _ in hs])
+        Xn = np.concatenate([F for (F, _, _), _ in os_])
+        return np.concatenate([Xp, Xn]), np.concatenate([np.ones(len(Xp), np.float32), np.zeros(len(Xn), np.float32)])
+
+    def XY_imagen(hs, os_):
+        Xp = np.stack([f for _, (f, es) in hs if es])
+        Xn = np.stack([f for _, (f, _) in os_])
         return np.concatenate([Xp, Xn]), np.concatenate([np.ones(len(Xp), np.float32), np.zeros(len(Xn), np.float32)])
 
     X, y = XY(Htr, Otr)
@@ -223,15 +239,25 @@ def main() -> None:
 
     print("\numbral verde / sin verde | fotos de hoja apartadas que se quedan sin hoja"
           " | objetos apartados que aún se leen como hoja")
-    antes = sum(es.any() for _, es, _ in Ote)
+    antes = sum(es.any() for (_, es, _), _ in Ote)
     for uv in [-5, -4, -3, -2]:
         for u in sorted({uv, args.umbral} if args.umbral != args.umbral_verde else {uv}):
-            pierde = sum(es.any() and not pasa(F, es, col, u, uv).any() for F, es, col in Hte)
-            quedan = sum(pasa(F, es, col, u, uv).any() for F, es, col in Ote)
+            pierde = sum(es.any() and not pasa(F, es, col, u, uv).any() for (F, es, col), _ in Hte)
+            quedan = sum(pasa(F, es, col, u, uv).any() for (F, es, col), _ in Ote)
             marca = "  <- elegido" if (uv, u) == (args.umbral_verde, args.umbral) else ""
             print(f"{uv:5.1f} / {u:5.1f} | {pierde:4d} de {len(Hte):4d} | {quedan:4d} de {len(Ote)} (sin filtro: {antes}){marca}")
 
+    wi, bi = entrenar(*XY_imagen(Htr, Otr), args.lam)
+    print("\nVideo en vivo (foto completa) | fotos de hoja apartadas que pasan a sin hoja | objetos apartados que aún se leen como hoja")
+    antes = sum(es for _, (_, es) in Ote)
+    for t in [-5, -4, -3, -2, -1]:
+        pierde = sum(es and f @ wi + bi < t for _, (f, es) in Hte)
+        quedan = sum(es and f @ wi + bi >= t for _, (f, es) in Ote)
+        marca = "  <- elegido" if t == args.umbral_imagen else ""
+        print(f"{t:5.1f} | {pierde:4d} de {len(Hte):4d} | {quedan:4d} de {len(Ote)} (sin filtro: {antes}){marca}")
+
     # Final: con todas las fotos.
+    wi, bi = entrenar(*XY_imagen(H, O), args.lam)
     X, y = XY(H, O)
     w, b = entrenar(X, y, args.lam)
     ruta_json = args.modelo.with_suffix(".json")
@@ -249,6 +275,13 @@ def main() -> None:
         "w": [float(f"{x:.4g}") for x in w],
         "entrenado": {"fecha": date.today().isoformat(), "fotos_hoja": len(hojas), "fotos_objetos": len(objetos),
                       "cuadros_hoja": int(y.sum()), "cuadros_objetos": int((1 - y).sum())},
+        "imagen": {
+            "descripcion": "Sonda para la foto completa reducida (video en vivo del dron). "
+                           "Si w · rasgos + b < umbral, la imagen cuenta como sin hoja.",
+            "umbral": args.umbral_imagen,
+            "b": round(bi, 5),
+            "w": [float(f"{x:.4g}") for x in wi],
+        },
     }
     ruta_json.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"\nfiltro_hoja guardado en {ruta_json}")

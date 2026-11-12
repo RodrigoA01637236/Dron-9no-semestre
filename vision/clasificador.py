@@ -87,15 +87,19 @@ class Clasificador:
         INTER_AREA, igual que hacer_parches.py al guardarlos."""
         return self._correr(imgs_bgr, interp)[0]
 
-    def _correr(self, imgs_bgr: list[np.ndarray], interp: int, filtrar: bool = False):
-        """(probabilidades calibradas, ¿es hoja de plátano? o None si no se filtra)."""
+    def _correr(self, imgs_bgr: list[np.ndarray], interp: int, filtrar: str | None = None):
+        """(probabilidades calibradas, ¿es hoja de plátano? o None si no se filtra).
+        filtrar: "cuadros" (la sonda de cuadros) o "imagen" (la de la foto completa)."""
         filas, hojas = [], []
-        filtrar = filtrar and self.filtro is not None
+        if self.filtro is None or (filtrar == "imagen" and self.filtro.w_imagen is None):
+            filtrar = None
         for i in range(0, len(imgs_bgr), self._lote):
             x = np.stack([self._tensor(im, interp) for im in imgs_bgr[i:i + self._lote]])
             salida = self._sess.run(None, {self._entrada: x})
             filas.append(salida[0].astype(np.float64))
-            if filtrar:
+            if filtrar == "imagen":
+                hojas.append(self.filtro.es_hoja_imagen(salida[1]))
+            elif filtrar:
                 hojas.append(self.filtro.es_hoja(salida[1], [R.color_hoja(t) for t in x]))
         p = np.concatenate(filas) if filas else np.zeros((0, len(self.clases)))
         if len(p) and not np.allclose(p.sum(axis=1), 1.0, atol=0.01):
@@ -121,7 +125,14 @@ class Clasificador:
         modo = modo or self.modo
         if modo == "parches":
             return self.predecir_parches(img_bgr)
-        r = self._resultado(self.probabilidades([img_bgr])[0])
+        p, es = self._correr([img_bgr], cv2.INTER_LINEAR, filtrar="imagen")
+        r = self._resultado(p[0])
+        if es is not None and not es[0] and r["clase"] != "sin_hoja":
+            # El filtro de hoja dice que la imagen no es hoja de plátano (video en vivo).
+            q = np.zeros_like(p[0])
+            q[self.clases.index("sin_hoja")] = 1.0
+            r = self._resultado(q)
+            r["n_filtrados"] = 1
         r["modo"] = "imagen"
         return r
 
@@ -139,7 +150,7 @@ class Clasificador:
                      ancho=ancho, alto=alto, aviso="No encontré hoja en la foto; usé la foto completa.")
             return r
 
-        probs, es = self._correr([P.recortar(img_bgr, c) for c in usar], cv2.INTER_AREA, filtrar=True)
+        probs, es = self._correr([P.recortar(img_bgr, c) for c in usar], cv2.INTER_AREA, filtrar="cuadros")
         n_filtrados = None
         if es is not None:
             probs, n_filtrados = self.filtro.aplicar(probs, es, self.clases.index("sin_hoja"))

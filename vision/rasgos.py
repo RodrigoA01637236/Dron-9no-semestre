@@ -145,6 +145,14 @@ class FiltroHoja:
         self.umbral_verde = float(f.get("umbral_verde", self.umbral))
         self.verde_min = float(f.get("verde_min", 1.01))
         self.modo = f.get("modo", "foto")
+        # Sonda aparte para la foto completa reducida (el video en vivo del dron): los rasgos de
+        # una imagen entera no se parecen a los de un cuadro recortado.
+        im = f.get("imagen") or {}
+        self.w_imagen = np.asarray(im["w"], dtype=np.float32) if im.get("w") else None
+        self.b_imagen = float(im.get("b", 0.0))
+        self.umbral_imagen = float(im.get("umbral", 0.0))
+        if self.w_imagen is not None and self.w_imagen.shape != (dim,):
+            raise ValueError(f"filtro_hoja.imagen trae {self.w_imagen.size} pesos y el modelo da {dim} rasgos")
         if self.w.shape != (dim,):
             raise ValueError(f"filtro_hoja trae {self.w.size} pesos y el modelo da {dim} rasgos")
 
@@ -154,6 +162,9 @@ class FiltroHoja:
     def es_hoja(self, rasgos: np.ndarray, color: np.ndarray) -> np.ndarray:
         umbral = np.where(np.asarray(color) >= self.verde_min, self.umbral_verde, self.umbral)
         return self.puntajes(rasgos) >= umbral
+
+    def es_hoja_imagen(self, rasgos: np.ndarray) -> np.ndarray:
+        return rasgos.astype(np.float32) @ self.w_imagen + self.b_imagen >= self.umbral_imagen
 
     def aplicar(self, probs: np.ndarray, es: np.ndarray, k_sin_hoja: int) -> tuple[np.ndarray, int]:
         """Probabilidades de los cuadros después del filtro y cuántos cuadros quitó."""

@@ -191,8 +191,15 @@ def cargar_modelo():
         return None
 
     nombre_modelo = onnx.stem
+
+    def _filtro(m):
+        f = getattr(m, "filtro", None)
+        if f is None:
+            return "no"
+        return "fotos y video" if getattr(f, "w_imagen", None) is not None else "solo fotos"
+
     print(f"[MODELO] {onnx.name} cargado; clases {modelo.clases}; fotos por parches: "
-          f"{'sí' if ANALIZAR_FOTOS else 'no'}; filtro de hoja: {'sí' if getattr(modelo, 'filtro', None) else 'no'}")
+          f"{'sí' if ANALIZAR_FOTOS else 'no'}; filtro de hoja: {_filtro(modelo)}")
     return modelo
 
 
