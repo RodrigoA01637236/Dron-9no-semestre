@@ -12,6 +12,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote
 
+# El lanzador manda la salida a un archivo (zed-right.log). Sin esto Python la guarda en memoria y
+# el log no muestra las líneas [MODELO], [PARCHES]... hasta que el programa se cierra.
+try:
+    sys.stdout.reconfigure(line_buffering=True)
+    sys.stderr.reconfigure(line_buffering=True)
+except AttributeError:
+    pass
+
 import pyzed.sl as sl
 import piexif
 from pymavlink import mavutil
@@ -527,7 +535,9 @@ def estado_actual(modelo):
             "archivo": modelo.ruta.name,
             "clases": modelo.clases,
             "umbral": modelo.umbral,
-            "fotos_por_parches": ANALIZAR_FOTOS
+            "fotos_por_parches": ANALIZAR_FOTOS,
+            "filtro_hoja": (None if getattr(modelo, "filtro", None) is None else
+                            "fotos y video" if getattr(modelo.filtro, "w_imagen", None) is not None else "solo fotos")
         },
         "prediccion": obtener_prediccion(),
         "fotos": {k: v for k, v in fotos.items() if k != "analisis"},
