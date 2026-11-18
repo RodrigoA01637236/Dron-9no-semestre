@@ -700,7 +700,7 @@ const Motor = (() => {
       if (cab.startsWith("UNICODE") && !/[=;]/.test(c)) c = new TextDecoder("utf-16le").decode(resto);
       out.comentario = c.replace(/\0+$/, "");
       const d = Object.fromEntries(out.comentario.split(";").map(x => x.split("=")).filter(x => x.length >= 2).map(([k, ...r]) => [k.trim(), r.join("=").trim()]));
-      if (d.AnalisisYOLO && d.AnalisisYOLO !== "NO_REALIZADO")
+      if (d.AnalisisYOLO && !/^(NO_REALIZADO|PENDIENTE)$/.test(d.AnalisisYOLO))
         out.abordo = { clase: d.AnalisisYOLO, confianza: d.ConfianzaYOLO != null ? +d.ConfianzaYOLO : null,
                        parches: d.AnalisisParches || null, hojas: d.Hojas != null ? +d.Hojas : null, hojasConSintomas: d.HojasConSintomas != null ? +d.HojasConSintomas : null };
     }
@@ -996,7 +996,8 @@ const Motor = (() => {
   }
 
   // Avisa a la variante con: aviso({ titulo, texto, error, local }), conectado({ host, video }),
-  // estado({ lectura, gps, ms, sinModelo, esperando }), desconectado().
+  // estado({ lectura, gps, ms, sinModelo, esperando, revisando, foto }), desconectado().
+  // La lectura es la de la última foto del dron, revisada por cuadros como aquí; el video no diagnostica.
   function dron(avisar) {
     let d = null;
     async function pedir(ruta, opciones = {}, espera = 6000) {
@@ -1009,11 +1010,11 @@ const Motor = (() => {
       } finally { clearTimeout(t); }
     }
     function estado(est) {
-      const p = est.prediccion;
-      const umbral = est.modelo?.umbral ?? .65;
+      const a = est.analisis_foto, umbral = est.modelo?.umbral ?? .65, lista = !!(a && a.clase && !a.pendiente && !a.error);
       avisar.estado?.({
-        sinModelo: !est.modelo, esperando: !!est.modelo && !p, gps: est.gps || null, ms: p?.ms,
-        lectura: p ? { clase: p.clase, confianza: p.confianza, seguro: p.confianza >= umbral, umbral, probs: p.probs } : null,
+        sinModelo: !est.modelo, esperando: !!est.modelo && !lista, revisando: !!a?.pendiente, foto: a?.archivo || null,
+        gps: est.gps || null, ms: lista ? a.ms : null,
+        lectura: lista ? { clase: a.clase, confianza: a.confianza, seguro: a.confianza >= umbral || a.clase === "sin_hoja", umbral, probs: a.probs || {} } : null,
       });
     }
     async function ciclo() {

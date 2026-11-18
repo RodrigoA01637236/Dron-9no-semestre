@@ -30,13 +30,14 @@ PUERTO = "/dev/ttyACM0"   # si no existe, se busca la Pixhawk en /dev/serial/by-
 PUERTO_WEB = 8080        # video y diagnóstico en http://<ip-de-la-jetson>:8080
 ANCHO_WEB = 960          # ancho del video que se manda por WiFi (más chico = más fluido)
 FPS_WEB = 12
-PAUSA_MODELO = 0.2       # como máximo 5 identificaciones por segundo
-MODO_EN_VIVO = "imagen"  # el video usa la foto completa reducida (rápido)
-ANALIZAR_FOTOS = True    # cada foto se analiza además por parches de hoja, en segundo plano
+# Cada foto tiene UN solo resultado: el análisis por parches de su copia limpia, el mismo
+# código y el mismo modelo que usa la página web. El video en vivo no diagnostica: con la
+# imagen completa reducida las manchas de Sigatoka no se ven y daba otro resultado.
+ANALIZAR_FOTOS = True    # analizar cada foto por parches, en segundo plano (~1-3 s)
 # El modelo más nuevo que esté en vision/models; para volver a uno anterior:
 #   SIGATOKA_MODELO=sigatoka_cls_v1.onnx bash jetson/zed_control.sh reiniciar
 MODELOS = ("sigatoka_cls_v2.onnx", "sigatoka_cls_v1.onnx")
-TEXTO_EN_FOTO = True     # la foto se guarda con FECHA/HORA/GPS/DIAG dibujados encima
+TEXTO_EN_FOTO = True     # la foto se guarda con FECHA/HORA/GPS y su resultado dibujados encima
 COPIA_SIN_TEXTO = True   # y una copia limpia en <CARPETA>/sin_texto/ para el modelo y el dataset
 # Sin monitor (en el dron) o con --sin-ventana: no abre ventana, solo la página.
 CON_VENTANA = bool(os.environ.get("DISPLAY")) and "--sin-ventana" not in sys.argv
@@ -47,11 +48,9 @@ gps_actual = None
 gps_lock = threading.Lock()
 
 # Último cuadro de la cámara (lo comparten la ventana, el modelo y la página)
-ultimo = {"frame": None, "instante": None, "n": 0, "con_texto": None}
+ultimo = {"frame": None, "instante": None, "n": 0}
 cuadro_lock = threading.Lock()
 
-prediccion = None
-pred_lock = threading.Lock()
 nombre_modelo = "sin modelo"
 
 video = {"jpeg": None, "n": 0}
@@ -200,55 +199,9 @@ def cargar_modelo():
 
     nombre_modelo = onnx.stem
 
-    def _filtro(m):
-        f = getattr(m, "filtro", None)
-        if f is None:
-            return "no"
-        return "fotos y video" if getattr(f, "w_imagen", None) is not None else "solo fotos"
-
     print(f"[MODELO] {onnx.name} cargado; clases {modelo.clases}; fotos por parches: "
-          f"{'sí' if ANALIZAR_FOTOS else 'no'}; filtro de hoja: {_filtro(modelo)}")
+          f"{'sí' if ANALIZAR_FOTOS else 'no'}; filtro de hoja: {'sí' if getattr(modelo, 'filtro', None) else 'no'}")
     return modelo
-
-
-def identificar_continuo(modelo):
-    global prediccion
-    visto = -1
-
-    while True:
-        with cuadro_lock:
-            frame, n = ultimo["frame"], ultimo["n"]
-
-        if frame is None or n == visto:
-            time.sleep(0.02)
-            continue
-
-        visto = n
-        inicio = time.perf_counter()
-
-        try:
-            r = modelo.predecir_bgr(frame, MODO_EN_VIVO)
-        except Exception as e:
-            print("[MODELO]", e)
-            time.sleep(1)
-            continue
-
-        r["ms"] = (time.perf_counter() - inicio) * 1000
-        r["diagnosticable"] = r["confianza"] >= modelo.umbral
-        r["tiempo"] = time.monotonic()
-
-        with pred_lock:
-            prediccion = r
-
-        time.sleep(max(0.0, PAUSA_MODELO - (time.perf_counter() - inicio)))
-
-
-def obtener_prediccion():
-    with pred_lock:
-        if prediccion is None or time.monotonic() - prediccion["tiempo"] > 3:
-            return None
-
-        return {k: v for k, v in prediccion.items() if k != "tiempo"}
 
 
 # CONVERTIR COORDENADAS A EXIF
@@ -271,26 +224,23 @@ def coordenada_exif(valor):
     )
 
 
-def crear_exif(gps, instante, pred=None, analisis_parches=None):
+def crear_exif(gps, instante, r=None):
+    """EXIF de la foto. r = resultado del análisis por parches (None mientras se analiza)."""
     import piexif.helper
 
     fecha_exif = instante.strftime("%Y:%m:%d %H:%M:%S")
     fecha_iso = instante.isoformat(timespec="microseconds")
 
-    if pred is None:
+    if modelo is None or not ANALIZAR_FOTOS:
         analisis = "AnalisisYOLO=NO_REALIZADO"
+    elif r is None:
+        analisis = "AnalisisYOLO=PENDIENTE"
     else:
+        a = r
         analisis = (
-            f"AnalisisYOLO={pred['clase']}; "
-            f"ConfianzaYOLO={pred['confianza']:.3f}; "
-            f"ModeloYOLO={nombre_modelo} a bordo"
-        )
-
-    if analisis_parches is not None:
-        a = analisis_parches
-        analisis += (
-            f"; AnalisisParches={a['clase']}"
-            f"; ConfianzaParches={a['confianza']:.3f}"
+            f"AnalisisYOLO={a['clase']}; "
+            f"ConfianzaYOLO={a['confianza']:.3f}; "
+            f"ModeloYOLO={nombre_modelo} a bordo, por parches"
             f"; ParchesHoja={a.get('n_parches', 0)}"
             f"; Hojas={len(a.get('hojas') or [])}"
             f"; HojasConSintomas={sum(h['clase'] not in ('sana', 'sin_hoja') for h in a.get('hojas') or [])}"
@@ -357,14 +307,61 @@ def crear_exif(gps, instante, pred=None, analisis_parches=None):
 
 
 # GUARDAR FOTOGRAFIA
-def guardar_foto(frame, pantalla, gps, instante, pred=None):
+def texto_resultado(a, prefijo="DIAG"):
+    """La línea de resultado (texto y color) para la pantalla o la foto, con el análisis de una foto."""
+    gris = (200, 200, 200)
+    if modelo is None:
+        return f"{prefijo}: SIN MODELO", gris
+    if not ANALIZAR_FOTOS:
+        return f"{prefijo}: SIN ANALISIS", gris
+    if a is None:
+        return f"{prefijo}: TOMA UNA FOTO", gris
+    if a.get("pendiente"):
+        return f"{prefijo}: ANALIZANDO...", gris
+    if a.get("error"):
+        return f"{prefijo}: NO SE PUDO ANALIZAR", gris
+    if a["clase"] != "sin_hoja" and a["confianza"] < modelo.umbral:
+        return f"{prefijo}: NO SEGURO ({a['confianza']:.0%})", gris
+    return (f"{prefijo}: {NOMBRES.get(a['clase'], a['clase'])} {a['confianza']:.0%}",
+            COLORES.get(a["clase"], (255, 255, 255)))
+
+
+def dibujar_textos(frame, gps, instante, resultado):
+    """Copia del cuadro con fecha, hora, GPS y la línea de resultado dibujados encima."""
+    pantalla = frame.copy()
+    fecha_visible = instante.strftime("%y-%m-%d")
+    hora_visible = instante.strftime("%H:%M:%S")
+
+    if gps is None:
+        textos = ["RIGHT CAMERA", f"FECHA: {fecha_visible}", f"HORA: {hora_visible}", "GPS: SIN SENAL"]
+        color = (0, 0, 255)
+    else:
+        textos = ["RIGHT CAMERA", f"FECHA: {fecha_visible}", f"HORA: {hora_visible}",
+                  f"LAT: {gps['lat']:.7f}", f"LON: {gps['lon']:.7f}", f"ALT: {gps['alt']:.1f} m",
+                  f"SAT: {gps['satelites']}"]
+        color = (0, 255, 0)
+
+    for i, texto in enumerate(textos):
+        cv2.putText(pantalla, texto, (30, 50 + i * 40), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 0), 5)
+        cv2.putText(pantalla, texto, (30, 50 + i * 40), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
+
+    texto, color_r = resultado
+    y = 50 + len(textos) * 40 + 10
+    cv2.putText(pantalla, texto, (30, y), cv2.FONT_HERSHEY_SIMPLEX, 1.1, (0, 0, 0), 6)
+    cv2.putText(pantalla, texto, (30, y), cv2.FONT_HERSHEY_SIMPLEX, 1.1, color_r, 2)
+    return pantalla
+
+
+def guardar_foto(frame, gps, instante):
     from PIL import Image
 
     marca = instante.strftime("%y-%m-%d_%H-%M-%S")
 
-    exif = crear_exif(gps, instante, pred)
+    exif = crear_exif(gps, instante)
 
-    con_texto = TEXTO_EN_FOTO and pantalla is not None
+    # Con texto: mientras se analiza dice "ANALIZANDO"; al terminar se vuelve a dibujar con el resultado.
+    con_texto = TEXTO_EN_FOTO
+    pantalla = dibujar_textos(frame, gps, instante, texto_resultado({"pendiente": True})) if con_texto else None
 
     imagen = Image.fromarray(cv2.cvtColor(
         pantalla if con_texto else frame, cv2.COLOR_BGR2RGB
@@ -412,12 +409,9 @@ def guardar_foto(frame, pantalla, gps, instante, pred=None):
     else:
         print("[FOTO] GPS:", gps["lat"], gps["lon"])
 
-    if pred is not None:
-        print(f"[FOTO] Modelo: {pred['clase']} {pred['confianza']:.0%}")
-
     if ANALIZAR_FOTOS and modelo is not None:
         fotos["analisis"] = {"archivo": ruta.name, "pendiente": True}
-        threading.Thread(target=analizar_foto, args=(ruta, frame, gps, instante, pred),
+        threading.Thread(target=analizar_foto, args=(ruta, frame, gps, instante, con_texto),
                          daemon=True).start()
 
     return ruta
@@ -427,17 +421,26 @@ def guardar_foto(frame, pantalla, gps, instante, pred=None):
 analisis_lock = threading.Lock()
 
 
-def analizar_foto(ruta, frame, gps, instante, pred):
+def analizar_foto(ruta, frame, gps, instante, con_texto):
     import piexif
+    from PIL import Image
+
+    limpia = CARPETA / "sin_texto" / ruta.name if con_texto and COPIA_SIN_TEXTO else ruta
 
     with analisis_lock:  # una foto a la vez; si toman varias seguidas, hacen fila
         inicio = time.perf_counter()
 
         try:
-            r = modelo.predecir_bgr(frame, "parches")
+            # La misma imagen que revisa la página: la copia limpia ya guardada en JPEG
+            img = cv2.imread(str(limpia))
+            r = modelo.predecir_bgr(frame if img is None else img, "parches")
         except Exception as e:
             print("[PARCHES]", e)
             fotos["analisis"] = {"archivo": ruta.name, "error": str(e)}
+            if con_texto:
+                Image.fromarray(cv2.cvtColor(dibujar_textos(frame, gps, instante, texto_resultado(fotos["analisis"])),
+                                             cv2.COLOR_BGR2RGB)).save(ruta, format="JPEG", quality=95,
+                                                                     exif=piexif.dump(piexif.load(str(ruta))))
             return
 
         ms = (time.perf_counter() - inicio) * 1000
@@ -445,9 +448,22 @@ def analizar_foto(ruta, frame, gps, instante, pred):
         hojas = r.get("hojas") or []
         hojas_mal = [h for h in hojas if h["clase"] not in ("sana", "sin_hoja")]
 
-        # El EXIF de la foto (y de su copia sin texto) suma el resultado por parches
-        exif = crear_exif(gps, instante, pred, r)
-        for archivo in (ruta, CARPETA / "sin_texto" / ruta.name):
+        fotos_analisis = {
+            "archivo": ruta.name, "clase": r["clase"], "confianza": r["confianza"],
+            "probs": r.get("probs"), "n_parches": r.get("n_parches", 0), "n_sintomas": len(sintomas),
+            "n_hojas": len(hojas), "n_hojas_sintomas": len(hojas_mal),
+            "fraccion": r.get("fraccion"), "ms": round(ms)
+        }
+
+        # El resultado va en el EXIF de la foto y de su copia limpia, y dibujado en la foto con texto
+        exif = crear_exif(gps, instante, r)
+        if con_texto:
+            try:
+                Image.fromarray(cv2.cvtColor(dibujar_textos(frame, gps, instante, texto_resultado(fotos_analisis)),
+                                             cv2.COLOR_BGR2RGB)).save(ruta, format="JPEG", quality=95, exif=exif)
+            except Exception as e:
+                print("[PARCHES] foto con texto:", e)
+        for archivo in {ruta, limpia}:
             if archivo.is_file():
                 try:
                     piexif.insert(exif, str(archivo))
@@ -463,12 +479,7 @@ def analizar_foto(ruta, frame, gps, instante, pred):
             "hojas": hojas, "parches": r.get("parches", [])
         }, indent=1), encoding="utf-8")
 
-        fotos["analisis"] = {
-            "archivo": ruta.name, "clase": r["clase"], "confianza": r["confianza"],
-            "n_parches": r.get("n_parches", 0), "n_sintomas": len(sintomas),
-            "n_hojas": len(hojas), "n_hojas_sintomas": len(hojas_mal),
-            "fraccion": r.get("fraccion"), "ms": round(ms)
-        }
+        fotos["analisis"] = fotos_analisis
 
     print(f"[PARCHES] {ruta.name}: {r['clase']} {r['confianza']:.0%} · "
           f"{len(sintomas)}/{r.get('n_parches', 0)} trozos con síntomas · "
@@ -476,17 +487,13 @@ def analizar_foto(ruta, frame, gps, instante, pred):
 
 
 def tomar_foto():
-    # Con texto: el cuadro, su versión con texto y su hora salen del mismo ciclo
     with cuadro_lock:
-        if TEXTO_EN_FOTO and ultimo["con_texto"] is not None:
-            frame, pantalla, instante = ultimo["con_texto"]
-        else:
-            frame, pantalla, instante = ultimo["frame"], None, ultimo["instante"]
+        frame, instante = ultimo["frame"], ultimo["instante"]
 
     if frame is None:
         return None
 
-    return guardar_foto(frame, pantalla, obtener_gps(), instante, obtener_prediccion())
+    return guardar_foto(frame, obtener_gps(), instante)
 
 
 # VIDEO PARA LA PAGINA (MJPEG): solo se codifica si alguien lo está viendo
@@ -521,6 +528,14 @@ def codificar_video():
         time.sleep(max(0.0, 1 / FPS_WEB - (time.perf_counter() - inicio)))
 
 
+def resultado_ultima_foto(modelo):
+    a = fotos.get("analisis")
+    if modelo is None or not a or "clase" not in a:
+        return None
+    return {"clase": a["clase"], "confianza": a["confianza"], "probs": a.get("probs"), "ms": a.get("ms"),
+            "foto": a["archivo"], "diagnosticable": a["confianza"] >= modelo.umbral or a["clase"] == "sin_hoja"}
+
+
 def estado_actual(modelo):
     gps = obtener_gps()
 
@@ -536,10 +551,10 @@ def estado_actual(modelo):
             "clases": modelo.clases,
             "umbral": modelo.umbral,
             "fotos_por_parches": ANALIZAR_FOTOS,
-            "filtro_hoja": (None if getattr(modelo, "filtro", None) is None else
-                            "fotos y video" if getattr(modelo.filtro, "w_imagen", None) is not None else "solo fotos")
+            "filtro_hoja": getattr(modelo, "filtro", None) is not None
         },
-        "prediccion": obtener_prediccion(),
+        # El resultado de la última foto (no hay diagnóstico del video en vivo)
+        "prediccion": resultado_ultima_foto(modelo),
         "fotos": {k: v for k, v in fotos.items() if k != "analisis"},
         "analisis_foto": fotos.get("analisis")
     }
@@ -557,17 +572,18 @@ button{font:inherit;font-weight:700;padding:.8rem 1.2rem;border-radius:10px;bord
 </style></head><body><main>
 <img src="/video" alt="Video en vivo del dron">
 <div id="diag">Conectando...</div>
+<div class="nota">El resultado es el de la última foto, revisada por cuadros como en la página. El video no diagnostica.</div>
 <div class="nota" id="gps"></div>
 <div><button id="foto">Tomar foto</button> <span class="nota" id="msg"></span></div>
 <div class="nota" id="analisis"></div>
 <p class="nota">Para revisar y guardar en el mapa, usa la estación de tierra: pestaña Cargar, botón Cámara del dron.</p>
 </main><script>
 const N={sana:"Sana",sigatoka:"Sigatoka",otra_condicion:"Otra condición",sin_hoja:"Sin hojas de plátano"};
-async function estado(){try{const e=await (await fetch("/estado")).json();const p=e.prediccion;
-document.getElementById("diag").textContent=!e.modelo?"Sin modelo en el dron":!p?"Esperando lectura...":
-p.diagnosticable?`${N[p.clase]||p.clase} · ${Math.round(p.confianza*100)} %`:`No está seguro (${N[p.clase]||p.clase} ${Math.round(p.confianza*100)} %)`;
-const a=e.analisis_foto;document.getElementById("analisis").textContent=!a?"":a.pendiente?`Analizando ${a.archivo} por parches...`:
-a.error?`No se pudo analizar ${a.archivo}`:`Última foto (${a.archivo}): ${a.confianza>=e.modelo.umbral?(N[a.clase]||a.clase):"no está seguro"} · `+
+async function estado(){try{const e=await (await fetch("/estado")).json();const a=e.analisis_foto;
+document.getElementById("diag").textContent=!e.modelo?"Sin modelo en el dron":!a?"Toma una foto para revisar la hoja":
+a.pendiente?"Revisando la foto...":a.error?"No se pudo revisar la foto":
+(a.confianza>=e.modelo.umbral||a.clase==="sin_hoja")?`${N[a.clase]||a.clase} · ${Math.round(a.confianza*100)} %`:`No está seguro (${N[a.clase]||a.clase} ${Math.round(a.confianza*100)} %)`;
+document.getElementById("analisis").textContent=!a||a.pendiente||a.error?"":`Foto ${a.archivo} · `+
 `${a.n_hojas?`${a.n_hojas} hojas, ${a.n_hojas_sintomas} con síntomas · `:""}${a.n_parches} trozos de hoja, ${a.n_sintomas} con síntomas · ${(a.ms/1000).toFixed(1)} s`;
 document.getElementById("gps").textContent=e.gps?`GPS ${e.gps.lat.toFixed(6)}, ${e.gps.lon.toFixed(6)} · ${e.gps.satelites} satélites`:"GPS: sin señal";
 }catch(x){document.getElementById("diag").textContent="Sin conexión con el dron";}}
@@ -745,9 +761,6 @@ print("Camara RIGHT conectada")
 # INICIAR MODELO Y PAGINA WEB
 modelo = cargar_modelo()
 
-if modelo is not None:
-    threading.Thread(target=identificar_continuo, args=(modelo,), daemon=True).start()
-
 threading.Thread(target=codificar_video, daemon=True).start()
 
 try:
@@ -793,78 +806,12 @@ try:
             ultimo["instante"] = instante
             ultimo["n"] += 1
 
-        if not CON_VENTANA and not TEXTO_EN_FOTO:
-            continue
-
-        gps = obtener_gps()
-        pred = obtener_prediccion()
-
-        fecha_visible = instante.strftime("%y-%m-%d")
-        hora_visible = instante.strftime("%H:%M:%S")
-
-        # Crear copia para mostrar datos en pantalla
-        pantalla = frame.copy()
-
-        if gps is None:
-            textos = [
-                "RIGHT CAMERA",
-                f"FECHA: {fecha_visible}",
-                f"HORA: {hora_visible}",
-                "GPS: SIN SENAL"
-            ]
-            color = (0, 0, 255)
-        else:
-            textos = [
-                "RIGHT CAMERA",
-                f"FECHA: {fecha_visible}",
-                f"HORA: {hora_visible}",
-                f"LAT: {gps['lat']:.7f}",
-                f"LON: {gps['lon']:.7f}",
-                f"ALT: {gps['alt']:.1f} m",
-                f"SAT: {gps['satelites']}"
-            ]
-            color = (0, 255, 0)
-
-        for i, texto in enumerate(textos):
-            cv2.putText(
-                pantalla,
-                texto,
-                (30, 50 + i * 40),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.9,
-                (0, 0, 0),
-                5
-            )
-            cv2.putText(
-                pantalla,
-                texto,
-                (30, 50 + i * 40),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.9,
-                color,
-                2
-            )
-
-        # DIAGNOSTICO DEL MODELO (a bordo)
-        if modelo is None:
-            diag, color_diag = "DIAG: SIN MODELO", (200, 200, 200)
-        elif pred is None:
-            diag, color_diag = "DIAG: ...", (200, 200, 200)
-        elif pred["diagnosticable"]:
-            diag = f"DIAG: {NOMBRES.get(pred['clase'], pred['clase'])} {pred['confianza']:.0%}"
-            color_diag = COLORES.get(pred["clase"], (255, 255, 255))
-        else:
-            diag, color_diag = f"DIAG: NO SEGURO ({pred['confianza']:.0%})", (200, 200, 200)
-
-        y = 50 + len(textos) * 40 + 10
-        cv2.putText(pantalla, diag, (30, y), cv2.FONT_HERSHEY_SIMPLEX, 1.1, (0, 0, 0), 6)
-        cv2.putText(pantalla, diag, (30, y), cv2.FONT_HERSHEY_SIMPLEX, 1.1, color_diag, 2)
-
-        with cuadro_lock:
-            ultimo["con_texto"] = (frame, pantalla, instante)
-
         if not CON_VENTANA:
             continue
+
+        # La ventana muestra fecha, hora, GPS y el resultado de la última foto
+        gps = obtener_gps()
+        pantalla = dibujar_textos(frame, gps, instante, texto_resultado(fotos.get("analisis"), "ULTIMA FOTO"))
 
         cv2.imshow(
             "ZED X Mini - RIGHT + GPS",
@@ -874,7 +821,7 @@ try:
         tecla = cv2.waitKey(1) & 0xFF
 
         if tecla == ord("s"):
-            guardar_foto(frame, pantalla, gps, instante, pred)
+            guardar_foto(frame, gps, instante)
 
         elif tecla == ord("q"):
             break

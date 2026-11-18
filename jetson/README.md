@@ -11,21 +11,23 @@ Este directorio contiene el script de captura probado en la Jetson Orin Nano del
 - Ventana con GPS o `GPS: SIN SENAL` y **sin contador FPS**.
 - `S`: toma una fotografía JPEG con texto sobreimpreso y EXIF GPS cuando existe fix válido.
 - `Q`: cierra la aplicación.
-- **Identificación a bordo:** con un modelo en `vision/models/` (usa el más nuevo:
-  `sigatoka_cls_v2.onnx`, si no `v1`), un hilo clasifica lo que ve la cámara (hasta 5 veces
-  por segundo, con la foto completa) y lo muestra en la ventana (`DIAG: SIGATOKA 87%`,
-  `DIAG: NO SEGURO`...). Sin el modelo, todo lo demás funciona igual.
-- **Análisis por parches de cada foto:** al tomar una foto, en segundo plano (1–3 s) la revisa
-  por trozos de hoja a resolución completa ([vision/GUIA-PARCHES.md](../vision/GUIA-PARCHES.md)),
-  suma el resultado al EXIF y guarda los cuadros en `Prueba#1/parches/<foto>.json`.
-  Se apaga con `ANALIZAR_FOTOS = False`.
-- **Página web en el puerto 8080:** video en vivo, GPS, diagnóstico y botón de foto. La
+- **Un solo resultado por foto, el mismo que la página:** con un modelo en `vision/models/`
+  (usa el más nuevo: `sigatoka_cls_v2.onnx`, si no `v1`), cada foto se revisa en segundo plano
+  (1–3 s) por cuadros a resolución completa, sobre su copia limpia ya guardada: el mismo modelo,
+  el mismo código y la misma imagen que revisa la página web. Ese resultado es el único: se
+  dibuja en la foto con texto (`DIAG: SIGATOKA 100%`), va en el EXIF de las dos copias, en el
+  log (`[PARCHES] ...`) y en la página; los cuadros quedan en `Prueba#1/parches/<foto>.json`.
+  Mientras se revisa, la foto dice `DIAG: ANALIZANDO...`. Se apaga con `ANALIZAR_FOTOS = False`.
+- **El video en vivo no diagnostica.** Antes clasificaba la imagen completa reducida a
+  384 x 384, donde las manchas de Sigatoka no se ven, y daba un resultado distinto al de la
+  foto. Ahora la ventana muestra el resultado de la última foto (`ULTIMA FOTO: SIGATOKA 100%`).
+- **Página web en el puerto 8080:** video en vivo, GPS, resultado de la última foto y botón de foto. La
   estación de tierra la usa desde *Cargar > Cámara del dron*; también abre en un celular.
 - Sin monitor (o con `--sin-ventana`) no abre ventana: se controla desde la página.
 - Directorio configurado en el script: `/home/jetsonnanoorin/Prueba#1`.
 - Nombre: `AA-MM-DD_HH-MM-SS-GPS.jpg`; si varias fotos coinciden en el mismo segundo, sufijos `_2`, `_3`, `_4` y siguientes.
-- Fecha (`FECHA`), hora (`HORA`), GPS y diagnóstico (`DIAG`) visibles sobre el video y la
-  fotografía JPEG (`TEXTO_EN_FOTO = True`).
+- Fecha (`FECHA`), hora (`HORA`), GPS y el resultado de la foto (`DIAG`) visibles sobre la
+  fotografía JPEG (`TEXTO_EN_FOTO = True`); en la ventana, el de la última foto.
 - **Copia sin texto:** cada foto se guarda también, con el mismo nombre y EXIF, en
   `Prueba#1/sin_texto/`. El texto encima confunde al modelo, así que el dataset, el
   reentrenamiento y la estación de tierra usan esa copia (`COPIA_SIN_TEXTO = True`).
@@ -127,14 +129,14 @@ sleep 30; grep "\[MODELO\]" ~/ZED_Pruebas/zed-right.log | tail -1
 Debe decir:
 
 ```
-[MODELO] sigatoka_cls_v2.onnx cargado; clases ['otra_condicion', 'sana', 'sigatoka', 'sin_hoja']; fotos por parches: sí; filtro de hoja: fotos y video
+[MODELO] sigatoka_cls_v2.onnx cargado; clases ['otra_condicion', 'sana', 'sigatoka', 'sin_hoja']; fotos por parches: sí; filtro de hoja: sí
 ```
 
 Si dice `v1`, el repo de la Jetson no está al día o el v2 no cargó: revisar `git log --oneline -1`
 y `grep -n "MODELO\|Traceback" ~/ZED_Pruebas/zed-right.log | tail`. También se puede preguntar al
 programa que está corriendo: `curl -s http://localhost:8080/estado` (campo `modelo`, con
-`filtro_hoja`). Corre en CPU con onnxruntime; la página muestra cuántos milisegundos tarda cada
-identificación, y el log, cuánto tarda el análisis por parches de cada foto (`[PARCHES] ... ms`).
+`filtro_hoja`). Corre en CPU con onnxruntime; el log dice cuánto tarda la revisión de cada
+foto (`[PARCHES] ... ms`).
 Para probar con el v1: `SIGATOKA_MODELO=sigatoka_cls_v1.onnx bash jetson/zed_control.sh reiniciar`.
 
 **La hora de la Jetson.** La Jetson no guarda bien la hora cuando se queda sin internet. El
@@ -151,11 +153,8 @@ sudo date -s "2026-11-12 17:05"       # sin internet, a mano con la hora real
 
 No usar `git config http.sslVerify false`: quita la protección y no arregla la hora.
 
-**Video en vivo y fotos no dicen lo mismo.** El video clasifica la imagen completa reducida a
-384 x 384, donde las manchas de Sigatoka son demasiado chicas: en un cuadro aéreo de Colombia con
-Sigatoka, la foto por parches dice Sigatoka (11 de 16 parches) y el video, sana. El diagnóstico
-que cuenta es el de la foto (`[PARCHES]`). Para revisar una foto en detalle (parches, foto
-completa y v1, lado a lado):
+**Revisar una foto en detalle** (cuadro por cuadro, y para comparar, la foto completa reducida
+y el v1):
 
 ```bash
 ~/ZED_Pruebas/.venv/bin/python vision/diagnosticar.py --ultimas 1
@@ -173,7 +172,7 @@ Al arrancar imprime la dirección, por ejemplo:
 | --- | --- |
 | `/` | Página sencilla para celular: video, diagnóstico, GPS y botón de foto |
 | `/video` | Video MJPEG (960 px de ancho, ~12 cuadros/s; solo se codifica si alguien lo ve) |
-| `/estado` | JSON con GPS, modelo, la última identificación (`clase`, `confianza`, `probs`, `ms`) y el análisis por parches de la última foto (`analisis_foto`) |
+| `/estado` | JSON con GPS, modelo y el resultado de la última foto (`analisis_foto`; `prediccion` repite ese resultado para páginas viejas). El video no diagnostica |
 | `POST /foto` | Toma una foto como la tecla `S` y responde el nombre del archivo |
 | `/fotos/<nombre>.jpg` | Descarga una foto de la carpeta de fotos |
 

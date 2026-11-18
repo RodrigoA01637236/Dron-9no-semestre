@@ -427,20 +427,21 @@ async function abrirDron(texto) {
   dron.temporizador = setTimeout(cicloDron, 500);
 }
 
+// La lectura es la de la última foto del dron (revisada por cuadros, como la página); el video no diagnostica.
 function pintarDron(est) {
-  const p = est.prediccion;
+  const a = est.analisis_foto, p = a && a.clase && !a.pendiente && !a.error ? a : null;
   if (!est.modelo) {
     $("lectura").innerHTML = `<h2>El dron no tiene modelo</h2><p class="suave" style="margin:0">El video funciona, pero para identificar
       copia <code>sigatoka_cls_v1.onnx</code> a <code>vision/models/</code> en la Jetson y reinicia <code>zed_right.py</code>.</p>`;
     ["probs", "que"].forEach(s => $(s).classList.add("oculto"));
     $("pie-tiempo").textContent = "";
   } else if (!p) {
-    $("lectura").innerHTML = `<h2>Esperando lectura del dron…</h2>`;
+    $("lectura").innerHTML = `<h2>${a && a.pendiente ? "Revisando la foto en el dron…" : "Toma una foto con el dron para revisar la hoja"}</h2>`;
     ["probs", "que"].forEach(s => $(s).classList.add("oculto"));
   } else {
-    pintarLectura({ clase: p.clase, confianza: p.confianza, probs: p.probs, umbral: est.modelo.umbral,
-                    diagnosticable: p.confianza >= est.modelo.umbral });
-    $("pie-tiempo").textContent = `identificada en el dron · ${Math.round(p.ms)} ms por imagen`;
+    pintarLectura({ clase: p.clase, confianza: p.confianza, probs: p.probs || {}, umbral: est.modelo.umbral,
+                    diagnosticable: p.confianza >= est.modelo.umbral || p.clase === "sin_hoja" });
+    $("pie-tiempo").textContent = `última foto (${p.archivo}) · revisada en el dron por cuadros · ${(p.ms / 1000).toFixed(1)} s`;
   }
   const g = est.gps;
   $("dron-gps").textContent = g ? `GPS ${g.lat.toFixed(6)}, ${g.lon.toFixed(6)} · ${g.satelites} sat.` : "GPS: sin señal";

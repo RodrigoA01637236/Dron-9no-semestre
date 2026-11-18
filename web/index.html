@@ -1102,10 +1102,11 @@ panel.querySelectorAll("[data-vista]").forEach(b => b.addEventListener("click", 
 const dron = M.dron({
   aviso({ titulo, texto, error }) { $("aviso-dron").className = error ? "error" : ""; $("aviso-dron").textContent = titulo + (texto ? `. ${texto}` : ""); },
   conectado({ video }) { $("video").src = video; $("conectar").hidden = true; $("en-vivo").hidden = false; $("aviso-dron").textContent = ""; },
-  estado({ lectura, gps, sinModelo }) {
+  estado({ lectura, gps, sinModelo, revisando }) {
     const L = lectura ? M.lectura(lectura) : null;
-    $("lectura-dron").style.setProperty("--c", L ? (L.clave === "dudoso" ? "var(--text)" : L.color) : "var(--text)");
-    $("lectura-dron").innerHTML = `<div><b>${sinModelo ? "El dron no está revisando hojas" : L ? M.esc(L.titulo) : "Esperando…"}</b><br><span>${gps ? `GPS ${gps.lat.toFixed(5)}, ${gps.lon.toFixed(5)}` : "Sin señal de GPS"}</span></div>
+    const titulo = sinModelo ? "El dron no está revisando hojas" : revisando ? "Revisando la foto…" : L ? `Última foto: ${L.titulo}` : "Toma una foto para revisar la hoja";
+    $("lectura-dron").style.setProperty("--c", L && !revisando ? (L.clave === "dudoso" ? "var(--text)" : L.color) : "var(--text)");
+    $("lectura-dron").innerHTML = `<div><b>${M.esc(titulo)}</b><br><span>${gps ? `GPS ${gps.lat.toFixed(5)}, ${gps.lon.toFixed(5)}` : "Sin señal de GPS"}</span></div>
       <button class="btn btn-secundario" type="button" data-desconectar>Desconectar</button>`;
   },
   desconectado() { $("video").removeAttribute("src"); $("conectar").hidden = false; $("en-vivo").hidden = true; },
