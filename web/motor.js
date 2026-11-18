@@ -719,7 +719,8 @@ const Motor = (() => {
     const limpias = new Set(fotos.filter(x => enSinTexto(x.ruta)).map(x => base(x.ruta)));
     return fotos.filter(x => enSinTexto(x.ruta) || !limpias.has(base(x.ruta))).map(x => {
       const d = dir(x.ruta), padre = d.replace(/(^|\/)?sin_texto$/i, "");
-      return { archivo: x.archivo, nombre: x.ruta.slice(x.ruta.lastIndexOf("/") + 1),
+      const conTexto = enSinTexto(x.ruta) ? fotos.find(y => !enSinTexto(y.ruta) && base(y.ruta) === base(x.ruta) && dir(y.ruta) === padre) : null;
+      return { archivo: x.archivo, nombre: x.ruta.slice(x.ruta.lastIndexOf("/") + 1), texto: conTexto?.archivo || null,
                json: jsons.get(`${d}|${base(x.ruta)}`) || jsons.get(`${padre}|${base(x.ruta)}`) || null };
     }).sort((a, b) => a.nombre.localeCompare(b.nombre, "es", { numeric: true }));
   }
@@ -731,19 +732,29 @@ const Motor = (() => {
     return URL.createObjectURL(await new Promise(ok => c.toBlob(ok, "image/jpeg", .78)));
   }
 
-  // Todo lo que se sabe de una foto del vuelo: dónde y cuándo, qué ve el modelo aquí y qué vio a bordo.
+  // Todo lo que se sabe de una foto del vuelo: dónde, cuándo y su resultado. Una foto, un resultado:
+  // si la foto ya trae el resultado del dron (EXIF), ese es el que va al mapa y a la tabla, el mismo
+  // que está escrito en la foto. El navegador solo analiza las fotos que no traen uno (celular, etc.).
   async function analizarFotoDeVuelo(item, alProgreso) {
     let exif = {}, gemelo = null;
     try { exif = await leerExif(item.archivo); } catch (e) {}
+    if (!exif.abordo && item.texto) { try { exif.abordo = (await leerExif(item.texto)).abordo; } catch (e) {} }
     if (item.json) { try { gemelo = JSON.parse(await item.json.text()); } catch (e) {} }
     let lat = null, lon = null, alt = null;
     if (gemelo && gemelo.gps_ok !== false && gemelo.lat != null && gemelo.lon != null) { lat = +gemelo.lat; lon = +gemelo.lon; alt = gemelo.alt_rel_m ?? gemelo.alt ?? null; }
     else if (Number.isFinite(exif.lat) && Number.isFinite(exif.lon) && (exif.lat || exif.lon)) { lat = exif.lat; lon = exif.lon; alt = exif.alt ?? null; }
+    const base = { archivo: item.nombre, lat, lon, alt: alt != null ? +alt : null,
+                   fecha: gemelo?.ts || exif.fecha || new Date(item.archivo.lastModified).toISOString().slice(0, 19),
+                   abordo: exif.abordo || null, humano: false, revisor: "" };
+    const m = exif.abordo ? await modelo(alProgreso) : null;
+    if (m && m.clases.includes(exif.abordo.clase)) {
+      const a = exif.abordo, conf = Number.isFinite(a.confianza) ? a.confianza : null;
+      return { ...base, clave: a.clase, dudoso: a.clase !== "sin_hoja" && conf != null && conf < m.umbral, conf, probs: null, umbral: m.umbral,
+               calidad: null, mejorado: false, deDron: true, mini: await miniatura(item.archivo).catch(() => null) };
+    }
     const r = await diagnosticar(item.archivo, alProgreso), L = lectura(r);
-    return { archivo: item.nombre, lat, lon, alt: alt != null ? +alt : null,
-             fecha: gemelo?.ts || exif.fecha || new Date(item.archivo.lastModified).toISOString().slice(0, 19),
-             clave: L.sinHoja ? "sin_hoja" : r.clase, dudoso: !r.seguro && !L.sinHoja, conf: r.confianza, probs: r.probs, umbral: r.umbral,
-             calidad: r.calidad, mejorado: r.mejorado, abordo: exif.abordo || null, mini: await miniatura(item.archivo).catch(() => null), humano: false, revisor: "" };
+    return { ...base, clave: L.sinHoja ? "sin_hoja" : r.clase, dudoso: !r.seguro && !L.sinHoja, conf: r.confianza, probs: r.probs, umbral: r.umbral,
+             calidad: r.calidad, mejorado: r.mejorado, deDron: false, mini: await miniatura(item.archivo).catch(() => null) };
   }
 
   // Para el técnico o la estación: el mismo .geojson que abre la página (Abrir otro > mapa)…
@@ -752,7 +763,7 @@ const Motor = (() => {
     return JSON.stringify({ type: "FeatureCollection", features: registros.filter(f => f.lat != null).map(f => ({ type: "Feature",
       geometry: { type: "Point", coordinates: f.alt != null ? [f.lon, f.lat, r3(f.alt)] : [f.lon, f.lat] },
       properties: { archivo: f.archivo, fecha: f.fecha, vuelo, clave: f.clave, diagnostico: cat(f.clave).nombre, color: cat(f.clave).color,
-                    dudoso: f.dudoso, confianza_modelo: r3(f.conf), umbral: f.umbral, fuente: f.mejorado ? "modelo mejorado en el navegador" : "modelo en el navegador",
+                    dudoso: f.dudoso, confianza_modelo: r3(f.conf), umbral: f.umbral, fuente: f.deDron ? "resultado del dron (escrito en la foto)" : f.mejorado ? "modelo mejorado en el navegador" : "modelo en el navegador",
                     prob_sana: r3(f.probs?.sana), prob_sigatoka: r3(f.probs?.sigatoka), prob_otra_condicion: r3(f.probs?.otra_condicion),
                     a_bordo: f.abordo?.clase ?? null, confianza_a_bordo: f.abordo?.confianza ?? null } })) });
   }
@@ -765,7 +776,7 @@ const Motor = (() => {
     registros.forEach(f => filas.push([f.archivo, f.fecha, f.lat?.toFixed(7), f.lon?.toFixed(7), f.alt?.toFixed(1), f.dudoso ? "Sin confirmar" : cat(f.clave).nombre,
       n(f.conf), f.dudoso ? "no" : "sí", f.clave === "sin_hoja" ? "sí" : "no", n(f.probs?.sana), n(f.probs?.sigatoka), n(f.probs?.otra_condicion),
       f.abordo?.clase ? cat(f.abordo.clase).nombre : "", n(f.abordo?.confianza), f.abordo?.parches ? cat(f.abordo.parches).nombre : "", f.abordo?.hojasConSintomas ?? "",
-      f.mejorado ? "mejorado" : "original"]));
+      f.deDron ? "dron" : f.mejorado ? "mejorado" : "original"]));
     return "\ufeff" + filas.map(r => r.map(q).join(",")).join("\r\n");
   }
 
@@ -933,9 +944,10 @@ const Motor = (() => {
 
     function ficha(f) {
       const c = f.dudoso ? { nombre: "Sin confirmar", color: GRIS } : cat(f.clave);
-      const fuente = f.humano ? `Revisada${f.revisor ? " por " + esc(f.revisor) : ""}` : f.conf != null ? `Qué tan seguro: ${Math.round(f.conf * 100)} de 100` : "Sin revisar";
+      const seguro = f.conf != null ? `Qué tan seguro: ${Math.round(f.conf * 100)} de 100` : "";
+      const fuente = f.humano ? `Revisada${f.revisor ? " por " + esc(f.revisor) : ""}` : f.deDron ? `Resultado del dron${seguro ? " · " + seguro : ""}` : seguro || "Sin revisar";
       const hora = f.fecha && f.fecha !== "Ejemplo" ? String(f.fecha).replace("T", " ").slice(0, 19) : "";
-      const abordo = f.abordo?.clase ? `A bordo del dron: ${esc(cat(f.abordo.clase).nombre)}${f.abordo.confianza != null ? ` (${Math.round(f.abordo.confianza * 100)} de 100)` : ""}` : "";
+      const abordo = f.abordo?.clase && !f.deDron && f.abordo.clase !== f.clave ? `A bordo del dron: ${esc(cat(f.abordo.clase).nombre)}${f.abordo.confianza != null ? ` (${Math.round(f.abordo.confianza * 100)} de 100)` : ""}` : "";
       return `<div class="mapa-ficha">${f.mini ? `<img src="${f.mini}" alt="">` : ""}<b><i style="background:${c.color}"></i>${esc(c.nombre)}</b><span>${fuente}${f.archivo ? ` · ${esc(f.archivo)}` : ""}</span>` +
         `${hora ? `<span>${esc(hora)}${f.alt != null ? ` · ${Math.round(f.alt)} m de altura` : ""}</span>` : ""}${abordo ? `<span>${abordo}</span>` : ""}</div>`;
     }

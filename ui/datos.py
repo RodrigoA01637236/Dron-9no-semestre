@@ -215,6 +215,43 @@ def gps_sidecar(ruta_img: Path) -> dict:
     return out
 
 
+def resultado_dron(ruta: Path) -> dict | None:
+    """El resultado que el dron escribió en la foto (EXIF UserComment de jetson/zed_right.py:
+    "AnalisisYOLO=sigatoka; ConfianzaYOLO=0.820; ..."). Una foto, un resultado: si la foto ya
+    trae el suyo, la estación usa ese en lugar de volver a analizarla."""
+    try:
+        from PIL import Image
+        with Image.open(ruta) as im:
+            c = im.getexif().get_ifd(0x8769).get(0x9286)
+    except Exception:
+        return None
+    if not c:
+        return None
+    if isinstance(c, bytes):
+        cab, resto = c[:8], c[8:]
+        if cab.startswith(b"UNICODE"):
+            texto = resto.decode("utf-16-be", "ignore")
+            if "=" not in texto:
+                texto = resto.decode("utf-16-le", "ignore")
+        else:
+            texto = resto.decode("utf-8", "ignore")
+    else:
+        texto = str(c)
+    d = {}
+    for parte in texto.replace("\0", "").split(";"):
+        if "=" in parte:
+            k, v = parte.split("=", 1)
+            d[k.strip()] = v.strip()
+    clase = d.get("AnalisisYOLO")
+    if not clase or clase in ("NO_REALIZADO", "PENDIENTE"):
+        return None
+    try:
+        conf = float(d["ConfianzaYOLO"])
+    except (KeyError, ValueError):
+        conf = None
+    return {"clase": clase, "confianza": conf}
+
+
 def leer_gps(ruta_img: Path) -> dict:
     """Prioridad: sidecar del Pixhawk (preciso y con hora GPS) > EXIF."""
     return gps_sidecar(ruta_img) or gps_exif(ruta_img)
@@ -247,8 +284,9 @@ def crear_miniatura(origen: Path, destino: Path, lado=360) -> None:
 
 
 def procesar_vuelo(con, vuelo: str, clasificador, version) -> dict:
-    """Registra en la base todas las fotos nuevas de la carpeta del vuelo:
-    GPS, miniatura y predicción del modelo activo."""
+    """Registra en la base todas las fotos nuevas de la carpeta del vuelo: GPS, miniatura y
+    resultado. Si la foto trae el resultado del dron, se usa ese (el mismo que está escrito en
+    la foto); si no, la predicción del modelo activo."""
     carpeta = carpeta_vuelo(vuelo)
     existentes = {r[0] for r in con.execute("SELECT archivo FROM fotos WHERE vuelo=?", (vuelo,))}
     nuevas = con_gps = 0
@@ -258,12 +296,16 @@ def procesar_vuelo(con, vuelo: str, clasificador, version) -> dict:
             continue
         g = leer_gps(ruta)
         crear_miniatura(ruta, MINIS / vuelo / (ruta.stem + ".jpg"))
-        pred = clasificador.predecir(ruta) if clasificador else None
+        pred, ver = resultado_dron(ruta), None
+        if pred and clasificador and pred["clase"] not in clasificador.clases:
+            pred = None
+        if pred is None and clasificador:
+            pred, ver = clasificador.predecir(ruta), version
         cur = con.execute(
             "INSERT INTO fotos (vuelo, archivo, lat, lon, alt, fecha, pred, conf, modelo_version,"
             " holdout, importada) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
             (vuelo, ruta.name, g.get("lat"), g.get("lon"), g.get("alt"), g.get("fecha"),
-             pred and pred["clase"], pred and pred["confianza"], version if pred else None,
+             pred and pred["clase"], pred and pred["confianza"], ver if pred else None,
              es_holdout(vuelo, ruta.name), ahora()),
         )
         nuevas += 1

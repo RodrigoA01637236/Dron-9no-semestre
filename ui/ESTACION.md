@@ -52,6 +52,11 @@ no diagnostica.
    el EXIF) y la trae a la estación como una imagen más de hoy, sin cerrar el video. De ahí
    sigue el flujo normal: Revisar y Mapa.
 
+Al importar fotos del dron, la estación usa **el resultado que trae cada foto** (el mismo que
+está escrito en ella) y no la vuelve a analizar; solo analiza las fotos que no traen uno. Si
+luego se activa un modelo nuevo, la estación sí revisa de nuevo todas las fotos con ese
+modelo (Modelo > "Revisando de nuevo todas las fotos con el modelo nuevo").
+
 Sin laptop también se puede ver desde un celular en la misma red: abre
 `http://<ip-de-la-jetson>:8080` en el navegador.
 
