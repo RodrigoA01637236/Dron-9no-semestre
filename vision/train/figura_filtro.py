@@ -2,8 +2,8 @@
 
 (a) Fotos de hoja que el filtro vuelve "sin hoja" según el umbral, dejando fuera una fuente a la vez.
 (b) Imágenes de objetos que siguen pasando como hoja según el umbral.
-Las dos para las fotos (por cuadros) y el video en vivo (foto completa). La línea punteada
-vertical marca el umbral elegido.
+Las dos para las fotos (por cuadros) y, salvo con --sin-video, para la foto completa reducida
+(la sonda de la imagen completa). La línea punteada vertical marca el umbral elegido.
 
 Uso (necesita matplotlib, que ya trae el entorno de entrenamiento):
     python vision/train/figura_filtro.py
@@ -26,6 +26,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--entrada", type=Path, default=RAIZ / "vision/models/filtro_hoja_evaluacion.json")
     ap.add_argument("--salida", type=Path, default=RAIZ / "vision/models/filtro_hoja_evaluacion.png")
+    ap.add_argument("--sin-video", action="store_true", help="solo las fotos por cuadros")
     args = ap.parse_args()
     r = json.loads(args.entrada.read_text(encoding="utf-8"))
     umbrales = sorted(float(u) for u in r["loo_foto"])
@@ -43,7 +44,8 @@ def main() -> None:
     ]
     for eje, fotos, video, titulo, etiqueta, sin_filtro in series:
         eje.plot(umbrales, fotos, "o-", color=NARANJA if eje is ax[0] else AZUL, lw=2, label="Photos (patches)")
-        eje.plot(umbrales, video, "s--", color=GRIS, lw=1.5, label="Live video (full image)")
+        if not args.sin_video:
+            eje.plot(umbrales, video, "s--", color=GRIS, lw=1.5, label="Full image")
         for x, y in zip(umbrales, fotos):
             eje.annotate(str(y), (x, y), textcoords="offset points", xytext=(-9 if x == elegido else 0, 7),
                          ha="right" if x == elegido else "center", fontsize=9.5)
@@ -61,7 +63,7 @@ def main() -> None:
                      color=GRIS, fontsize=9, ha="center")
             eje.set_ylim(0, sin_filtro * 1.15)
         else:
-            eje.set_ylim(0, max(max(fotos), max(video)) * 1.25 + 1)
+            eje.set_ylim(0, max(max(fotos), 0 if args.sin_video else max(video)) * 1.25 + 1)
         eje.legend(frameon=False, fontsize=9, loc="upper left" if eje is ax[0] else "center left")
     ax[0].text(elegido + 0.05, ax[0].get_ylim()[1] * 0.9, f"chosen: {elegido:g}".replace("-", "−"), color=VERDE)
     fig.tight_layout()
