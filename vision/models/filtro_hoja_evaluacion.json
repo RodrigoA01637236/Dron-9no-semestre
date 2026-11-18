@@ -1,0 +1,213 @@
+{
+  "fecha": "2026-11-18",
+  "modelo": "sigatoka_cls_v2.onnx",
+  "elegido": -3.0,
+  "fotos_hoja": 3866,
+  "excluidas": [
+    "colombia_uav",
+    "v1_publico"
+  ],
+  "fuentes": {
+    "azam": 1280,
+    "bananalsd": 897,
+    "bangladesh2": 424,
+    "bd_reconocimiento": 408,
+    "dl_hailu": 815,
+    "dl_nutr": 3,
+    "dl_peru": 6,
+    "dl_uav": 25,
+    "samples": 8
+  },
+  "objetos_entrenar": 1200,
+  "objetos_prueba": 760,
+  "loo_foto": {
+    "-6.0": {
+      "azam": 0,
+      "bananalsd": 0,
+      "bangladesh2": 0,
+      "bd_reconocimiento": 0,
+      "dl_hailu": 0,
+      "dl_nutr": 0,
+      "dl_peru": 0,
+      "dl_uav": 0,
+      "samples": 0,
+      "total": 0
+    },
+    "-5.0": {
+      "azam": 0,
+      "bananalsd": 0,
+      "bangladesh2": 0,
+      "bd_reconocimiento": 0,
+      "dl_hailu": 0,
+      "dl_nutr": 0,
+      "dl_peru": 0,
+      "dl_uav": 0,
+      "samples": 0,
+      "total": 0
+    },
+    "-4.0": {
+      "azam": 0,
+      "bananalsd": 0,
+      "bangladesh2": 0,
+      "bd_reconocimiento": 0,
+      "dl_hailu": 0,
+      "dl_nutr": 0,
+      "dl_peru": 0,
+      "dl_uav": 0,
+      "samples": 0,
+      "total": 0
+    },
+    "-3.0": {
+      "azam": 0,
+      "bananalsd": 1,
+      "bangladesh2": 0,
+      "bd_reconocimiento": 1,
+      "dl_hailu": 3,
+      "dl_nutr": 0,
+      "dl_peru": 0,
+      "dl_uav": 0,
+      "samples": 0,
+      "total": 5
+    },
+    "-2.5": {
+      "azam": 1,
+      "bananalsd": 4,
+      "bangladesh2": 0,
+      "bd_reconocimiento": 4,
+      "dl_hailu": 4,
+      "dl_nutr": 0,
+      "dl_peru": 0,
+      "dl_uav": 0,
+      "samples": 0,
+      "total": 13
+    },
+    "-2.0": {
+      "azam": 1,
+      "bananalsd": 4,
+      "bangladesh2": 0,
+      "bd_reconocimiento": 10,
+      "dl_hailu": 10,
+      "dl_nutr": 0,
+      "dl_peru": 0,
+      "dl_uav": 0,
+      "samples": 0,
+      "total": 25
+    }
+  },
+  "loo_imagen": {
+    "-6.0": {
+      "azam": 0,
+      "bananalsd": 0,
+      "bangladesh2": 0,
+      "bd_reconocimiento": 0,
+      "dl_hailu": 0,
+      "dl_nutr": 0,
+      "dl_peru": 0,
+      "dl_uav": 0,
+      "samples": 0,
+      "total": 0
+    },
+    "-5.0": {
+      "azam": 1,
+      "bananalsd": 0,
+      "bangladesh2": 0,
+      "bd_reconocimiento": 0,
+      "dl_hailu": 0,
+      "dl_nutr": 0,
+      "dl_peru": 0,
+      "dl_uav": 0,
+      "samples": 0,
+      "total": 1
+    },
+    "-4.0": {
+      "azam": 3,
+      "bananalsd": 0,
+      "bangladesh2": 0,
+      "bd_reconocimiento": 0,
+      "dl_hailu": 0,
+      "dl_nutr": 0,
+      "dl_peru": 0,
+      "dl_uav": 0,
+      "samples": 0,
+      "total": 3
+    },
+    "-3.0": {
+      "azam": 15,
+      "bananalsd": 1,
+      "bangladesh2": 0,
+      "bd_reconocimiento": 1,
+      "dl_hailu": 1,
+      "dl_nutr": 0,
+      "dl_peru": 0,
+      "dl_uav": 0,
+      "samples": 0,
+      "total": 18
+    },
+    "-2.5": {
+      "azam": 26,
+      "bananalsd": 1,
+      "bangladesh2": 0,
+      "bd_reconocimiento": 4,
+      "dl_hailu": 1,
+      "dl_nutr": 0,
+      "dl_peru": 0,
+      "dl_uav": 1,
+      "samples": 0,
+      "total": 33
+    },
+    "-2.0": {
+      "azam": 47,
+      "bananalsd": 2,
+      "bangladesh2": 0,
+      "bd_reconocimiento": 11,
+      "dl_hailu": 2,
+      "dl_nutr": 0,
+      "dl_peru": 0,
+      "dl_uav": 2,
+      "samples": 0,
+      "total": 64
+    }
+  },
+  "loo_cuadro_primera": {
+    "azam": 11,
+    "bananalsd": 12,
+    "bangladesh2": 0,
+    "bd_reconocimiento": 16,
+    "dl_hailu": 0,
+    "dl_nutr": 0,
+    "dl_peru": 0,
+    "dl_uav": 0,
+    "samples": 0,
+    "total": 39
+  },
+  "objetos": {
+    "sin_filtro": 130,
+    "sin_filtro_video": 10,
+    "foto": {
+      "-6.0": 127,
+      "-5.0": 118,
+      "-4.0": 108,
+      "-3.0": 85,
+      "-2.5": 67,
+      "-2.0": 42
+    },
+    "video": {
+      "-6.0": 9,
+      "-5.0": 8,
+      "-4.0": 8,
+      "-3.0": 4,
+      "-2.5": 4,
+      "-2.0": 4
+    },
+    "poco_verde": {
+      "-6.0": 55,
+      "-5.0": 48,
+      "-4.0": 42,
+      "-3.0": 29,
+      "-2.5": 20,
+      "-2.0": 10
+    },
+    "poco_verde_sin_filtro": 56,
+    "cuadro_primera": 61
+  }
+}

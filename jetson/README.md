@@ -118,14 +118,48 @@ usa el modelo más nuevo de `vision/models/` (`sigatoka_cls_v2.onnx`, si no
 Los modelos están en el repo, así que basta con:
 
 ```bash
+date                                   # la hora debe ser la real (ver abajo)
 cd ~/Dron-9no-semestre && git pull
 bash jetson/zed_control.sh reiniciar
+sleep 30; grep "\[MODELO\]" ~/ZED_Pruebas/zed-right.log | tail -1
 ```
 
-Al arrancar debe imprimir `[MODELO] sigatoka_cls_v2.onnx cargado` (o `v1` si el v2 aún no
-existe). Corre en CPU con onnxruntime; la página muestra cuántos milisegundos tarda cada
+Debe decir:
+
+```
+[MODELO] sigatoka_cls_v2.onnx cargado; clases ['otra_condicion', 'sana', 'sigatoka', 'sin_hoja']; fotos por parches: sí; filtro de hoja: fotos y video
+```
+
+Si dice `v1`, el repo de la Jetson no está al día o el v2 no cargó: revisar `git log --oneline -1`
+y `grep -n "MODELO\|Traceback" ~/ZED_Pruebas/zed-right.log | tail`. También se puede preguntar al
+programa que está corriendo: `curl -s http://localhost:8080/estado` (campo `modelo`, con
+`filtro_hoja`). Corre en CPU con onnxruntime; la página muestra cuántos milisegundos tarda cada
 identificación, y el log, cuánto tarda el análisis por parches de cada foto (`[PARCHES] ... ms`).
 Para probar con el v1: `SIGATOKA_MODELO=sigatoka_cls_v1.onnx bash jetson/zed_control.sh reiniciar`.
+
+**La hora de la Jetson.** La Jetson no guarda bien la hora cuando se queda sin internet. El
+12 de noviembre estaba un mes atrás: `git pull` falló con `server certificate verification
+failed` (el certificado de GitHub parecía todavía no válido) y las fotos habrían salido con la
+fecha equivocada (el archivo de pruebas anterior tiene 70 fotos con año 1969). Antes de cada
+sesión:
+
+```bash
+date                                  # si no es la hora real:
+sudo timedatectl set-ntp true         # con internet, la corrige sola
+sudo date -s "2026-11-12 17:05"       # sin internet, a mano con la hora real
+```
+
+No usar `git config http.sslVerify false`: quita la protección y no arregla la hora.
+
+**Video en vivo y fotos no dicen lo mismo.** El video clasifica la imagen completa reducida a
+384 x 384, donde las manchas de Sigatoka son demasiado chicas: en un cuadro aéreo de Colombia con
+Sigatoka, la foto por parches dice Sigatoka (11 de 16 parches) y el video, sana. El diagnóstico
+que cuenta es el de la foto (`[PARCHES]`). Para revisar una foto en detalle (parches, foto
+completa y v1, lado a lado):
+
+```bash
+~/ZED_Pruebas/.venv/bin/python vision/diagnosticar.py --ultimas 1
+```
 
 ## Página web (video para la estación)
 
@@ -145,6 +179,18 @@ Al arrancar imprime la dirección, por ejemplo:
 
 La laptop y la Jetson deben estar en la misma red. Si no conecta, revisar que el puerto 8080
 no esté bloqueado (`sudo ufw status`; si está activo: `sudo ufw allow 8080/tcp`).
+
+**Revisar las fotos del dron en la página.** La página revisa fotos del dispositivo donde se
+abre, así que primero se copian a la laptop (con el hotspot `10.42.0.1`, o por el cable USB
+`192.168.55.1`):
+
+```powershell
+scp -r "jetsonnanoorin@10.42.0.1:/home/jetsonnanoorin/Prueba#1" "$HOME\Desktop\vuelo1"
+```
+
+Luego, en la página, **Analizar un vuelo** y elegir la carpeta completa: usa sola las copias de
+`sin_texto/` (las letras encima confunden al modelo) y el GPS que va dentro de cada foto. Las
+fotos tomadas con la tecla `S` y con el botón de la página se guardan igual.
 
 ## Página sin internet (hotspot)
 

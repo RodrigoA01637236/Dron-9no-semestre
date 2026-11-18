@@ -18,22 +18,27 @@ Qué hace:
    con todos sus cuadros. Así el filtro nunca le quita a una hoja los cuadros con manchas
    cafés, que son los de la Sigatoka.
 
-   Cómo se eligió (dejando fuera una fuente de fotos de hoja a la vez, para medir fotos como
-   las de un celular nuevo): de 3986 fotos de hoja de 10 fuentes, con -3 cambiaron 7 (0.2 %);
-   de 760 fotos de objetos que el filtro no vio, el modelo leía 130 como hoja y el filtro atrapa
-   47 de esas (de las casi sin verde, 27 de 56). Lo que se probó
-   y salió peor: quitar cuadro por cuadro, o un umbral más estricto para cuadros o fotos con
-   poco verde. Las lesiones cafés casi no tienen verde, y fuentes nuevas de fotos de Sigatoka
-   perdían hasta 26 de 897 fotos (con la versión de un día antes, 8 de 122 fotos de prueba con
-   Sigatoka salían "sin hoja"). Un umbral más alto (-2) atrapa más objetos pero cambia 30 fotos
-   de hoja; uno más bajo (-4) casi no atrapa objetos.
-   El reporte muestra los dos lados con el 20 % de las fotos apartado (al azar, así que de las
-   mismas fuentes: es más optimista que dejar fuera una fuente).
+   Cómo se eligió: con vision/train/evaluar_filtro.py, dejando fuera una fuente de fotos de hoja
+   a la vez para medir fotos como las de un celular nuevo (resultados en
+   vision/models/filtro_hoja_evaluacion.md). De 3866 fotos reales de hoja de 9 fuentes, con -3
+   cambiaron 5; de 760 fotos de objetos que el filtro no vio, el modelo aceptaba 130 como hoja y
+   el filtro atrapa 45 (27 de las 56 con poco color de hoja). Lo que se probó y salió peor:
+   quitar cuadro por cuadro con un umbral más estricto para cuadros con poco verde (cambia 39 de
+   3866; las lesiones cafés casi no tienen verde y se quitaban: 8 de 112 fotos de prueba con
+   Sigatoka salían "sin hoja"). Un umbral más alto (-2) atrapa más objetos pero cambia 25 fotos de
+   hoja; uno más bajo (-4) casi no atrapa objetos.
+   El reporte de este script muestra los dos lados con el 20 % de las fotos apartado (al azar, así
+   que de las mismas fuentes: es más optimista que dejar fuera una fuente).
 5. Una segunda sonda para la foto completa reducida, que es lo que usa el video en vivo del
    dron (modo "imagen"): los rasgos de una imagen entera no se parecen a los de un cuadro.
-   Umbral --umbral-imagen (-3). Dejando fuera una fuente a la vez cambiaron 4 de 4192 fotos de
-   hoja (ninguna aérea) y los objetos que el video leía como hoja bajaron de 10 a 4 de 760. En
-   ese modo el modelo ya rechaza casi todos los objetos solo, porque ve la escena completa.
+   Umbral --umbral-imagen (-3). Dejando fuera una fuente a la vez cambiaron 18 de 3866 fotos de
+   hoja (15 de una fuente de hojas recortadas sobre fondo negro; ninguna aérea) y los objetos que
+   el video leía como hoja bajaron de 10 a 4 de 760. En ese modo el modelo ya rechaza casi todos
+   los objetos solo, porque ve la escena completa.
+
+--excluir-fuentes deja fuera fuentes de hoja (la fuente es lo que va antes de "__" en el nombre
+de la foto, o su carpeta). --cache guarda los rasgos de cada foto, la misma carpeta que usa
+evaluar_filtro.py, para no volver a calcularlos.
 
 --coco N baja N fotos al azar de COCO test2017 (escenas y objetos cotidianos, 160 KB cada una)
 a data/raw/objetos_coco/. Hace falta internet una vez; después se reusan.
@@ -47,6 +52,7 @@ Escribe filtro_hoja en vision/models/sigatoka_cls_v2.json (o el JSON de --modelo
 web, la estación y el dron lo usan al cargar el modelo; sin él, todo funciona como antes.
 """
 import argparse
+import hashlib
 import json
 import random
 import sys
@@ -131,6 +137,40 @@ class Rasgos:
         return f[0].astype(np.float32), int(p[0].argmax()) not in self.ignorar
 
 
+def extraer(R: Rasgos, img: np.ndarray) -> dict:
+    """Rasgos, probabilidades y color de cada cuadro, y rasgos y probabilidades de la foto completa."""
+    cuadros = P.cuadros(img, R.cfg, P.mascara_hoja(img))
+    x = np.stack([R.c._tensor(P.recortar(img, q), cv2.INTER_AREA) for q in cuadros])
+    partes = [R.sesion.run(None, {R.entrada: x[i:i + 16]}) for i in range(0, len(x), 16)]
+    pi, fi = R.sesion.run(None, {R.entrada: R.c._tensor(img, cv2.INTER_LINEAR)[None]})
+    return {"f": np.concatenate([s[1] for s in partes]).astype(np.float32),
+            "p": np.concatenate([s[0] for s in partes]).astype(np.float32),
+            "col": np.array([color_hoja(t) for t in x], np.float32),
+            "fi": fi[0].astype(np.float32), "pi": pi[0].astype(np.float32)}
+
+
+def con_cache(R: Rasgos, cache: Path | None, ruta: Path, variante: str, img_fn) -> dict | None:
+    """extraer() con cache en disco (un .npz por foto y variante). img_fn da la imagen si hace falta."""
+    archivo = None
+    if cache is not None:
+        clave = hashlib.sha1(f"{ruta.resolve()}|{variante}".encode()).hexdigest()
+        archivo = cache / f"{clave}.npz"
+        if archivo.exists():
+            return dict(np.load(archivo))
+    img = img_fn()
+    if img is None or img.ndim != 3:
+        return None
+    d = extraer(R, img)
+    if archivo is not None:
+        np.savez(archivo, **d)
+    return d
+
+
+def fuente_de(foto: Path, carpeta: Path) -> str:
+    """La fuente de una foto: lo que va antes de "__" (así nombra preparar_datos.py) o su carpeta."""
+    return foto.name.split("__")[0] if "__" in foto.name else carpeta.name
+
+
 def acercamiento(img: np.ndarray, rnd: random.Random) -> np.ndarray:
     h, w = img.shape[:2]
     k = rnd.uniform(0.3, 0.6)
@@ -183,14 +223,20 @@ def main() -> None:
     ap.add_argument("--lam", type=float, default=1e-2, help="regularización L2")
     ap.add_argument("--apartar", type=float, default=0.2, help="fracción de fotos para el reporte")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--excluir-fuentes", default="", help="fuentes de hoja a dejar fuera, separadas por coma")
+    ap.add_argument("--cache", type=Path, default=None,
+                    help="carpeta para guardar los rasgos de cada foto (la misma que evaluar_filtro.py)")
     args = ap.parse_args()
     if args.umbral_verde is None:
         args.umbral_verde = args.umbral
+    if args.cache is not None:
+        args.cache.mkdir(parents=True, exist_ok=True)
 
     rnd = random.Random(args.seed)
     R = Rasgos(args.modelo)
     saltar = set(R.cfg.get("ignorar") or [])
-    hojas = fotos(args.hojas, saltar)
+    excluir = {x.strip() for x in args.excluir_fuentes.split(",") if x.strip()}
+    hojas = [f for c in args.hojas for f in fotos([c], saltar) if fuente_de(f, c) not in excluir]
     rnd.shuffle(hojas)
     hojas = hojas[:args.max_fotos]
     coco = bajar_coco(args.coco, args.carpeta_coco) if args.coco else []
@@ -202,14 +248,25 @@ def main() -> None:
         sys.exit("Hacen falta fotos de hoja (--hojas) y de objetos (--objetos o --coco).")
     print(f"{len(hojas)} fotos de hoja, {len(objetos)} de objetos (más un acercamiento de cada una)", flush=True)
 
+    ign = R.ignorar
+
+    def tupla(d):
+        return ((d["f"], ~np.isin(d["p"].argmax(1), ign), d["col"]),
+                (d["fi"], int(d["pi"].argmax()) not in ign))
+
     def leer(lista, con_acercamiento):
         out = []
         for k, f in enumerate(lista, 1):
-            img = leer_imagen(f)
-            if img is None or img.ndim != 3:
+            img = leer_imagen(f) if con_acercamiento or args.cache is None else None
+            d = con_cache(R, args.cache, f, "tal", lambda: img if img is not None else leer_imagen(f))
+            if d is None:
                 continue
-            for im in ([img, acercamiento(img, rnd)] if con_acercamiento else [img]):
-                out.append((R.de(im), R.completa(im)))
+            out.append(tupla(d))
+            if con_acercamiento:
+                cerca = acercamiento(img, rnd)
+                d = con_cache(R, args.cache, f, f"cerca{args.seed}", lambda: cerca)
+                if d is not None:
+                    out.append(tupla(d))
             if k % 200 == 0:
                 print(f"  {k}/{len(lista)}", flush=True)
         return out
@@ -274,6 +331,7 @@ def main() -> None:
         "b": round(b, 5),
         "w": [float(f"{x:.4g}") for x in w],
         "entrenado": {"fecha": date.today().isoformat(), "fotos_hoja": len(hojas), "fotos_objetos": len(objetos),
+                      "fuentes_excluidas": sorted(excluir),
                       "cuadros_hoja": int(y.sum()), "cuadros_objetos": int((1 - y).sum())},
         "imagen": {
             "descripcion": "Sonda para la foto completa reducida (video en vivo del dron). "
