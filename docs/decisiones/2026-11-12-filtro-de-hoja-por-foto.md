@@ -39,7 +39,7 @@ Las opciones 1 a 3 fueron pruebas exploratorias del 11 y 12 de noviembre; no se 
 | Sin filtro | — | 130 de 760 |
 | Primera versión (por cuadro) | 39 de 3866 | 61 de 760 |
 | Elegida (por foto, −3) | 5 de 3866 | 85 de 760 |
-| Video en vivo (foto completa, −3) | 18 de 3866 (15 de una fuente de hojas recortadas sobre fondo negro; ninguna aérea) | 4 de 760 (10 sin filtro) |
+| Foto completa, −3 (la usaba el video en vivo; sin uso desde el 18 de noviembre) | 18 de 3866 (15 de una fuente de hojas recortadas sobre fondo negro; ninguna aérea) | 4 de 760 (10 sin filtro) |
 
 La elegida atrapa menos objetos que la primera (45 de 130 contra 69), a cambio de no perder hojas
 enfermas. Perder una hoja con Sigatoka es peor que aceptar un objeto, que quien revisa sí ve.

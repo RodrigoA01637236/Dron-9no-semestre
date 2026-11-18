@@ -1,6 +1,7 @@
 """Evalúa el filtro "¿esto es hoja de plátano?" (vision/rasgos.py) sin tocar el modelo.
 
-Responde dos preguntas, para la regla por cuadros (fotos) y para la de foto completa (video):
+Responde dos preguntas, para la regla por cuadros (fotos) y para la de foto completa (modo "imagen",
+que el dron ya no usa desde el 18 de noviembre):
 1. ¿Cuántas fotos de hoja vuelve "sin hoja"? Se deja fuera una fuente de fotos de hoja a la vez:
    la sonda se entrena con las demás y se prueba con la que quedó fuera. Imita fotos de un
    celular o de una plantación que el filtro nunca vio. Una foto "cambia" si sin filtro el
@@ -167,7 +168,7 @@ def main() -> None:
                 loo["imagen"][u][s_fuera] += imagen_cambia(d, si, u)
             loo["cuadro_primera"][s_fuera] += cuadro_veredicto(d, s, -4.0, 0.0) != d["base"]
         print(f"  sin {s_fuera} ({len(fuera)} fotos): cambian {loo['foto'][args.elegido][s_fuera]} (fotos, {args.elegido}), "
-              f"{loo['imagen'][args.elegido][s_fuera]} (video)", flush=True)
+              f"{loo['imagen'][args.elegido][s_fuera]} (foto completa)", flush=True)
 
     # ---- 2. objetos que no se usaron para entrenar
     w, b = entrenar(*datos(hojas, O_tr, False), args.lam)
@@ -206,21 +207,21 @@ def main() -> None:
          "(nunca se usaron para entrenar).", "",
          "## Fotos de hoja que el filtro vuelve \"sin hoja\" (dejando fuera una fuente a la vez)", "",
          "Regla final (fotos por cuadros): la foto cuenta como sin hoja solo si ningún cuadro de hoja pasa el umbral.", "",
-         "| Umbral | Fotos (por cuadros) | Video (foto completa) |", "|---|---|---|"]
+         "| Umbral | Fotos (por cuadros) | Foto completa (sin uso en el dron) |", "|---|---|---|"]
     for u in umbrales:
         marca = " (elegido)" if u == args.elegido else ""
         L.append(f"| {u:g}{marca} | {res['loo_foto'][str(u)]['total']} de {len(hojas)} | "
                  f"{res['loo_imagen'][str(u)]['total']} de {len(hojas)} |")
     L += ["", f"Primera versión (cuadro por cuadro, umbral -4 si el cuadro tiene color de hoja y 0 si no), "
           f"reentrenada con las mismas fuentes: cambia el veredicto de {res['loo_cuadro_primera']['total']} de {len(hojas)} fotos.", "",
-          f"Por fuente, con el umbral elegido ({args.elegido:g}):", "", "| Fuente | Fotos | Cambian (fotos) | Cambian (video) |",
+          f"Por fuente, con el umbral elegido ({args.elegido:g}):", "", "| Fuente | Fotos | Cambian (fotos) | Cambian (foto completa) |",
           "|---|---|---|---|"]
     for s in fuentes:
         L.append(f"| {s} | {res['fuentes'][s]} | {res['loo_foto'][str(args.elegido)].get(s, 0)} | {res['loo_imagen'][str(args.elegido)].get(s, 0)} |")
     L += ["", "## Objetos que el modelo sigue aceptando como hoja", "",
           f"Sin filtro: {obj['sin_filtro']} de {len(O_te)} por cuadros y {obj['sin_filtro_video']} de {len(O_te)} con la foto completa. "
           f"De las {obj['poco_verde_sin_filtro']} aceptadas por cuadros con poco color de hoja (menos de 15 %), cuántas quedan:", "",
-          "| Umbral | Fotos (por cuadros) | De ellas, con poco verde | Video (foto completa) |", "|---|---|---|---|"]
+          "| Umbral | Fotos (por cuadros) | De ellas, con poco verde | Foto completa (sin uso en el dron) |", "|---|---|---|---|"]
     for u in umbrales:
         marca = " (elegido)" if u == args.elegido else ""
         L.append(f"| {u:g}{marca} | {obj['foto'][u]} | {obj['poco_verde'][u]} | {obj['video'][u]} |")

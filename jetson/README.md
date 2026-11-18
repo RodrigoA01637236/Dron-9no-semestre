@@ -153,8 +153,8 @@ sudo date -s "2026-11-12 17:05"       # sin internet, a mano con la hora real
 
 No usar `git config http.sslVerify false`: quita la protección y no arregla la hora.
 
-**Revisar una foto en detalle** (cuadro por cuadro, y para comparar, la foto completa reducida
-y el v1):
+**Revisar una foto en detalle** (cuadro por cuadro; da el mismo resultado que la foto y la página.
+Con `--comparar` imprime además la foto completa y el v1, solo como referencia):
 
 ```bash
 ~/ZED_Pruebas/.venv/bin/python vision/diagnosticar.py --ultimas 1
@@ -170,7 +170,7 @@ Al arrancar imprime la dirección, por ejemplo:
 
 | Ruta | Qué da |
 | --- | --- |
-| `/` | Página sencilla para celular: video, diagnóstico, GPS y botón de foto |
+| `/` | Página sencilla para celular: video, resultado de la última foto, GPS y botón de foto |
 | `/video` | Video MJPEG (960 px de ancho, ~12 cuadros/s; solo se codifica si alguien lo ve) |
 | `/estado` | JSON con GPS, modelo y el resultado de la última foto (`analisis_foto`; `prediccion` repite ese resultado para páginas viejas). El video no diagnostica |
 | `POST /foto` | Toma una foto como la tecla `S` y responde el nombre del archivo |

@@ -10,7 +10,7 @@ Generado por `vision/train/evaluar_filtro.py` el 2026-11-18. No cambia el modelo
 
 Regla final (fotos por cuadros): la foto cuenta como sin hoja solo si ningún cuadro de hoja pasa el umbral.
 
-| Umbral | Fotos (por cuadros) | Video (foto completa) |
+| Umbral | Fotos (por cuadros) | Foto completa (sin uso en el dron) |
 |---|---|---|
 | -6 | 0 de 3866 | 0 de 3866 |
 | -5 | 0 de 3866 | 1 de 3866 |
@@ -23,7 +23,7 @@ Primera versión (cuadro por cuadro, umbral -4 si el cuadro tiene color de hoja 
 
 Por fuente, con el umbral elegido (-3):
 
-| Fuente | Fotos | Cambian (fotos) | Cambian (video) |
+| Fuente | Fotos | Cambian (fotos) | Cambian (foto completa) |
 |---|---|---|---|
 | azam | 1280 | 0 | 15 |
 | bananalsd | 897 | 1 | 1 |
@@ -39,7 +39,7 @@ Por fuente, con el umbral elegido (-3):
 
 Sin filtro: 130 de 760 por cuadros y 10 de 760 con la foto completa. De las 56 aceptadas por cuadros con poco color de hoja (menos de 15 %), cuántas quedan:
 
-| Umbral | Fotos (por cuadros) | De ellas, con poco verde | Video (foto completa) |
+| Umbral | Fotos (por cuadros) | De ellas, con poco verde | Foto completa (sin uso en el dron) |
 |---|---|---|---|
 | -6 | 127 | 55 | 9 |
 | -5 | 118 | 48 | 8 |

@@ -47,9 +47,10 @@ El v2 hace lo que hace un agrónomo: mira la hoja por partes.
 4. **Calibración**: con temperatura (Guo et al., ICML 2017), "80 % seguro" significa
    acertar alrededor del 80 % de las veces. Así el umbral se elige con datos.
 
-En la Jetson, el **video en vivo sigue con la foto completa**, porque es rápido. **Cada
-foto** se analiza además por parches en segundo plano: tarda unos 1–3 s y el resultado
-queda en el EXIF y en la página del dron. La estación usa el modo por parches para todas
+En la Jetson, **el video en vivo no diagnostica** (solo sirve para encuadrar). **Cada foto**
+se analiza por parches sobre su copia limpia, con el mismo código que la página: tarda unos
+1–3 s, mientras tanto la foto dice `ANALIZANDO`, y el resultado (uno solo) queda en la foto,
+en el EXIF y en la página del dron. La estación usa el modo por parches para todas
 las fotos y dibuja en la foto los cuadros con síntomas.
 
 ---

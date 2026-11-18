@@ -46,3 +46,6 @@ con la cámara real.
 - La Jetson tiene más procesador libre para revisar fotos (ya no clasifica el video).
 - La sonda del filtro de hoja para la imagen completa (`filtro_hoja.imagen`) queda sin uso en
   el dron; se conserva en el JSON por si se vuelve a usar.
+- `vision/diagnosticar.py` imprime por defecto solo ese resultado; la foto completa y el v1
+  salen únicamente con `--comparar`, marcados como referencia. La figura del filtro
+  (`figura_filtro.py`) grafica por defecto solo las fotos por cuadros.

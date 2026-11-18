@@ -6,7 +6,8 @@ estación de tierra (ui/estacion.py), la Jetson (jetson/zed_right.py) y cualquie
 script que necesite predecir.
 
 Dos modos:
-- "imagen": la foto completa reducida a la entrada del modelo (rápido; video en vivo).
+- "imagen": la foto completa reducida a la entrada del modelo (rápido; el dron y la página
+  usan "parches").
 - "parches": la foto se corta en cuadros de hoja a resolución nativa, se clasifica cada
   uno y se junta el veredicto (vision/parches.py). Es más lento, pero ve las lesiones
   pequeñas. Se usa en las fotos.
@@ -128,7 +129,7 @@ class Clasificador:
         p, es = self._correr([img_bgr], cv2.INTER_LINEAR, filtrar="imagen")
         r = self._resultado(p[0])
         if es is not None and not es[0] and r["clase"] != "sin_hoja":
-            # El filtro de hoja dice que la imagen no es hoja de plátano (video en vivo).
+            # El filtro de hoja dice que la imagen no es hoja de plátano.
             q = np.zeros_like(p[0])
             q[self.clases.index("sin_hoja")] = 1.0
             r = self._resultado(q)

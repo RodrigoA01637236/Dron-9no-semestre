@@ -1437,7 +1437,7 @@
       "cuadros_objetos": 24877
     },
     "imagen": {
-      "descripcion": "Sonda para la foto completa reducida (video en vivo del dron). Si w · rasgos + b < umbral, la imagen cuenta como sin hoja.",
+      "descripcion": "Sonda para la foto completa reducida (modo imagen; el dron ya no la usa). Si w · rasgos + b < umbral, la imagen cuenta como sin hoja.",
       "umbral": -3.0,
       "b": 1.27427,
       "w": [

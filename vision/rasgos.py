@@ -145,7 +145,7 @@ class FiltroHoja:
         self.umbral_verde = float(f.get("umbral_verde", self.umbral))
         self.verde_min = float(f.get("verde_min", 1.01))
         self.modo = f.get("modo", "foto")
-        # Sonda aparte para la foto completa reducida (el video en vivo del dron): los rasgos de
+        # Sonda aparte para la foto completa reducida (modo "imagen"; el dron ya no lo usa): los rasgos de
         # una imagen entera no se parecen a los de un cuadro recortado.
         im = f.get("imagen") or {}
         self.w_imagen = np.asarray(im["w"], dtype=np.float32) if im.get("w") else None

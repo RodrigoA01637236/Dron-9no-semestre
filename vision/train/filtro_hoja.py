@@ -29,11 +29,12 @@ Qué hace:
    hoja; uno más bajo (-4) casi no atrapa objetos.
    El reporte de este script muestra los dos lados con el 20 % de las fotos apartado (al azar, así
    que de las mismas fuentes: es más optimista que dejar fuera una fuente).
-5. Una segunda sonda para la foto completa reducida, que es lo que usa el video en vivo del
-   dron (modo "imagen"): los rasgos de una imagen entera no se parecen a los de un cuadro.
+5. Una segunda sonda para la foto completa reducida (modo "imagen"). Desde el 18 de noviembre
+   el dron ya no la usa: el video no diagnostica y cada foto se revisa solo por cuadros, igual
+   que la página. Se conserva por si se vuelve a usar el modo "imagen". Los rasgos de una imagen entera no se parecen a los de un cuadro.
    Umbral --umbral-imagen (-3). Dejando fuera una fuente a la vez cambiaron 18 de 3866 fotos de
    hoja (15 de una fuente de hojas recortadas sobre fondo negro; ninguna aérea) y los objetos que
-   el video leía como hoja bajaron de 10 a 4 de 760. En ese modo el modelo ya rechaza casi todos
+   la foto completa leía como hoja bajaron de 10 a 4 de 760. En ese modo el modelo ya rechaza casi todos
    los objetos solo, porque ve la escena completa.
 
 --excluir-fuentes deja fuera fuentes de hoja (la fuente es lo que va antes de "__" en el nombre
@@ -132,7 +133,7 @@ class Rasgos:
         return f, ~np.isin(p.argmax(1), self.ignorar), np.array([color_hoja(t) for t in x])
 
     def completa(self, img: np.ndarray) -> tuple[np.ndarray, bool]:
-        """(rasgos D, ¿el modelo la lee como hoja?) de la foto completa reducida (video en vivo)."""
+        """(rasgos D, ¿el modelo la lee como hoja?) de la foto completa reducida (modo "imagen")."""
         p, f = self.sesion.run(None, {self.entrada: self.c._tensor(img, cv2.INTER_LINEAR)[None]})
         return f[0].astype(np.float32), int(p[0].argmax()) not in self.ignorar
 
@@ -219,7 +220,7 @@ def main() -> None:
                     help="otro umbral para cuadros con color de hoja (por omisión, el mismo)")
     ap.add_argument("--verde-min", type=float, default=0.2, help="fracción del cuadro con color de hoja")
     ap.add_argument("--modo", choices=["foto", "cuadro"], default="foto")
-    ap.add_argument("--umbral-imagen", type=float, default=-3.0, help="sonda de la foto completa (video en vivo)")
+    ap.add_argument("--umbral-imagen", type=float, default=-3.0, help="sonda de la foto completa (modo imagen; el dron ya no la usa)")
     ap.add_argument("--lam", type=float, default=1e-2, help="regularización L2")
     ap.add_argument("--apartar", type=float, default=0.2, help="fracción de fotos para el reporte")
     ap.add_argument("--seed", type=int, default=0)
@@ -305,7 +306,7 @@ def main() -> None:
             print(f"{uv:5.1f} / {u:5.1f} | {pierde:4d} de {len(Hte):4d} | {quedan:4d} de {len(Ote)} (sin filtro: {antes}){marca}")
 
     wi, bi = entrenar(*XY_imagen(Htr, Otr), args.lam)
-    print("\nVideo en vivo (foto completa) | fotos de hoja apartadas que pasan a sin hoja | objetos apartados que aún se leen como hoja")
+    print("\nFoto completa (modo imagen, sin uso en el dron) | fotos de hoja apartadas que pasan a sin hoja | objetos apartados que aún se leen como hoja")
     antes = sum(es for _, (_, es) in Ote)
     for t in [-5, -4, -3, -2, -1]:
         pierde = sum(es and f @ wi + bi < t for _, (f, es) in Hte)
@@ -334,7 +335,7 @@ def main() -> None:
                       "fuentes_excluidas": sorted(excluir),
                       "cuadros_hoja": int(y.sum()), "cuadros_objetos": int((1 - y).sum())},
         "imagen": {
-            "descripcion": "Sonda para la foto completa reducida (video en vivo del dron). "
+            "descripcion": "Sonda para la foto completa reducida (modo imagen; el dron ya no la usa). "
                            "Si w · rasgos + b < umbral, la imagen cuenta como sin hoja.",
             "umbral": args.umbral_imagen,
             "b": round(bi, 5),

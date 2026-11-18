@@ -1,11 +1,14 @@
-"""Explica por qué el modelo dio un resultado en una foto: cuadro por cuadro, foto completa y v1.
+"""Explica por qué el modelo dio un resultado en una foto, cuadro por cuadro.
 
+El resultado es el mismo que da el dron y la página web: el v2 por cuadros sobre la foto.
 Sirve para revisar fotos donde el resultado parece mal (p. ej. una hoja con Sigatoka que sale
-"sana"). No cambia nada; solo imprime.
+"sana"). No cambia nada; solo imprime. Con --comparar imprime también la foto completa
+reducida y el modelo v1, solo como referencia: ni el dron ni la página los usan.
 
 Uso (desde la raíz del repo):
     python vision/diagnosticar.py foto1.jpg foto2.jpg
     python vision/diagnosticar.py --ultimas 3          # las 3 fotos más nuevas del dron
+    python vision/diagnosticar.py --comparar foto.jpg  # además, foto completa y v1
 En la Jetson, con el Python del dron:
     ~/ZED_Pruebas/.venv/bin/python vision/diagnosticar.py --ultimas 3
 """
@@ -38,6 +41,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("fotos", nargs="*", type=Path)
     ap.add_argument("--ultimas", type=int, default=0, help=f"las N fotos más nuevas de {FOTOS_DRON}")
+    ap.add_argument("--comparar", action="store_true", help="también la foto completa y el v1 (solo referencia)")
     args = ap.parse_args()
     fotos = list(args.fotos) + (ultimas(args.ultimas) if args.ultimas else [])
     if not fotos:
@@ -45,7 +49,7 @@ def main() -> None:
 
     v2 = Clasificador(RAIZ / "vision/models/sigatoka_cls_v2.onnx")
     v1_ruta = RAIZ / "vision/models/sigatoka_cls_v1.onnx"
-    v1 = Clasificador(v1_ruta) if v1_ruta.exists() else None
+    v1 = Clasificador(v1_ruta) if args.comparar and v1_ruta.exists() else None
     cl = v2.clases
     print(f"v2: umbral {v2.umbral}, temperatura {v2.temperatura}, filtro de hoja "
           f"{'sí' if v2.filtro is not None else 'no'}")
@@ -60,7 +64,7 @@ def main() -> None:
         r = v2.predecir_bgr(img, "parches")
         print(f"  tamaño {ancho} x {alto}; {r.get('n_cuadros')} cuadros, {r.get('n_parches')} de hoja"
               f"{'; el filtro quitó ' + str(r['n_filtrados']) if r.get('n_filtrados') else ''}")
-        print(f"  v2 por cuadros (fotos del dron y página): {r['clase']} {r['confianza']:.2f}"
+        print(f"  Resultado (el mismo del dron y la página): {r['clase']} {r['confianza']:.2f}"
               f"{'' if r['confianza'] >= v2.umbral else ' (no seguro)'}")
         print(f"     puntajes: {fmt(r['probs'])}")
         print(f"     cuadros seguros por clase: {r.get('votos')}")
@@ -74,11 +78,13 @@ def main() -> None:
             for i in orden:
                 q = lista[i]
                 print(f"       ({q['x']}, {q['y']}, {q['w']}): " + " ".join(f"{c} {p:.2f}" for c, p in zip(cl, probs[i])))
+        if not args.comparar:
+            continue
         rv = v2.predecir_bgr(img, "imagen")
-        print(f"  v2 foto completa (video en vivo): {rv['clase']} {rv['confianza']:.2f} | {fmt(rv['probs'])}")
+        print(f"  Solo referencia, no se usa: v2 foto completa {rv['clase']} {rv['confianza']:.2f} | {fmt(rv['probs'])}")
         if v1 is not None:
             r1 = v1.predecir_bgr(img, "imagen")
-            print(f"  v1 foto completa (modelo anterior): {r1['clase']} {r1['confianza']:.2f} | {fmt(r1['probs'])}")
+            print(f"  Solo referencia, no se usa: v1 foto completa {r1['clase']} {r1['confianza']:.2f} | {fmt(r1['probs'])}")
 
 
 if __name__ == "__main__":
