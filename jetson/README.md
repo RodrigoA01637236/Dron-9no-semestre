@@ -34,6 +34,21 @@ Este directorio contiene el script de captura probado en la Jetson Orin Nano del
 
 > El texto "GPS" en el nombre no implica que el JPEG contenga coordenadas. Sin fix válido, la foto se guarda sin datos EXIF GPS. La posición corresponde a la última lectura válida reciente, no a un disparo sincronizado por hardware.
 
+## Sesión de fotos, paso a paso
+
+1. **Con internet, una vez antes de salir:** revisar la hora (`date`), actualizar y reiniciar
+   (ver [Modelo para la identificación a bordo](#modelo-para-la-identificación-a-bordo)), y
+   `bash web/preparar.sh` para el sitio sin internet. El log debe decir `filtro de hoja: sí`.
+2. **Opcional, para que el mapa tenga solo las fotos de esta sesión:** mover las anteriores a
+   otra carpeta (`mkdir -p ~/vuelos_anteriores/AAAA-MM-DD && mv ~/Prueba#1/* ~/vuelos_anteriores/AAAA-MM-DD/`).
+   El programa vuelve a crear `sin_texto/` y `parches/` solo.
+3. **Tomar fotos** con `S` en la ventana o con el botón de `http://<ip>:8080`. Cada foto dice
+   `ANALIZANDO` y en 1–3 s su resultado. Para el mapa hace falta GPS: afuera, con satélites.
+4. **Copiar las fotos a la laptop** (`scp`, ver [Revisar las fotos del dron en la página](#página-web-video-para-la-estación)).
+5. **Abrir la página** (dron-sigatoka.netlify.app con internet, o `http://10.42.0.1:8000` con el
+   hotspot), **Analizar un vuelo** y elegir la carpeta copiada. El mapa y la tabla muestran el
+   resultado escrito en cada foto. Las fotos sin GPS salen en la tabla, no en el mapa.
+
 ## Metadatos EXIF escritos por el programa
 
 Se tomó y verificó una fotografía en la Jetson con nombre `26-10-16_19-33-19-GPS.jpg`:
@@ -43,10 +58,13 @@ Se tomó y verificó una fotografía en la Jetson con nombre `26-10-16_19-33-19-
 - Software: `Dron Sigatoka - Jetson`.
 - Descripción: `ZED X Mini RIGHT; GPS desde Pixhawk HERE4`.
 - Comentario EXIF: `Proyecto=Dron Sigatoka; Camara=ZED X Mini RIGHT; FechaHora=2026-10-16T19:33:19.128640-06:00; GPS=SIN_SENAL; FuenteGPS=Pixhawk 6C HERE4; AnalisisYOLO=NO_REALIZADO`.
-- Con el modelo cargado, `AnalisisYOLO` lleva la clase que vio el dron al tomar la foto, más
-  `ConfianzaYOLO=0.873; ModeloYOLO=sigatoka_cls_v2 a bordo`.
-- Segundos después, el análisis por parches agrega
-  `AnalisisParches=sigatoka; ConfianzaParches=0.870; ParchesHoja=18; FraccionParches=otra_condicion:0.00,sana:0.83,sigatoka:0.17`.
+- Con el modelo cargado, mientras se revisa la foto dice `AnalisisYOLO=PENDIENTE`. Entre 1 y 3 s
+  después queda su único resultado, el de la revisión por cuadros:
+  `AnalisisYOLO=sigatoka; ConfianzaYOLO=0.870; ModeloYOLO=sigatoka_cls_v2 a bordo, por parches; ParchesHoja=18; Hojas=3; HojasConSintomas=2; FraccionParches=...`.
+  La página (Analizar un vuelo) y la estación ponen ese resultado en el mapa, sin volver a
+  analizar la foto. Las fotos tomadas antes del 18 de noviembre traen la lectura del video
+  (`AnalisisYOLO`) y, aparte, `AnalisisParches`; para ellas se muestra `AnalisisYOLO`, lo que
+  quedó escrito en la foto.
 
 ### Mapeo de información a etiquetas
 
@@ -187,8 +205,9 @@ abre, así que primero se copian a la laptop (con el hotspot `10.42.0.1`, o por 
 scp -r "jetsonnanoorin@10.42.0.1:/home/jetsonnanoorin/Prueba#1" "$HOME\Desktop\vuelo1"
 ```
 
-Luego, en la página, **Analizar un vuelo** y elegir la carpeta completa: usa sola las copias de
-`sin_texto/` (las letras encima confunden al modelo) y el GPS que va dentro de cada foto. Las
+Luego, en la página, **Analizar un vuelo** y elegir la carpeta completa: cada punto del mapa
+lleva el resultado escrito en la foto (no se vuelve a analizar) y el GPS que va dentro de ella.
+Solo las fotos sin resultado del dron se analizan en el navegador, con la copia de `sin_texto/`. Las
 fotos tomadas con la tecla `S` y con el botón de la página se guardan igual.
 
 ## Página sin internet (hotspot)
