@@ -46,6 +46,15 @@ El v2 hace lo que hace un agrónomo: mira la hoja por partes.
    hoja en promedio se ve sana. Si no alcanza la seguridad mínima, va a revisión humana.
 4. **Calibración**: con temperatura (Guo et al., ICML 2017), "80 % seguro" significa
    acertar alrededor del 80 % de las veces. Así el umbral se elige con datos.
+5. **Dos tamaños de cuadro** (desde el 20 de noviembre, `escala_gruesa` en el JSON): la foto se
+   revisa con el cuadro de 384 px y con uno de la mitad del lado corto (en la foto del dron,
+   600 px reducidos a 384). Manda el chico si encuentra Sigatoka con seguridad y el grande no
+   dice "sin hoja"; si no, manda el grande. Motivo: tres de cada cuatro fotos de Sigatoka del
+   entrenamiento son de 224–320 px, así que el modelo aprendió Sigatoka con la hoja vista
+   completa y poco nítida. En una foto de cerca a 1920 x 1200, el cuadro de 384 px ve un pedazo
+   nítido y muy ampliado, y lo leía como "otro problema". Desde el aire, el cuadro chico sigue
+   siendo el que ve las manchas. Evaluación: `vision/models/escalas_evaluacion.md`; decisión:
+   [docs/decisiones/2026-11-20-dos-tamanos-de-cuadro.md](../docs/decisiones/2026-11-20-dos-tamanos-de-cuadro.md).
 
 En la Jetson, **el video en vivo no diagnostica** (solo sirve para encuadrar). **Cada foto**
 se analiza por parches sobre su copia limpia, con el mismo código que la página: tarda unos
@@ -321,6 +330,14 @@ La estación ya separa ~20 % de las fotos etiquetadas como examen de campo (hold
 ---
 
 ## Siguiente fase (no incluida aquí)
+
+- **Entrenar con acercamientos nítidos de Sigatoka.** Los dos tamaños de cuadro son un arreglo
+  en la inferencia; el de fondo es que el modelo vea, al entrenar, lo mismo que ve el dron de
+  cerca. Hoy no lo ve por dos razones: tres de cada cuatro fotos de Sigatoka son de 224–320 px, y en
+  `hacer_parches.py` el maestro v1 descarta los acercamientos de Sigatoka donde él no ve la
+  mancha. Para la siguiente corrida: fotos propias de la ZED (1920 x 1200) de hojas con
+  Sigatoka etiquetadas en la estación, y bajar o quitar el filtro del maestro en las escalas
+  de 30–40 %.
 
 - **Tamaño de cuadro según la distancia:** con el `fx` del lente y la profundidad de la ZED
   (`depth_mode` hoy es `NONE`), calcular el GSD de cada foto y ajustar `lado_px` para que

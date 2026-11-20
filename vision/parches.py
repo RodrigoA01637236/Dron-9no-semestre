@@ -30,6 +30,8 @@ CONFIG_DEFECTO = {
     "separar_hojas": True, # dividir la foto en hojas y dar un veredicto por hoja
     "min_area_hoja": 0.02, # una hoja debe ocupar al menos 2 % de la foto
     "separacion_hojas": 0.08,  # distancia mínima entre centros de hojas (fracción del lado corto)
+    "escala_gruesa": 0.0,  # segundo tamaño de cuadro (fracción del lado corto); 0 = solo uno
+    "fina_para": ["sigatoka"],  # clases en las que manda el cuadro chico (ver elegir_escala)
 }
 
 
@@ -233,6 +235,36 @@ def hoja_de_cuadro(c: dict, etiquetas: np.ndarray, alto: int, ancho: int) -> int
     if len(cuenta) < 2 or cuenta.max() < 0.1 * sub.size:
         return None
     return int(cuenta.argmax())
+
+
+# ------------------------------------------------------------------ dos tamaños de cuadro
+
+def cfg_gruesa(cfg: dict) -> dict | None:
+    """La configuración del cuadro grande, o None si el modelo no la usa."""
+    rel = float(cfg.get("escala_gruesa") or 0)
+    return {**cfg, "lado_min_rel": rel} if rel > 0 else None
+
+
+def elegir_escala(r_fina: dict, r_gruesa: dict | None, cfg: dict, umbral: float) -> str:
+    """Qué tamaño de cuadro da el veredicto de la foto: "fina" o "gruesa".
+
+    El cuadro chico (384 px a resolución nativa) es para fotos desde el aire, donde una hoja
+    ocupa poco de la foto y las manchas son chicas. En una foto de cerca a 1920 x 1200 el mismo
+    cuadro ve un pedazo de hoja nítido y muy ampliado, algo que el modelo casi no vio al entrenar
+    (tres de cada cuatro de sus fotos de Sigatoka son de 224-320 px), y lo confunde con "otro problema".
+    El cuadro grande (escala_gruesa, p. ej. 50 % del lado corto, reducido a 384) se parece a
+    lo que vio al entrenar. Regla: si el cuadro chico encuentra con seguridad una clase de
+    fina_para (Sigatoka) y el grande no dice "sin hoja", manda el chico (no se pierden las
+    manchas chicas vistas desde el aire); en todo lo demás, manda el grande.
+    Ver docs/decisiones/2026-11-20-dos-tamanos-de-cuadro.md.
+    """
+    if r_gruesa is None:
+        return "fina"
+    ignorar = set(cfg.get("ignorar") or [])
+    if (r_fina["clase"] in set(cfg.get("fina_para") or []) and r_fina["confianza"] >= umbral
+            and r_gruesa["clase"] not in ignorar):
+        return "fina"
+    return "gruesa"
 
 
 # ------------------------------------------------------------------ veredicto de la foto

@@ -255,7 +255,8 @@ const Motor = (() => {
   // chicas que desaparecen al reducir la foto entera. El JSON del modelo trae los valores.
   // No se calcula la máscara de hoja: el v2 usa min_hoja 0 y su clase "sin_hoja" hace ese papel.
   // Tampoco se separan las hojas (eso lo hacen la estación y el dron); aquí basta el veredicto.
-  const PARCHES = { lado_px: 384, lado_min_rel: .3, solape: .2, min_parches: 1, top_k: 2, max_parches: 64, ignorar: [] };
+  const PARCHES = { lado_px: 384, lado_min_rel: .3, solape: .2, min_parches: 1, top_k: 2, max_parches: 64, ignorar: [],
+                    escala_gruesa: 0, fina_para: ["sigatoka"] };
   const masAlto = p => p.indexOf(Math.max(...p));
   const media = a => a.reduce((s, v) => s + v, 0) / Math.max(1, a.length);
 
@@ -264,8 +265,9 @@ const Motor = (() => {
     const paso = lado * (1 - solape), n = Math.ceil((total - lado) / paso) + 1;
     return Array.from({ length: n }, (_, i) => Math.round(i * (total - lado) / (n - 1)));
   }
+  const ladoCuadro = (alto, ancho, cfg) => Math.min(Math.max(cfg.lado_px, Math.floor(cfg.lado_min_rel * Math.min(alto, ancho))), Math.max(alto, ancho));
   function cuadros(alto, ancho, cfg) {
-    const lado = Math.min(Math.max(cfg.lado_px, Math.floor(cfg.lado_min_rel * Math.min(alto, ancho))), Math.max(alto, ancho));
+    const lado = ladoCuadro(alto, ancho, cfg);
     let solape = cfg.solape, xs = posiciones(ancho, lado, solape), ys = posiciones(alto, lado, solape);
     while (xs.length * ys.length > cfg.max_parches && solape > -1) {   // demasiados: se agranda el paso
       solape -= .1; xs = posiciones(ancho, lado, solape); ys = posiciones(alto, lado, solape);
@@ -373,10 +375,14 @@ const Motor = (() => {
   // en vision/rasgos.py: en modo "foto", si ningún cuadro de hoja pasa, todos cuentan como
   // "sin_hoja"; si alguno pasa, no se quita ninguno (así no se pierden los cuadros con manchas
   // cafés). En modo "cuadro", cada cuadro que no pasa cuenta como "sin_hoja".
-  async function revisarCuadros(m, archivo, alRevisar) {
+  // cfgs: un tamaño de cuadro por elemento; los que no son más grandes que el primero se saltan.
+  // Devuelve una lectura por tamaño: { lista, probs, rasgos, filtrados }.
+  async function revisarCuadros(m, archivo, alRevisar, cfgs = [m.cfg]) {
     const img = await createImageBitmap(archivo);
     const alto = img.height, ancho = img.width, L = m.lado, N = L * L, K = m.clases.length;
-    const lista = cuadros(alto, ancho, m.cfg), c = m.rasgos ? cabeza.leer(m) : null;
+    const usar = cfgs.filter((cfg, e) => e === 0 || ladoCuadro(alto, ancho, cfg) > ladoCuadro(alto, ancho, cfgs[0]));
+    const listas = usar.map(cfg => cuadros(alto, ancho, cfg)), c = m.rasgos ? cabeza.leer(m) : null;
+    const lista = listas.flatMap((l, e) => l.map(q => ({ ...q, e })));
     const lienzo = document.createElement("canvas"); lienzo.width = lienzo.height = L;
     const ctx = lienzo.getContext("2d", { willReadFrequently: true });
     ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
@@ -400,7 +406,7 @@ const Motor = (() => {
         let salida;
         try { salida = await m.sesion.run({ [m.entrada]: new ort.Tensor("float32", x, [grupo.length, 3, L, L]) }); }
         catch (e) {
-          if (m.lote > 1) { m.lote = 1; img.close(); return revisarCuadros(m, archivo, alRevisar); }   // modelo con lote fijo
+          if (m.lote > 1) { m.lote = 1; img.close(); return revisarCuadros(m, archivo, alRevisar, cfgs); }   // modelo con lote fijo
           throw e;
         }
         const P = salida[m.salida].data, F = m.rasgos ? salida[m.rasgos].data : null, D = F ? F.length / grupo.length : 0;
@@ -413,25 +419,41 @@ const Motor = (() => {
         alRevisar?.(Math.min(lista.length, i + m.lote), lista.length);
       }
     } finally { img.close(); }
-    let quitar = pasa.map(p => !p);
-    if (m.filtro?.modo === "foto") {
-      const hayHoja = probs.some((p, k) => pasa[k] && masAlto(p) !== sinHoja);
-      quitar = pasa.map(() => !hayHoja);
-    }
-    quitar.forEach((q, k) => { if (q) probs[k] = m.clases.map((_, j) => (j === sinHoja ? 1 : 0)); });
-    const filtrados = quitar.filter(Boolean).length;
-    return { lista, probs, rasgos, alto, ancho, filtrados, mejorado: !!(c && rasgos[0]) };
+    const escalas = listas.map((_, e) => {
+      const ks = lista.map((q, k) => (q.e === e ? k : -1)).filter(k => k >= 0);
+      const pr = ks.map(k => probs[k]), pa = ks.map(k => pasa[k]);
+      let quitar = pa.map(p => !p);
+      if (m.filtro?.modo === "foto") {
+        const hayHoja = pr.some((p, k) => pa[k] && masAlto(p) !== sinHoja);
+        quitar = pa.map(() => !hayHoja);
+      }
+      quitar.forEach((q, k) => { if (q) pr[k] = m.clases.map((_, j) => (j === sinHoja ? 1 : 0)); });
+      return { lista: ks.map(k => { const { e: _, ...q } = lista[k]; return q; }), probs: pr, rasgos: ks.map(k => rasgos[k]),
+               filtrados: quitar.filter(Boolean).length };
+    });
+    return { escalas, alto, ancho, mejorado: !!(c && rasgos[0]) };
+  }
+  // Qué tamaño de cuadro da el veredicto: copia de elegir_escala() en vision/parches.py. El chico
+  // (0) manda si encuentra con seguridad Sigatoka y el grande no dice "sin hoja"; si no, el grande (1).
+  function elegirEscala(fina, gruesa, cfg, umbral) {
+    const ignorar = new Set(cfg.ignorar || []), chico = new Set(cfg.fina_para || []);
+    return chico.has(fina.clase) && fina.confianza >= umbral && !ignorar.has(gruesa.clase) ? 0 : 1;
   }
 
+  // Con escala_gruesa en el JSON la foto se revisa con dos tamaños de cuadro (vision/parches.py).
   async function diagnosticarPorCuadros(m, archivo, revision, inicio, opciones) {
-    const { lista, probs, rasgos, alto, ancho, filtrados, mejorado } = await revisarCuadros(m, archivo, opciones.alRevisar);
-    const r = agregar(probs, m.clases, m.cfg, m.umbral), ignorar = new Set(m.cfg.ignorar || []);
+    const cfgs = [m.cfg];
+    if (+m.cfg.escala_gruesa > 0) cfgs.push({ ...m.cfg, lado_min_rel: +m.cfg.escala_gruesa });
+    const { escalas, alto, ancho, mejorado } = await revisarCuadros(m, archivo, opciones.alRevisar, cfgs);
+    const lecturas = escalas.map(e => agregar(e.probs, m.clases, m.cfg, m.umbral));
+    const k = lecturas.length > 1 ? elegirEscala(lecturas[0], lecturas[1], m.cfg, m.umbral) : 0;
+    const { lista, probs, rasgos, filtrados } = escalas[k], r = lecturas[k], ignorar = new Set(m.cfg.ignorar || []);
     const parches = lista.map((q, k) => { const i = masAlto(probs[k]); return { ...q, clase: m.clases[i], confianza: probs[k][i] }; });
     // Para mejorar el modelo: los rasgos y las probabilidades de los cuadros con hoja de plátano.
     let muestras = parches.map((q, k) => ({ f: rasgos[k], p: probs[k], hoja: !ignorar.has(q.clase) })).filter(s => s.f);
     if (muestras.some(s => s.hoja)) muestras = muestras.filter(s => s.hoja);
     return { clase: r.clase, confianza: r.confianza, seguro: r.confianza >= m.umbral, umbral: m.umbral, probs: r.probs, votos: r.votos,
-             modo: "parches", parches, ancho, alto, n_parches: r.n_hoja, n_cuadros: lista.length, n_filtrados: filtrados, modelo: m.nombre,
+             modo: "parches", escala: k ? "gruesa" : "fina", parches, ancho, alto, n_parches: r.n_hoja, n_cuadros: lista.length, n_filtrados: filtrados, modelo: m.nombre,
              ms: Math.round(performance.now() - inicio), calidad: revision, mejorado,
              rasgos: muestras.length ? muestras.map(({ f, p }) => ({ f, p })) : null, rasgosEspejo: null };
   }

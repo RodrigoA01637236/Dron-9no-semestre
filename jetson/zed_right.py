@@ -475,6 +475,7 @@ def analizar_foto(ruta, frame, gps, instante, con_texto):
         (CARPETA / "parches" / (ruta.stem + ".json")).write_text(json.dumps({
             "archivo": ruta.name, "modelo": nombre_modelo, "clase": r["clase"],
             "confianza": r["confianza"], "probs": r["probs"], "modo": r.get("modo"),
+            "escala": r.get("escala"), "lado": r.get("lado"),
             "fraccion": r.get("fraccion"), "ancho": r.get("ancho"), "alto": r.get("alto"),
             "hojas": hojas, "parches": r.get("parches", [])
         }, indent=1), encoding="utf-8")
@@ -483,7 +484,7 @@ def analizar_foto(ruta, frame, gps, instante, con_texto):
 
     print(f"[PARCHES] {ruta.name}: {r['clase']} {r['confianza']:.0%} · "
           f"{len(sintomas)}/{r.get('n_parches', 0)} trozos con síntomas · "
-          f"{len(hojas_mal)}/{len(hojas)} hojas con síntomas · {ms:.0f} ms")
+          f"{len(hojas_mal)}/{len(hojas)} hojas con síntomas · cuadro de {r.get('lado', '?')} px · {ms:.0f} ms")
 
 
 def tomar_foto():

@@ -29,7 +29,11 @@
     ],
     "separar_hojas": true,
     "min_area_hoja": 0.02,
-    "separacion_hojas": 0.08
+    "separacion_hojas": 0.08,
+    "escala_gruesa": 0.5,
+    "fina_para": [
+      "sigatoka"
+    ]
   },
   "dataset": "C:\\dron\\data\\dataset_v2",
   "top1_test": 0.946,

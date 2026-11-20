@@ -137,20 +137,12 @@ class Clasificador:
         r["modo"] = "imagen"
         return r
 
-    def predecir_parches(self, img_bgr: np.ndarray) -> dict:
-        """Veredicto por parches de hoja, con los cuadros y las hojas para dibujarlos."""
-        cfg = self.cfg_parches
-        alto, ancho = img_bgr.shape[:2]
-        mascara = P.mascara_hoja(img_bgr)
+    def _por_cuadros(self, img_bgr: np.ndarray, cfg: dict, mascara: np.ndarray):
+        """Un tamaño de cuadro: (veredicto, cuadros usados, sus probabilidades, todos los cuadros)."""
         todos = P.cuadros(img_bgr, cfg, mascara)
         usar = [c for c in todos if c["hoja"] >= cfg["min_hoja"]]
         if not usar:
-            # Nada parece vegetación (muy seca, de noche, cielo...): respaldo con la foto completa.
-            r = self._resultado(self.probabilidades([img_bgr])[0])
-            r.update(modo="imagen", n_parches=0, n_cuadros=len(todos), parches=[], hojas=[],
-                     ancho=ancho, alto=alto, aviso="No encontré hoja en la foto; usé la foto completa.")
-            return r
-
+            return None, usar, None, todos
         probs, es = self._correr([P.recortar(img_bgr, c) for c in usar], cv2.INTER_AREA, filtrar="cuadros")
         n_filtrados = None
         if es is not None:
@@ -158,6 +150,29 @@ class Clasificador:
         r = P.agregar(probs, self.clases, cfg, self.umbral)
         if n_filtrados is not None:
             r["n_filtrados"] = n_filtrados
+        return r, usar, probs, todos
+
+    def predecir_parches(self, img_bgr: np.ndarray) -> dict:
+        """Veredicto por parches de hoja, con los cuadros y las hojas para dibujarlos.
+        Con escala_gruesa en el JSON revisa con dos tamaños de cuadro y P.elegir_escala decide."""
+        cfg = self.cfg_parches
+        alto, ancho = img_bgr.shape[:2]
+        mascara = P.mascara_hoja(img_bgr)
+        r, usar, probs, todos = self._por_cuadros(img_bgr, cfg, mascara)
+        if r is None:
+            # Nada parece vegetación (muy seca, de noche, cielo...): respaldo con la foto completa.
+            r = self._resultado(self.probabilidades([img_bgr])[0])
+            r.update(modo="imagen", n_parches=0, n_cuadros=len(todos), parches=[], hojas=[],
+                     ancho=ancho, alto=alto, aviso="No encontré hoja en la foto; usé la foto completa.")
+            return r
+        escala = "fina"
+        gruesa = P.cfg_gruesa(cfg)
+        if gruesa is not None and P.lado_cuadro(alto, ancho, gruesa) > P.lado_cuadro(alto, ancho, cfg):
+            rg, usar_g, probs_g, todos_g = self._por_cuadros(img_bgr, gruesa, mascara)
+            if rg is not None and P.elegir_escala(r, rg, cfg, self.umbral) == "gruesa":
+                r, usar, probs, todos, cfg, escala = rg, usar_g, probs_g, todos_g, gruesa, "gruesa"
+        r["escala"] = escala
+        r["lado"] = P.lado_cuadro(alto, ancho, cfg)
         ignorar = set(cfg.get("ignorar") or [])
         lista = []
         for c, p in zip(usar, probs):
