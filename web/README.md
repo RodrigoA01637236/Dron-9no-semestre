@@ -9,7 +9,7 @@ Todo está en una sola página, `index.html`, pensada para productores (palabras
 | --- | --- |
 | Revisar una hoja | Toma o elige una foto y el modelo `sigatoka_cls_v2.onnx` la revisa **en el navegador** (onnxruntime-web), por cuadros como la estación y el dron: la foto se recorre en cuadros de 384 px (30 % del lado corto en fotos grandes), cada uno se clasifica y el veredicto sale con la regla de `vision/parches.py`; los cuadros enfermos se marcan sobre la foto. Antes, el filtro de hoja del JSON del modelo (`filtro_hoja`, ver `vision/rasgos.py`) descarta los cuadros que no son hoja de plátano (una mesa, una mano, una taza): si no queda ninguno, dice "No veo hojas de plátano". Con `?modelo=v1` en la dirección usa el modelo anterior (foto completa), para comparar. La foto no sale del dispositivo. Dice qué tan seguro está (de 0 a 100), avisa si quedó casi en el límite y qué hacer. *Mandar al técnico* comparte la foto con el resultado escrito encima (en la computadora: WhatsApp Web, la foto en Descargas y en el portapapeles) |
 | Analizar un vuelo | Se eligen o arrastran **todas las fotos de un vuelo** (o la carpeta completa). Una foto, un resultado: si la foto trae el resultado del dron (comentario del EXIF que escribe `jetson/zed_right.py`), ese es el que va al mapa y a la tabla, el mismo que está escrito en la foto; el navegador solo revisa las fotos que no traen uno (de celular, por ejemplo). El GPS sale del EXIF o del `.json` gemelo de `vision/capture.py`; si viene `sin_texto/`, se usa esa copia limpia, y si no trae el EXIF del resultado se lee el de la copia con letras. El mapa se va llenando mientras revisa; al final se descargan el mapa (`.geojson`) y una tabla (`.csv`) con todo, incluidas las fotos sin GPS |
-| Mapa del lote | Cuadros de 5 × 5 m (`METROS` en `motor.js`; antes 20 m) y qué revisar primero. Además del vuelo, abre un `.geojson` (de la estación o descargado de aquí) o un ejemplo. Todo se lee **en el navegador**: no se sube a ningún lado |
+| Mapa del lote | Vista **2D** (Leaflet) o **3D** (MapLibre GL: satélite de Esri sobre el relieve de Terrain Tiles de AWS; cada cuadro es una columna del color de su condición y tan alta como fotos con Sigatoka tenga; se inclina y gira con el mouse o con dos dedos). Cuadros de 5 × 5 m (`METROS` en `motor.js`; antes 20 m) y qué revisar primero. Además del vuelo, abre un `.geojson` (de la estación o descargado de aquí) o un ejemplo. Todo se lee **en el navegador**: no se sube a ningún lado |
 | Dron en vivo | Video, GPS y revisión en vivo de la Jetson (`jetson/zed_right.py`) a través de un túnel https |
 
 `historial.html` (pestaña *Historial*): cada vuelo analizado en la página principal se guarda solo en
@@ -43,13 +43,14 @@ lo pinta. `identificar.html`, `mapa.html` y `dron.html` solo redirigen a la pág
 que los enlaces viejos sigan sirviendo (`dron.html?dron=https://...` incluido).
 
 Letra Geist (Google Fonts); sin internet usa la letra del sistema. `preparar.sh` copia a `web/` el
-modelo (`vision/models/`) y Leaflet (`ui/static/leaflet/`), y baja onnxruntime-web 1.30.0 a
-`web/vendor/` (verifica el sha256), así que no hay copias en git: Netlify lo corre en cada despliegue
+modelo (`vision/models/`) y Leaflet (`ui/static/leaflet/`), y baja onnxruntime-web 1.30.0 y
+MapLibre GL JS 4.7.1 (solo se carga al elegir 3D) a `web/vendor/` (verifica el sha256), así que no hay copias en git: Netlify lo corre en cada despliegue
 (`netlify.toml` en la raíz). En el celular el modelo (unos 20 MB) se baja con la primera foto, o al
 abrir la página si hay WiFi.
 
 **Sin internet:** la Jetson sirve este mismo sitio por su hotspot con `jetson/sitio_local.sh`
-(`http://10.42.0.1:8000`); ahí *Dron en vivo* se conecta solo a la cámara. Ver `jetson/README.md`,
+(`http://10.42.0.1:8000`); ahí *Dron en vivo* se conecta solo a la cámara. Sin internet el mapa 3D
+muestra las columnas, pero no el satélite ni el relieve. Ver `jetson/README.md`,
 sección *Página sin internet*.
 
 ## Probar en la computadora

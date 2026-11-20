@@ -319,6 +319,14 @@ a { color: inherit; }
 .leaflet-bar a { width: 34px !important; height: 34px !important; line-height: 34px !important; color: var(--text) !important; }
 .leaflet-tooltip, .leaflet-popup-content-wrapper { border-radius: 10px; box-shadow: var(--shadow-md); font-size: 13px; }
 .leaflet-control-attribution { font-size: 10.5px; background: rgba(255, 255, 255, .7) !important; }
+.mapa-3d { background: #e9ebe6; }
+.mapa-3d .maplibregl-canvas:focus-visible { outline: 2px solid var(--text); outline-offset: -2px; }
+.maplibregl-map { font-family: var(--font); }
+.maplibregl-ctrl-group { border-radius: 10px !important; overflow: hidden; box-shadow: var(--shadow-md) !important; }
+.maplibregl-ctrl-group button { width: 34px; height: 34px; }
+.maplibregl-popup-content { padding: 10px 12px; border-radius: 10px; box-shadow: var(--shadow-md); font-size: 13px; line-height: 1.4; }
+.maplibregl-ctrl-attrib { font-size: 10.5px; }
+.segmento button[aria-busy="true"] { cursor: progress; color: var(--text-3); }
 .cuerpo-dron { display: grid; place-items: center; padding: 24px; min-height: 0; }
 .conectar { width: min(100%, 400px); display: grid; gap: 14px; justify-items: center; text-align: center; }
 .conectar .circulo { width: 52px; height: 52px; border-radius: 16px; background: var(--sunken); display: grid; place-items: center; }
@@ -495,7 +503,8 @@ a { color: inherit; }
       <div class="panel-cabeza" id="panel-cabeza">
         <h2 id="t-panel">Mapa del lote</h2>
         <div class="segmento" data-solo="mapa" role="group" aria-label="Ver el mapa por"><button type="button" data-vista="zonas" aria-pressed="true">Cuadros</button><button type="button" data-vista="fotos" aria-pressed="false">Cada foto</button></div>
-        <button class="btn btn-secundario" type="button" data-solo="mapa" id="b-archivo"><span data-ico="archivo"></span>Abrir otro</button>
+        <div class="segmento" data-solo="mapa" role="group" aria-label="Vista del mapa"><button type="button" data-dim="2d" aria-pressed="true">2D</button><button type="button" data-dim="3d" aria-pressed="false" title="Satélite y relieve, en 3D">3D</button></div>
+        <button class="btn btn-secundario" type="button" data-solo="mapa" id="b-archivo" aria-label="Abrir otro"><span data-ico="archivo"></span><span class="largo">Abrir otro</span></button>
         <button class="btn btn-fantasma btn-icono" type="button" id="b-cerrar" aria-label="Cerrar"><span data-ico="cerrar"></span></button>
       </div>
       <div class="cuerpo-hoja" data-solo="hoja">
@@ -1069,7 +1078,7 @@ function pintarLeyenda() {
     : res.zonas ? "No se vio Sigatoka en este lote."
     : lote?.deVuelo ? (lote.deVuelo.terminado ? "Ninguna foto trae GPS: no se pueden poner en el mapa. La tabla trae el resultado de cada una." : "Todavía no hay fotos con GPS.")
     : "El archivo no trae fotos revisadas.";
-  $("titulo-leyenda").textContent = cuadros ? `Cada cuadro mide ${M.metros} × ${M.metros} metros` : "Cada punto es una foto del dron";
+  $("titulo-leyenda").textContent = cuadros ? `Cada cuadro mide ${M.metros} × ${M.metros} metros${mapa?.dim === "3d" ? ". Más alto, más fotos con Sigatoka" : ""}` : "Cada punto es una foto del dron";
   const nombres = cuadros ? { sigatoka: "Con Sigatoka", otra_condicion: "Otro problema", sana: "Sanos" } : { sigatoka: "Sigatoka", otra_condicion: "Otro problema", sana: "Sana" };
   const cuenta = cuadros ? res.zonasPor : res.porClase;
   const filas = ["sigatoka", "otra_condicion", "sana"].map(k => `<li><span class="punto" style="background:${M.cat(k).color}"></span>${nombres[k]}<b>${cuenta[k] || 0}</b></li>`);
@@ -1092,6 +1101,16 @@ $("b-archivo").addEventListener("click", () => { $("elegir-mapa").hidden = false
 $("b-mi-mapa").addEventListener("click", () => $("in-mapa").click());
 $("b-ejemplo").addEventListener("click", () => { loteVisto = true; $("elegir-mapa").hidden = true; if (lote?.deVuelo || !lote?.ejemplo) { if (vuelo) vuelo.detenido = true; vuelo = null; verLote(EJEMPLO, true); } });
 $("in-mapa").addEventListener("change", e => { const f = e.target.files[0]; e.target.value = ""; if (f) abrirMapa(f); });
+// 2D (Leaflet) o 3D (MapLibre: satélite sobre el relieve, cuadros como columnas). La librería 3D se
+// baja la primera vez; si el navegador no tiene WebGL, se queda en 2D y lo dice en la leyenda.
+panel.querySelectorAll("[data-dim]").forEach(b => b.addEventListener("click", async () => {
+  const pedir = b.dataset.dim, marcar = d => panel.querySelectorAll("[data-dim]").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.dim === d)));
+  if (!mapa || mapa.dim === pedir) return;
+  marcar(pedir); b.setAttribute("aria-busy", "true"); $("error-mapa").hidden = true;
+  try { await mapa.dimension(pedir); }
+  catch (e) { marcar(mapa.dim); $("error-mapa").textContent = e.message || "No se pudo abrir el mapa 3D."; $("error-mapa").hidden = false; }
+  finally { b.removeAttribute("aria-busy"); pintarLeyenda(); }
+}));
 panel.querySelectorAll("[data-vista]").forEach(b => b.addEventListener("click", () => {
   panel.querySelectorAll("[data-vista]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
   vistaMapa = b.dataset.vista;

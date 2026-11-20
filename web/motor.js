@@ -905,6 +905,28 @@ const Motor = (() => {
     return window.L;
   }
 
+  // MapLibre GL (mapa 3D): se baja solo la primera vez que alguien pide la vista 3D (~800 KB).
+  async function maplibre() {
+    if (!window.maplibregl) {
+      const l = document.createElement("link");
+      l.rel = "stylesheet"; l.href = RAIZ + "vendor/maplibre/maplibre-gl.css";
+      document.head.prepend(l);
+      await cargarScript(RAIZ + "vendor/maplibre/maplibre-gl.js");
+    }
+    return window.maplibregl;
+  }
+  const hayWebGL = () => { try { const c = document.createElement("canvas"); return !!(c.getContext("webgl2") || c.getContext("webgl")); } catch (e) { return false; } };
+  const SATELITE = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+  // Relieve: Terrain Tiles de AWS (formato terrarium, libre y sin clave).
+  const RELIEVE = "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png";
+  const TEXTOS_3D = {
+    "NavigationControl.ResetBearing": "Volver al norte y ver desde arriba", "NavigationControl.ZoomIn": "Acercar",
+    "NavigationControl.ZoomOut": "Alejar", "AttributionControl.ToggleAttribution": "Créditos del mapa",
+    "CooperativeGesturesHandler.WindowsHelpText": "Usa Ctrl + rueda para acercar el mapa",
+    "CooperativeGesturesHandler.MacHelpText": "Usa Cmd + rueda para acercar el mapa",
+    "CooperativeGesturesHandler.MobileHelpText": "Usa dos dedos para mover el mapa",
+  };
+
   function zonas(fotos, metros) {
     const lat0 = fotos.reduce((s, f) => s + f.lat, 0) / fotos.length;
     const dLat = metros / 111320, dLon = metros / (111320 * Math.cos(lat0 * Math.PI / 180));
@@ -998,11 +1020,118 @@ const Motor = (() => {
         }).bindTooltip(`<b>${esc(cat(z.dominante).nombre)}</b> · ${plural(z.n, "foto", "fotos")} en este cuadro<br>${detalle}`).addTo(capa);
       });
     }
+    // ---------------------------------------------------------------- vista 3D (MapLibre GL)
+    // La imagen de satélite sobre el relieve del terreno, y cada cuadro como una columna: el color es
+    // la condición que más se repite (como en 2D) y la altura, cuántas fotos con Sigatoka tiene. Si
+    // la Sigatoka no es la que más se repite, la columna lleva una tapa roja (el borde rojo del 2D).
+    // Se crea la primera vez que se pide y necesita WebGL. Sin internet no hay satélite ni relieve,
+    // pero las columnas sí se ven.
+    let dim = "2d", m3 = null, promesa3 = null, GL = null, conSat = true, relleno = null;
+    const caja3 = document.createElement("div");
+    caja3.className = "mapa mapa-3d"; caja3.hidden = true;
+    caja3.setAttribute("role", "region"); caja3.setAttribute("aria-label", "Mapa del lote en 3D");
+    caja3.style.isolation = "isolate";
+    el.after(caja3);
+    const VACIO = { type: "FeatureCollection", features: [] };
+
+    async function crear3d() {
+      GL = await maplibre();
+      const m = new GL.Map({
+        container: caja3, locale: TEXTOS_3D, cooperativeGestures: tactil, attributionControl: { compact: true },
+        center: [-92.95, 17.99], zoom: 15, pitch: 55, bearing: -20, maxPitch: 75, maxZoom: 21,
+        style: {
+          version: 8,
+          sources: {
+            // 18: en el campo de México el nivel 19 de Esri suele ser "Map data not yet available"; se amplía el 18.
+            satelite: { type: "raster", tiles: [SATELITE], tileSize: 256, maxzoom: 18, attribution: "Imágenes © Esri" },
+            relieve: { type: "raster-dem", tiles: [RELIEVE], tileSize: 256, maxzoom: 15, encoding: "terrarium",
+                       attribution: "Relieve: Terrain Tiles (Mapzen, AWS)" },
+            zonas: { type: "geojson", data: VACIO }, fotos: { type: "geojson", data: VACIO },
+          },
+          layers: [
+            { id: "fondo", type: "background", paint: { "background-color": "#e9ebe6" } },
+            { id: "satelite", type: "raster", source: "satelite" },
+            { id: "zonas", type: "fill-extrusion", source: "zonas",
+              paint: { "fill-extrusion-color": ["get", "color"], "fill-extrusion-height": ["get", "altura"], "fill-extrusion-base": 0,
+                       "fill-extrusion-opacity": .9, "fill-extrusion-vertical-gradient": true } },
+            { id: "zonas-tapa", type: "fill-extrusion", source: "zonas", filter: ["==", ["get", "algo"], true],
+              paint: { "fill-extrusion-color": CAT.sigatoka.color, "fill-extrusion-base": ["get", "altura"],
+                       "fill-extrusion-height": ["+", ["get", "altura"], .6], "fill-extrusion-opacity": .9 } },
+            { id: "fotos", type: "circle", source: "fotos", layout: { visibility: "none" },
+              paint: { "circle-color": ["get", "color"], "circle-radius": ["interpolate", ["linear"], ["zoom"], 15, 4, 20, 9],
+                       "circle-stroke-color": ["get", "trazo"], "circle-stroke-width": ["get", "grosor"], "circle-pitch-alignment": "map" } },
+          ],
+          terrain: { source: "relieve", exaggeration: 1 },
+          sky: { "sky-color": "#9fc4e6", "horizon-color": "#e8eef2", "fog-color": "#ffffff",
+                 "sky-horizon-blend": .6, "horizon-fog-blend": .5, "fog-ground-blend": .7 },
+        },
+      });
+      m.addControl(new GL.NavigationControl({ visualizePitch: true }), posicionZoom === "topleft" ? "top-left" : "top-right");
+      const globo = new GL.Popup({ closeButton: false, maxWidth: "260px", offset: 10 });
+      m.on("click", "zonas", e => globo.setLngLat(e.lngLat).setHTML(e.features[0].properties.texto).addTo(m));
+      m.on("click", "fotos", e => { const f = fotos[e.features[0].properties.k]; if (f) globo.setLngLat([f.lon, f.lat]).setHTML(ficha(f)).addTo(m); });
+      for (const id of ["zonas", "fotos"]) {
+        m.on("mouseenter", id, () => { m.getCanvas().style.cursor = "pointer"; });
+        m.on("mouseleave", id, () => { m.getCanvas().style.cursor = ""; });
+      }
+      await new Promise(ok => (m.loaded() ? ok() : m.once("load", ok)));
+      caja3.mapa3d = m;   // para pruebas
+      return m;
+    }
+
+    function dibujar3d() {
+      if (!m3) return;
+      const zs = zonas(fotos, metros), hueco = .06;   // un poco de aire entre columnas
+      m3.getSource("zonas").setData({ type: "FeatureCollection", features: zs.map(z => {
+        const s = z.cuenta.sigatoka || 0, a0 = (z.i + hueco) * z.dLat, a1 = (z.i + 1 - hueco) * z.dLat;
+        const b0 = (z.j + hueco) * z.dLon, b1 = (z.j + 1 - hueco) * z.dLon;
+        const detalle = Object.entries(z.cuenta).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${esc(cat(k).nombre)}: ${n}`).join(" · ");
+        return { type: "Feature", geometry: { type: "Polygon", coordinates: [[[b0, a0], [b1, a0], [b1, a1], [b0, a1], [b0, a0]]] },
+                 properties: { color: cat(z.dominante).color, altura: .8 + 2.2 * Math.min(s, 6), algo: z.dominante !== "sigatoka" && s > 0,
+                               texto: `<b>${esc(cat(z.dominante).nombre)}</b> · ${plural(z.n, "foto", "fotos")} en este cuadro<br>${detalle}` } };
+      }) });
+      m3.getSource("fotos").setData({ type: "FeatureCollection", features: fotos.map((f, k) => ({ type: "Feature",
+        geometry: { type: "Point", coordinates: [f.lon, f.lat] },
+        properties: { k, color: f.dudoso ? GRIS : cat(f.clave).color, trazo: f.humano ? borde : "#0b1510", grosor: f.humano ? 2.5 : 1.5 } })) });
+      const ver = (id, si) => m3.setLayoutProperty(id, "visibility", si ? "visible" : "none");
+      ver("zonas", vista !== "fotos"); ver("zonas-tapa", vista !== "fotos"); ver("fotos", vista === "fotos");
+      ver("satelite", conSat);
+    }
+
+    // Encuadra el lote inclinado: primero desde arriba, espera a que cargue el relieve de ese lugar
+    // (la cámara necesita saber a qué altura está el suelo, si no apunta por encima del lote) y luego se
+    // inclina. Con animar, la inclinación se ve (así se nota que es el mismo lugar); si la persona pidió
+    // menos movimiento, salta directo. Sin internet el relieve no llega y se inclina a los 2.5 s.
+    let encuadre = 0;
+    async function encuadrar3d(animar) {
+      if (!m3) return;
+      const yo = ++encuadre;
+      const zs = zonas(fotos, metros);
+      const pts = zs.length ? zs.flatMap(z => [[z.j * z.dLon, z.i * z.dLat], [(z.j + 1) * z.dLon, (z.i + 1) * z.dLat]]) : fotos.map(f => [f.lon, f.lat]);
+      if (!pts.length) return;
+      const caja = pts.reduce((b, p) => b.extend(p), new GL.LngLatBounds(pts[0], pts[0]));
+      const [ar, de, ab, iz] = relleno || [20, 20, 20, 20];
+      const w = caja3.clientWidth, h = caja3.clientHeight;
+      // Si los paneles tapan casi todo (pantalla chica), se encuadra sin dejarles espacio.
+      const padding = w - iz - de > 120 && h - ar - ab > 120 ? { top: ar, right: de, bottom: ab, left: iz } : { top: 20, right: 20, bottom: 20, left: 20 };
+      m3.jumpTo({ pitch: 0, bearing: 0, padding: { top: 0, right: 0, bottom: 0, left: 0 } });   // cameraForBounds mide con la cámara actual
+      const cam = m3.cameraForBounds(caja, { padding, maxZoom: 19.5 });
+      // Inclinado, el lote se ve más corto de frente a fondo: cabe un poco más cerca que desde arriba.
+      const zoom = Math.min(20, (cam?.zoom ?? 18) + .4), centro = caja.getCenter();
+      const destino = { center: centro, zoom, pitch: 55, bearing: -20, padding };
+      m3.jumpTo({ ...destino, pitch: 0, bearing: 0 });
+      await new Promise(ok => { const t = setTimeout(ok, 2500); m3.once("idle", () => { clearTimeout(t); ok(); }); });
+      if (yo !== encuadre || dim !== "3d") return;
+      m3.jumpTo({ center: centro });   // vuelve a medir la altura del suelo, ya con el relieve
+      if (animar && !matchMedia("(prefers-reduced-motion: reduce)").matches) m3.easeTo({ ...destino, duration: 900, easing: x => 1 - Math.pow(1 - x, 3) });
+      else m3.jumpTo(destino);
+    }
+
     return {
       mapa,
       // relleno: [arriba, derecha, abajo, izquierda] en px que tapan otros paneles encima del mapa.
-      mostrar(lista, { conSatelite = true, relleno = null, encuadrar = true } = {}) {
-        fotos = lista;
+      mostrar(lista, { conSatelite = true, relleno: r = null, encuadrar = true } = {}) {
+        fotos = lista; conSat = conSatelite; relleno = r;
         mapa.invalidateSize();   // por si el contenedor cambió de tamaño desde que se creó
         if (conSatelite) satelite.addTo(mapa); else satelite.remove();
         el.classList.toggle("sin-fondo", !conSatelite);
@@ -1012,10 +1141,27 @@ const Motor = (() => {
         const esquinas = zs.length ? zs.flatMap(z => [[z.i * z.dLat, z.j * z.dLon], [(z.i + 1) * z.dLat, (z.j + 1) * z.dLon]]) : fotos.map(f => [f.lat, f.lon]);
         const [ar, de, ab, iz] = relleno || [20, 20, 20, 20];
         if (encuadrar && esquinas.length) mapa.fitBounds(L.latLngBounds(esquinas), { paddingTopLeft: [iz, ar], paddingBottomRight: [de, ab], maxZoom: 20 });
+        if (dim === "3d") { dibujar3d(); if (encuadrar) encuadrar3d(false); }
         return resumen(fotos, metros);
       },
-      vista(v) { vista = v; dibujar(); },
-      invalidar() { mapa.invalidateSize(); },
+      vista(v) { vista = v; dibujar(); dibujar3d(); },
+      invalidar() { mapa.invalidateSize(); m3?.resize(); },
+      // "2d" (Leaflet) o "3d" (MapLibre). Falla si el navegador no tiene WebGL o no bajó la librería.
+      async dimension(d) {
+        if (d === "3d") {
+          if (!hayWebGL()) throw new Error("Este navegador no puede mostrar mapas en 3D.");
+          promesa3 ??= crear3d().catch(e => { promesa3 = null; throw e; });
+          m3 = await promesa3;
+          if (dim === "3d") return dim;
+          dim = "3d"; caja3.hidden = false; el.style.visibility = "hidden";
+          m3.resize(); dibujar3d(); encuadrar3d(true);
+        } else if (dim === "3d") {
+          dim = "2d"; caja3.hidden = true; el.style.visibility = "";
+          mapa.invalidateSize(); dibujar();
+        }
+        return dim;
+      },
+      get dim() { return dim; },
     };
   }
 
