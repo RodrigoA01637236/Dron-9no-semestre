@@ -868,10 +868,15 @@ const Motor = (() => {
 
   // Lote de ejemplo con datos inventados (para mostrar el mapa sin la estación): un foco de
   // Sigatoka en una esquina que se va diluyendo, otra condición en la esquina contraria.
+  // Lado de los cuadros del mapa, en metros: el mapa del lote, el historial y el ejemplo usan este.
+  // 5 m para pruebas de cerca (antes 20 m). El GPS sin RTK se mueve 1–3 m, así que una foto
+  // puede caer en el cuadro de al lado.
+  const METROS = 5;
+
   function ejemplo() {
     let s = 11;
     const azar = () => { s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
-    const dLat = 20 / 111320, dLon = 20 / (111320 * Math.cos(17.9 * Math.PI / 180));
+    const dLat = METROS / 111320, dLon = METROS / (111320 * Math.cos(17.9 * Math.PI / 180));
     const lat0 = Math.floor(17.9 / dLat) * dLat, lon0 = Math.floor(-93 / dLon) * dLon;
     const fotos = [];
     for (let i = 0; i < 6; i++) for (let j = 0; j < 9; j++) {
@@ -962,7 +967,7 @@ const Motor = (() => {
     const satelite = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
       { maxZoom: 20, maxNativeZoom: 19, attribution: "Imágenes © Esri" });
     const capa = L.layerGroup().addTo(mapa);
-    let fotos = [], vista = "zonas", metros = 20;
+    let fotos = [], vista = "zonas", metros = METROS;
 
     function ficha(f) {
       const c = f.dudoso ? { nombre: "Sin confirmar", color: GRIS } : cat(f.clave);
@@ -1006,7 +1011,7 @@ const Motor = (() => {
         const zs = zonas(fotos, metros);
         const esquinas = zs.length ? zs.flatMap(z => [[z.i * z.dLat, z.j * z.dLon], [(z.i + 1) * z.dLat, (z.j + 1) * z.dLon]]) : fotos.map(f => [f.lat, f.lon]);
         const [ar, de, ab, iz] = relleno || [20, 20, 20, 20];
-        if (encuadrar && esquinas.length) mapa.fitBounds(L.latLngBounds(esquinas), { paddingTopLeft: [iz, ar], paddingBottomRight: [de, ab], maxZoom: 19 });
+        if (encuadrar && esquinas.length) mapa.fitBounds(L.latLngBounds(esquinas), { paddingTopLeft: [iz, ar], paddingBottomRight: [de, ab], maxZoom: 20 });
         return resumen(fotos, metros);
       },
       vista(v) { vista = v; dibujar(); },
@@ -1110,5 +1115,5 @@ const Motor = (() => {
   }
 
   return { CAT, cat, GRIS, LECTURAS, esc, plural, pct, icono, qr, SITIO, modelo, modeloListo, diagnosticar, lectura, precargar, marcados,
-           hablar, callar, puedeHablar, mensaje, cabeza, entrenarCabeza, aciertos, aplicarCabeza, leerExif, juntarVuelo, analizarFotoDeVuelo, geojsonDeVuelo, csvDeVuelo, historial, leaflet, compartir, fotoConResultado, leerGeojson, ejemplo, crearMapa, resumen, zonas, cuantas, dron };
+           hablar, callar, puedeHablar, mensaje, cabeza, entrenarCabeza, aciertos, aplicarCabeza, leerExif, juntarVuelo, analizarFotoDeVuelo, geojsonDeVuelo, csvDeVuelo, historial, leaflet, compartir, fotoConResultado, leerGeojson, ejemplo, crearMapa, metros: METROS, resumen, zonas, cuantas, dron };
 })();

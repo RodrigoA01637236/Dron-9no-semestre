@@ -9,14 +9,14 @@ Todo está en una sola página, `index.html`, pensada para productores (palabras
 | --- | --- |
 | Revisar una hoja | Toma o elige una foto y el modelo `sigatoka_cls_v2.onnx` la revisa **en el navegador** (onnxruntime-web), por cuadros como la estación y el dron: la foto se recorre en cuadros de 384 px (30 % del lado corto en fotos grandes), cada uno se clasifica y el veredicto sale con la regla de `vision/parches.py`; los cuadros enfermos se marcan sobre la foto. Antes, el filtro de hoja del JSON del modelo (`filtro_hoja`, ver `vision/rasgos.py`) descarta los cuadros que no son hoja de plátano (una mesa, una mano, una taza): si no queda ninguno, dice "No veo hojas de plátano". Con `?modelo=v1` en la dirección usa el modelo anterior (foto completa), para comparar. La foto no sale del dispositivo. Dice qué tan seguro está (de 0 a 100), avisa si quedó casi en el límite y qué hacer. *Mandar al técnico* comparte la foto con el resultado escrito encima (en la computadora: WhatsApp Web, la foto en Descargas y en el portapapeles) |
 | Analizar un vuelo | Se eligen o arrastran **todas las fotos de un vuelo** (o la carpeta completa). Una foto, un resultado: si la foto trae el resultado del dron (comentario del EXIF que escribe `jetson/zed_right.py`), ese es el que va al mapa y a la tabla, el mismo que está escrito en la foto; el navegador solo revisa las fotos que no traen uno (de celular, por ejemplo). El GPS sale del EXIF o del `.json` gemelo de `vision/capture.py`; si viene `sin_texto/`, se usa esa copia limpia, y si no trae el EXIF del resultado se lee el de la copia con letras. El mapa se va llenando mientras revisa; al final se descargan el mapa (`.geojson`) y una tabla (`.csv`) con todo, incluidas las fotos sin GPS |
-| Mapa del lote | Cuadros de 20 × 20 m y qué revisar primero. Además del vuelo, abre un `.geojson` (de la estación o descargado de aquí) o un ejemplo. Todo se lee **en el navegador**: no se sube a ningún lado |
+| Mapa del lote | Cuadros de 5 × 5 m (`METROS` en `motor.js`; antes 20 m) y qué revisar primero. Además del vuelo, abre un `.geojson` (de la estación o descargado de aquí) o un ejemplo. Todo se lee **en el navegador**: no se sube a ningún lado |
 | Dron en vivo | Video, GPS y revisión en vivo de la Jetson (`jetson/zed_right.py`) a través de un túnel https |
 
 `historial.html` (pestaña *Historial*): cada vuelo analizado en la página principal se guarda solo en
 el navegador (IndexedDB `dron-sigatoka-historial`, sin fotos); también se pueden agregar `.geojson`.
 Un selector de vuelo arriba (con *Ver la evolución*, que los recorre en orden) manda en todo: 4
 indicadores (% de fotos con Sigatoka y su cambio, cuadros con Sigatoka, cuadros con Sigatoka nueva,
-fotos y hectáreas), mapa de calor por cuadro de 20 m (rojos de un solo tono, validados) o de cambio
+fotos y hectáreas), mapa de calor por cuadro de 5 m (rojos de un solo tono, validados) o de cambio
 contra el vuelo anterior (rojo empeoró, azul mejoró, gris igual), tendencia del % con Sigatoka,
 qué se encontró en cada vuelo (columnas al 100 %), cuadros que preocupan (nombre tipo C4: columnas de
 oeste a este, filas de norte a sur; primero los que llevan más vuelos seguidos con Sigatoka) y la
@@ -81,7 +81,7 @@ solo; `netlify.toml` ya tiene el comando y la carpeta.
 - El archivo sale de la estación: **Mapa > Descargar el mapa** (`/api/geojson`). Trae, por foto, la
   ubicación, el diagnóstico, si lo revisó alguien y si el modelo no estaba seguro. Archivos de antes
   (sin `clave`, `color` ni `dudoso`) también abren: la página lo deduce del nombre y la confianza.
-- Dos vistas: *Cuadros* (la condición que más se repite en cada cuadro de 20 m; empate gana la más
+- Dos vistas: *Cuadros* (la condición que más se repite en cada cuadro de 5 m; empate gana la más
   grave; borde rojo punteado si el cuadro tiene alguna foto con Sigatoka) y *Cada foto*.
 - El lote del archivo se ve sobre el fondo satelital (Esri), que sí pide mosaicos a internet; el
   ejemplo no usa fondo.

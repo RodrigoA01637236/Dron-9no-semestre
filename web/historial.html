@@ -249,7 +249,7 @@ details.tabla table { min-width: 720px; }
               <button type="button" data-modo="cambio" aria-pressed="false">Cambio</button>
             </div>
             <label class="casilla"><input type="checkbox" id="satelite"> Satélite</label>
-            <p id="sub-mapa">Cuadros de 20 × 20 metros. Toca un cuadro para ver sus números.</p>
+            <p id="sub-mapa">Cuadros de 5 × 5 metros. Toca un cuadro para ver sus números.</p>
           </div>
           <div class="mapa-marco"><div class="mapa" id="mapa" aria-label="Mapa de calor del lote"></div><p class="mapa-aviso" id="mapa-aviso" hidden></p></div>
           <div class="escala" id="escala"></div>
@@ -310,9 +310,9 @@ const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).
 const fechaCorta = t => { const d = new Date(String(t).slice(0, 10) + "T12:00:00"); return isNaN(d) ? String(t).slice(0, 10) : d.toLocaleDateString("es-MX", { day: "numeric", month: "short" }); };
 const fechaLarga = t => { const d = new Date(String(t).slice(0, 10) + "T12:00:00"); return isNaN(d) ? String(t).slice(0, 10) : d.toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" }); };
 const pctTxt = x => x == null ? "—" : `${Math.round(x * 100)} %`;
-const METROS = 20;
+const METROS = Motor.metros;
 
-// ------------------------------------------------ datos: cuadros de 20 m comunes a todos los vuelos
+// ------------------------------------------------ datos: cuadros de METROS comunes a todos los vuelos
 let VUELOS = [], ejemplo = false, sel = 0, modo = "calor", celdaElegida = null;
 function preparar(lista) {
   const conGps = lista.flatMap(v => v.fotos.filter(f => f.lat != null && f.lon != null));
@@ -451,7 +451,7 @@ async function pintarMapa() {
   }
   const v = VUELOS[sel], antes = VUELOS[sel - 1];
   $("t-mapa").textContent = modo === "calor" ? "Mapa de calor" : "Cómo cambió";
-  $("sub-mapa").textContent = modo === "calor" ? "% de fotos con Sigatoka en cada cuadro de 20 × 20 metros. Toca un cuadro para ver sus números."
+  $("sub-mapa").textContent = modo === "calor" ? `% de fotos con Sigatoka en cada cuadro de ${METROS} × ${METROS} metros. Toca un cuadro para ver sus números.`
     : `Puntos de diferencia en % de fotos con Sigatoka contra el vuelo del ${antes ? fechaCorta(antes.fecha) : "—"}.`;
   capa.clearLayers(); rects = new Map();
   const { dLat, dLon } = DATOS;
@@ -480,7 +480,7 @@ async function pintarMapa() {
   $("mapa-aviso").textContent = "Es el primer vuelo guardado: todavía no hay con qué compararlo.";
   if (!mapaListo) {   // se encuadra una vez con todos los cuadros de todos los vuelos, para que no brinque al cambiar de vuelo
     const todas = VUELOS.flatMap(x => [...x.celdas.values()]);
-    if (todas.length) mapa.fitBounds(L.latLngBounds(todas.flatMap(c => [[c.i * dLat, c.j * dLon], [(c.i + 1) * dLat, (c.j + 1) * dLon]])), { padding: [24, 24], maxZoom: 19 });
+    if (todas.length) mapa.fitBounds(L.latLngBounds(todas.flatMap(c => [[c.i * dLat, c.j * dLon], [(c.i + 1) * dLat, (c.j + 1) * dLon]])), { padding: [24, 24], maxZoom: 20 });
     mapaListo = true;
   }
   mapa.invalidateSize();
@@ -597,7 +597,7 @@ function pintarPreocupan() {
 function irACelda(k) {
   celdaElegida = k; pintarPreocupan(); pintarMapa();
   // se acerca dejando ver los cuadros vecinos, para ubicarlo en el lote
-  const r = rects.get(k); if (r) { mapa.flyToBounds(r.getBounds().pad(2), { maxZoom: 19, duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : .6 }); r.openTooltip(); }
+  const r = rects.get(k); if (r) { mapa.flyToBounds(r.getBounds().pad(2), { maxZoom: 20, duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : .6 }); r.openTooltip(); }
   $("mapa").closest(".tarjeta").scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 function pintarVuelos() {

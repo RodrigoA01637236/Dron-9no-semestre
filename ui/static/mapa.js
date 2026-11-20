@@ -4,7 +4,7 @@ const Mapa = (() => {
   let mapa = null, capa = null, fotos = [], sinGps = 0;
   // vista: "condicion" (cada zona con el color de lo que más hay), "zonas" (una condición) o "puntos".
   // ocultas: claves que el usuario apagó en la leyenda ("dudoso" = sin diagnóstico seguro).
-  const op = { vista: "condicion", objetivo: "sigatoka", metros: 20, ocultas: new Set() };
+  const op = { vista: "condicion", objetivo: "sigatoka", metros: 5, ocultas: new Set() };
   // Fotos que no dicen nada del cultivo: no cuentan para las zonas.
   const NO_DIAGNOSTICA = new Set(["sin_hoja"]);
   // En un empate, la zona toma el color de lo más grave.

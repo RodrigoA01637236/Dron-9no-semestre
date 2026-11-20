@@ -587,10 +587,10 @@ function hojaDePlatano(svg, { trazo = "#b4bab3", relleno = "#ecedeb", rayas = fa
 }
 hojaDePlatano($("hoja-guia"));
 
-// Cuadros de 20 m: lo mismo cuentan la tarjeta y la leyenda del mapa.
+// Cuadros de M.metros: lo mismo cuentan la tarjeta y la leyenda del mapa.
 const EJEMPLO = M.ejemplo();
 (function miniMapa() {
-  const zs = M.zonas(EJEMPLO, 20), svg = $("mini-mapa");
+  const zs = M.zonas(EJEMPLO, M.metros), svg = $("mini-mapa");
   const i0 = Math.min(...zs.map(z => z.i)), i1 = Math.max(...zs.map(z => z.i)), j0 = Math.min(...zs.map(z => z.j)), j1 = Math.max(...zs.map(z => z.j));
   const c = 34, g = 5, w = (j1 - j0 + 1) * (c + g) - g, h = (i1 - i0 + 1) * (c + g) - g;
   svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
@@ -1069,7 +1069,7 @@ function pintarLeyenda() {
     : res.zonas ? "No se vio Sigatoka en este lote."
     : lote?.deVuelo ? (lote.deVuelo.terminado ? "Ninguna foto trae GPS: no se pueden poner en el mapa. La tabla trae el resultado de cada una." : "Todavía no hay fotos con GPS.")
     : "El archivo no trae fotos revisadas.";
-  $("titulo-leyenda").textContent = cuadros ? "Cada cuadro mide 20 × 20 metros" : "Cada punto es una foto del dron";
+  $("titulo-leyenda").textContent = cuadros ? `Cada cuadro mide ${M.metros} × ${M.metros} metros` : "Cada punto es una foto del dron";
   const nombres = cuadros ? { sigatoka: "Con Sigatoka", otra_condicion: "Otro problema", sana: "Sanos" } : { sigatoka: "Sigatoka", otra_condicion: "Otro problema", sana: "Sana" };
   const cuenta = cuadros ? res.zonasPor : res.porClase;
   const filas = ["sigatoka", "otra_condicion", "sana"].map(k => `<li><span class="punto" style="background:${M.cat(k).color}"></span>${nombres[k]}<b>${cuenta[k] || 0}</b></li>`);
