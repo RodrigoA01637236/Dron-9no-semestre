@@ -43,6 +43,11 @@ ANALIZAR_FOTOS = True    # respaldo: sin revisión en vivo reciente, revisar la 
 # El modelo más nuevo que esté en vision/models; para volver a uno anterior:
 #   SIGATOKA_MODELO=sigatoka_cls_v1.onnx bash jetson/zed_control.sh reiniciar
 MODELOS = ("sigatoka_cls_v2.onnx", "sigatoka_cls_v1.onnx")
+# Cómo se revisa cada cuadro del video y cada foto:
+#   "imagen"  = la foto completa, como en la primera sesión de fotos (17 de noviembre)
+#   "parches" = por cuadros (segmentación); en fotos de cerca tiende a "otra condición"
+# Para usar los cuadros: SIGATOKA_MODO=parches bash jetson/zed_control.sh reiniciar
+MODO_ANALISIS = os.environ.get("SIGATOKA_MODO", "imagen")
 # MODO DEMO (solo para grabar video): "otra condición" se muestra como Sigatoka; sana y sin hoja
 # no cambian. El EXIF guarda el resultado real (AnalisisReal). Se prende al arrancar:
 #   SIGATOKA_DEMO=1 bash jetson/zed_control.sh reiniciar
@@ -214,8 +219,9 @@ def cargar_modelo():
 
     nombre_modelo = onnx.stem
 
-    print(f"[MODELO] {onnx.name} cargado; clases {modelo.clases}; en vivo por cuadros: "
+    print(f"[MODELO] {onnx.name} cargado; clases {modelo.clases}; en vivo: "
           f"{'sí' if ANALIZAR_EN_VIVO else 'no'}; filtro de hoja: {'sí' if getattr(modelo, 'filtro', None) else 'no'}")
+    print(f"[MODELO] revisión: {'foto completa (como la primera sesión)' if MODO_ANALISIS == 'imagen' else 'por cuadros'}")
     if DEMO:
         print("[DEMO] otra condición se muestra como Sigatoka (solo para video; el EXIF guarda AnalisisReal)")
     return modelo
@@ -277,7 +283,7 @@ def crear_exif(gps, instante, r=None, en_vivo=False):
         analisis = (
             f"AnalisisYOLO={a['clase']}; "
             f"ConfianzaYOLO={a['confianza']:.3f}; "
-            f"ModeloYOLO={nombre_modelo} a bordo, {'foto completa' if a.get('modo') == 'completa' else 'por parches'}{', en vivo' if en_vivo else ''}"
+            f"ModeloYOLO={nombre_modelo} a bordo, {'foto completa' if a.get('modo') in ('completa', 'imagen') else 'por parches'}{', en vivo' if en_vivo else ''}"
             f"; ParchesHoja={a.get('n_parches', 0)}"
             f"; Hojas={len(a.get('hojas') or [])}"
             f"; HojasConSintomas={sum(h['clase'] not in ('sana', 'sin_hoja') for h in a.get('hojas') or [])}"
@@ -427,7 +433,7 @@ def guardar_cuadros_json(ruta, r):
 
 
 def linea_parches(nombre, a, detalle=""):
-    como = "decidió la foto completa" if a.get("modo") == "completa" else f"cuadro de {a.get('lado') or '?'} px"
+    como = "decidió la foto completa" if a.get("modo") in ("completa", "imagen") else f"cuadro de {a.get('lado') or '?'} px"
     print(f"[PARCHES] {nombre}: {a['clase']} {a['confianza']:.0%} · "
           f"{a['n_sintomas']}/{a['n_parches']} trozos con síntomas · "
           f"{a['n_hojas_sintomas']}/{a['n_hojas']} hojas con síntomas · {como} · "
@@ -541,7 +547,7 @@ def analizar_en_vivo():
         inicio = time.perf_counter()
         try:
             with analisis_lock:
-                r = modo_demo(modelo.predecir_bgr(frame, "parches"))
+                r = modo_demo(modelo.predecir_bgr(frame, MODO_ANALISIS))
         except Exception as e:
             print("[EN VIVO]", e)
             time.sleep(2)
@@ -565,7 +571,7 @@ def analizar_foto(ruta, frame, gps, instante, con_texto):
         try:
             # La misma imagen que revisa la página: la copia limpia ya guardada en JPEG
             img = cv2.imread(str(limpia))
-            r = modo_demo(modelo.predecir_bgr(frame if img is None else img, "parches"))
+            r = modo_demo(modelo.predecir_bgr(frame if img is None else img, MODO_ANALISIS))
         except Exception as e:
             print("[PARCHES]", e)
             fotos["analisis"] = {"archivo": ruta.name, "error": str(e)}
@@ -681,7 +687,8 @@ def estado_actual(modelo):
             "fotos_por_parches": ANALIZAR_FOTOS,
             "en_vivo": ANALIZAR_EN_VIVO,
             "filtro_hoja": getattr(modelo, "filtro", None) is not None,
-            "demo": DEMO
+            "demo": DEMO,
+            "modo": MODO_ANALISIS
         },
         # La revisión en vivo (por cuadros) y la de la última foto, que es la en vivo del momento de la foto
         "en_vivo": resultado_en_vivo(modelo),
