@@ -45,7 +45,10 @@ El v2 hace lo que hace un agrónomo: mira la hoja por partes.
    misma enfermedad, la foto tiene esa enfermedad (para "otra condición", desde el 21 de
    noviembre, además tiene que haber más cuadros seguros de ella que de "sana": `mas_que_sana`).
    Sigatoka tiene prioridad: gana a otra enfermedad si tiene al menos la mitad de sus cuadros
-   seguros (`prioridad`, `fraccion_prioridad`). Si no, la foto es sana solo cuando la
+   seguros (`prioridad`, `fraccion_prioridad`).
+   **Foto completa primero** (`completa_primero`): si los cuadros no encuentran Sigatoka y la
+   foto completa está segura, decide la foto completa y no se dibujan cuadros; una hoja de cerca
+   ya no se parte en cuadros. Ver [la decisión](../docs/decisiones/2026-11-21-foto-completa-primero.md). Si no, la foto es sana solo cuando la
    hoja en promedio se ve sana. Si no alcanza la seguridad mínima, va a revisión humana.
 4. **Calibración**: con temperatura (Guo et al., ICML 2017), "80 % seguro" significa
    acertar alrededor del 80 % de las veces. Así el umbral se elige con datos.

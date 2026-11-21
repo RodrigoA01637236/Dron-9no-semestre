@@ -251,7 +251,7 @@ def crear_exif(gps, instante, r=None, en_vivo=False):
         analisis = (
             f"AnalisisYOLO={a['clase']}; "
             f"ConfianzaYOLO={a['confianza']:.3f}; "
-            f"ModeloYOLO={nombre_modelo} a bordo, por parches{', en vivo' if en_vivo else ''}"
+            f"ModeloYOLO={nombre_modelo} a bordo, {'foto completa' if a.get('modo') == 'completa' else 'por parches'}{', en vivo' if en_vivo else ''}"
             f"; ParchesHoja={a.get('n_parches', 0)}"
             f"; Hojas={len(a.get('hojas') or [])}"
             f"; HojasConSintomas={sum(h['clase'] not in ('sana', 'sin_hoja') for h in a.get('hojas') or [])}"
@@ -383,7 +383,7 @@ def resumen_analisis(nombre, r, ms, en_vivo=False):
     return {"archivo": nombre, "clase": r["clase"], "confianza": r["confianza"], "probs": r.get("probs"),
             "n_parches": r.get("n_parches", 0), "n_sintomas": len(sintomas), "n_hojas": len(hojas),
             "n_hojas_sintomas": sum(h["clase"] not in ("sana", "sin_hoja") for h in hojas),
-            "fraccion": r.get("fraccion"), "ms": round(ms), "lado": r.get("lado"), "en_vivo": en_vivo}
+            "fraccion": r.get("fraccion"), "ms": round(ms), "lado": r.get("lado"), "modo": r.get("modo"), "en_vivo": en_vivo}
 
 
 def guardar_cuadros_json(ruta, r):
@@ -399,9 +399,10 @@ def guardar_cuadros_json(ruta, r):
 
 
 def linea_parches(nombre, a, detalle=""):
+    como = "decidió la foto completa" if a.get("modo") == "completa" else f"cuadro de {a.get('lado') or '?'} px"
     print(f"[PARCHES] {nombre}: {a['clase']} {a['confianza']:.0%} · "
           f"{a['n_sintomas']}/{a['n_parches']} trozos con síntomas · "
-          f"{a['n_hojas_sintomas']}/{a['n_hojas']} hojas con síntomas · cuadro de {a.get('lado') or '?'} px · "
+          f"{a['n_hojas_sintomas']}/{a['n_hojas']} hojas con síntomas · {como} · "
           f"{a['ms']} ms{detalle}")
 
 
@@ -684,7 +685,7 @@ const N={sana:"Sana",sigatoka:"Sigatoka",otra_condicion:"Otra condición",sin_ho
 const txt=(a,u)=>(a.confianza>=u||a.clase==="sin_hoja")?`${N[a.clase]||a.clase} · ${Math.round(a.confianza*100)} %`:`No está seguro (${N[a.clase]||a.clase} ${Math.round(a.confianza*100)} %)`;
 async function estado(){try{const e=await (await fetch("/estado")).json();const a=e.analisis_foto,v=e.en_vivo;
 document.getElementById("diag").textContent=!e.modelo?"Sin modelo en el dron":v?"En vivo: "+txt(v,e.modelo.umbral):"Revisando el video...";
-document.getElementById("vivo").textContent=v?`${v.n_parches} trozos de hoja, ${v.n_sintomas} con síntomas · cuadro de ${v.lado} px · revisado hace ${v.edad_s} s · tarda ${(v.ms/1000).toFixed(1)} s`:"";
+document.getElementById("vivo").textContent=v?`${v.n_parches} trozos de hoja, ${v.n_sintomas} con síntomas · ${v.lado?`cuadro de ${v.lado} px`:"decidió la foto completa"} · revisado hace ${v.edad_s} s · tarda ${(v.ms/1000).toFixed(1)} s`:"";
 document.getElementById("analisis").textContent=!a?"":a.pendiente?"Revisando la foto...":a.error?"No se pudo revisar la foto":`Última foto ${a.archivo}: ${txt(a,e.modelo.umbral)} · `+
 `${a.n_hojas?`${a.n_hojas} hojas, ${a.n_hojas_sintomas} con síntomas · `:""}${a.n_parches} trozos de hoja, ${a.n_sintomas} con síntomas · ${(a.ms/1000).toFixed(1)} s`;
 document.getElementById("gps").textContent=e.gps?`GPS ${e.gps.lat.toFixed(6)}, ${e.gps.lon.toFixed(6)} · ${e.gps.satelites} satélites`:"GPS: sin señal";

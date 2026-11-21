@@ -204,7 +204,25 @@ class Clasificador:
             hojas = leidas
         r.update(modo="parches", n_parches=r.get("n_hoja", len(usar)), n_cuadros=len(todos),
                  parches=lista, hojas=hojas, ancho=ancho, alto=alto)
-        return r
+        return self._completa_primero(img_bgr, r)
+
+    def _completa_primero(self, img_bgr: np.ndarray, r: dict) -> dict:
+        """Con completa_primero en el JSON: la foto completa decide si está segura, salvo que los
+        cuadros encuentren Sigatoka con seguridad. Si decide la foto completa, no hay cuadros que
+        dibujar (una hoja de cerca no se parte en cuadros). Si no está segura, deciden los cuadros.
+        Ver docs/decisiones/2026-11-21-foto-completa-primero.md."""
+        if not self.cfg_parches.get("completa_primero"):
+            return r
+        pc = self.probabilidades([img_bgr])[0]
+        completa = self._resultado(pc)
+        sigatoka = r["clase"] == "sigatoka" and r["confianza"] >= self.umbral
+        if sigatoka or completa["confianza"] < self.umbral:
+            r["foto_completa"] = {"clase": completa["clase"], "confianza": completa["confianza"]}
+            return r
+        completa.update(modo="completa", n_parches=r.get("n_parches", 0), n_cuadros=r.get("n_cuadros", 0),
+                        parches=[], hojas=[], ancho=r.get("ancho"), alto=r.get("alto"),
+                        cuadros={"clase": r["clase"], "confianza": r["confianza"]})
+        return completa
 
     def predecir(self, ruta, modo: str | None = None) -> dict | None:
         img = leer_imagen(ruta)

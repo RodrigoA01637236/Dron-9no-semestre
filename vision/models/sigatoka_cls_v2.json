@@ -40,7 +40,8 @@
     "prioridad": [
       "sigatoka"
     ],
-    "fraccion_prioridad": 0.5
+    "fraccion_prioridad": 0.5,
+    "completa_primero": true
   },
   "dataset": "C:\\dron\\data\\dataset_v2",
   "top1_test": 0.946,

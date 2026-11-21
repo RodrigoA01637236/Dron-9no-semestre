@@ -74,6 +74,37 @@
       "sana": 1
      }
     }
+   },
+   "completa_primero": {
+    "fotos": 787,
+    "exactitud": 0.9555,
+    "recall": {
+     "otra_condicion": 0.7829,
+     "sana": 0.9899,
+     "sigatoka": 0.9554,
+     "sin_hoja": 1.0
+    },
+    "confusion": {
+     "otra_condicion": {
+      "otra_condicion": 101,
+      "sigatoka": 19,
+      "no_seguro": 6,
+      "sin_hoja": 2,
+      "sana": 1
+     },
+     "sana": {
+      "sana": 197,
+      "no_seguro": 2
+     },
+     "sigatoka": {
+      "sigatoka": 107,
+      "no_seguro": 3,
+      "otra_condicion": 2
+     },
+     "sin_hoja": {
+      "sin_hoja": 347
+     }
+    }
    }
   },
   "a_1920": {
@@ -145,6 +176,36 @@
       "otra_condicion": 1
      }
     }
+   },
+   "completa_primero": {
+    "fotos": 787,
+    "exactitud": 0.9555,
+    "recall": {
+     "otra_condicion": 0.7674,
+     "sana": 0.995,
+     "sigatoka": 0.9911,
+     "sin_hoja": 0.9914
+    },
+    "confusion": {
+     "otra_condicion": {
+      "otra_condicion": 99,
+      "sigatoka": 27,
+      "sin_hoja": 2,
+      "sana": 1
+     },
+     "sana": {
+      "sana": 198,
+      "sigatoka": 1
+     },
+     "sigatoka": {
+      "sigatoka": 111,
+      "otra_condicion": 1
+     },
+     "sin_hoja": {
+      "sin_hoja": 344,
+      "sigatoka": 3
+     }
+    }
    }
   },
   "mosaico": {
@@ -200,6 +261,32 @@
       "no_seguro": 1
      }
     }
+   },
+   "completa_primero": {
+    "fotos": 787,
+    "exactitud": 0.9581,
+    "recall": {
+     "otra_condicion": 0.7442,
+     "sana": 1.0,
+     "sigatoka": 1.0,
+     "sin_hoja": 1.0
+    },
+    "confusion": {
+     "otra_condicion": {
+      "otra_condicion": 96,
+      "sana": 7,
+      "sigatoka": 26
+     },
+     "sana": {
+      "sana": 199
+     },
+     "sigatoka": {
+      "sigatoka": 112
+     },
+     "sin_hoja": {
+      "sin_hoja": 347
+     }
+    }
    }
   }
  },
@@ -216,6 +303,10 @@
    "sana": 10
   },
   "dos_tamanos": {
+   "sigatoka": 15,
+   "sana": 10
+  },
+  "completa_primero": {
    "sigatoka": 15,
    "sana": 10
   }

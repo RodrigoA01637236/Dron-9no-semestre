@@ -14,7 +14,8 @@ Este directorio contiene el script de captura probado en la Jetson Orin Nano del
 - **Detección en vivo (desde el 21 de noviembre):** con un modelo en `vision/models/` (usa el más
   nuevo: `sigatoka_cls_v2.onnx`, si no `v1`), un hilo revisa por cuadros el último cuadro de la
   cámara una y otra vez, con el mismo modelo y el mismo código que la página (dos tamaños de
-  cuadro, filtro de hoja). En la Jetson tarda 2–5 s por revisión. La ventana dice
+  cuadro, filtro de hoja, foto completa primero: si la foto completa está segura y los cuadros no
+  ven Sigatoka, decide la foto completa y no se marcan cuadros). En la Jetson tarda 2–5 s por revisión. La ventana dice
   `EN VIVO: SIGATOKA 88%` y marca los cuadros con síntomas (rojo Sigatoka, amarillo otro
   problema); el video de la página también los marca. Se apaga con `ANALIZAR_EN_VIVO = False`.
 - **La foto se queda con el análisis en vivo:** al tomar una foto se guarda el cuadro que se revisó

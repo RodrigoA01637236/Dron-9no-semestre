@@ -443,7 +443,7 @@ function pintarDron(est) {
     pintarLectura({ clase: p.clase, confianza: p.confianza, probs: p.probs || {}, umbral: est.modelo.umbral,
                     diagnosticable: p.confianza >= est.modelo.umbral || p.clase === "sin_hoja" });
     $("pie-tiempo").textContent = v
-      ? `en vivo · revisado en el dron por cuadros hace ${v.edad_s} s · cuadro de ${v.lado} px · tarda ${(v.ms / 1000).toFixed(1)} s` +
+      ? `en vivo · revisado en el dron hace ${v.edad_s} s · ${v.lado ? `cuadro de ${v.lado} px` : "decidió la foto completa"} · tarda ${(v.ms / 1000).toFixed(1)} s` +
         (a && a.archivo && a.clase ? ` · última foto (${a.archivo}): ${NOMBRES_DRON[a.clase] || "Sin hojas de plátano"}` : "")
       : `última foto (${p.archivo}) · revisada en el dron por cuadros · ${(p.ms / 1000).toFixed(1)} s`;
   }

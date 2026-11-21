@@ -37,6 +37,7 @@ CONFIG_DEFECTO = {
     "umbral_prioridad": None,  # seguridad mínima de sus cuadros para ganar (None = el umbral del modelo)
     "minimo_prioridad": 0,  # y cuántos cuadros como mínimo (además de min_parches)
     "fraccion_prioridad": 0.0,  # y al menos esta fracción de los cuadros seguros de la enfermedad rival
+    "completa_primero": False,  # la foto completa decide si está segura, salvo Sigatoka en los cuadros
 }
 
 

@@ -70,6 +70,18 @@ def dos_lecturas(C: Clasificador, img: np.ndarray, gruesa: float):
     return rf, rg
 
 
+def con_completa(C: Clasificador, img: np.ndarray, r: dict | None) -> dict | None:
+    """La regla completa_primero (clasificador.py) sobre el veredicto por cuadros."""
+    if r is None:
+        return None
+    viejo = C.cfg_parches.get("completa_primero")
+    C.cfg_parches["completa_primero"] = True
+    try:
+        return C._completa_primero(img, r)
+    finally:
+        C.cfg_parches["completa_primero"] = viejo
+
+
 def final(r: dict | None, umbral: float) -> str:
     if r is None:
         return "sin_cuadros"
@@ -99,7 +111,8 @@ def main() -> None:
         grupos[(c, s)].append(f)
     print(f"{len(fotos)} fotos de prueba", flush=True)
 
-    conf = {b: {r: defaultdict(Counter) for r in ("un_tamano", "dos_tamanos")} for b in ("tal_cual", "a_1920", "mosaico")}
+    REGLAS = ("un_tamano", "dos_tamanos", "completa_primero")
+    conf = {b: {r: defaultdict(Counter) for r in REGLAS} for b in ("tal_cual", "a_1920", "mosaico")}
     usos = Counter()
     for n, (f, clase, fuente) in enumerate(fotos, 1):
         img = leer_imagen(f)
@@ -113,13 +126,15 @@ def main() -> None:
             escala = P.elegir_escala(rf, rg, cfg, U) if rf is not None and rg is not None else "fina"
             usos[(base, escala)] += 1
             conf[base]["un_tamano"][clase][final(rf, U)] += 1
-            conf[base]["dos_tamanos"][clase][final(rg if escala == "gruesa" else rf, U)] += 1
+            elegido = rg if escala == "gruesa" else rf
+            conf[base]["dos_tamanos"][clase][final(elegido, U)] += 1
+            conf[base]["completa_primero"][clase][final(con_completa(C, im, elegido), U)] += 1
         if n % 100 == 0:
             print(n, flush=True)
 
     aereas = None
     if args.aereas:
-        cuenta = {"un_tamano": Counter(), "dos_tamanos": Counter()}
+        cuenta = {r: Counter() for r in REGLAS}
         for f in sorted(p for p in args.aereas.rglob("*") if p.suffix.lower() in EXT):
             img = leer_imagen(f)
             if img is None:
@@ -127,7 +142,9 @@ def main() -> None:
             rf, rg = dos_lecturas(C, img, args.gruesa)
             escala = P.elegir_escala(rf, rg, cfg, U) if rf is not None and rg is not None else "fina"
             cuenta["un_tamano"][final(rf, U)] += 1
-            cuenta["dos_tamanos"][final(rg if escala == "gruesa" else rf, U)] += 1
+            elegido = rg if escala == "gruesa" else rf
+            cuenta["dos_tamanos"][final(elegido, U)] += 1
+            cuenta["completa_primero"][final(con_completa(C, img, elegido), U)] += 1
         aereas = {k: dict(v) for k, v in cuenta.items()}
 
     def resumen(m):
@@ -150,22 +167,26 @@ def main() -> None:
          f"Generado por `vision/train/evaluar_escalas.py` el {salida['fecha']}. Un tamaño: cuadro de 384 px "
          f"(lado_min_rel {cfg['lado_min_rel']}). Dos tamaños: además uno de {args.gruesa:g} del lado corto, con la regla "
          "de `elegir_escala` (vision/parches.py): manda el chico si encuentra Sigatoka con seguridad y el grande no dice "
-         "\"sin hoja\"; si no, manda el grande. Umbral de seguridad " f"{U:g}.", "",
+         "\"sin hoja\"; si no, manda el grande. Foto completa primero (`completa_primero`): la foto completa decide si "
+         "está segura, salvo que los cuadros encuentren Sigatoka con seguridad. Umbral de seguridad " f"{U:g}.", "",
          f"- Fotos de prueba: {len(fotos)} (carpeta `{args.test.name}`), fuentes excluidas: {', '.join(args.excluir_fuentes) or 'ninguna'}.", ""]
     for b in ("tal_cual", "a_1920", "mosaico"):
         L += [f"## {nombres[b]}", "", "| Regla | Exactitud | " + " | ".join(f"Acierto {c}" for c in cl) + " |",
               "|---|---|" + "---|" * len(cl)]
-        for r, etiqueta in (("un_tamano", "Un tamaño (antes)"), ("dos_tamanos", "Dos tamaños (ahora)")):
+        for r, etiqueta in (("un_tamano", "Un tamaño"), ("dos_tamanos", "Dos tamaños"),
+                            ("completa_primero", "Dos tamaños + foto completa primero (ahora)")):
             s = salida["resultados"][b][r]
             L.append(f"| {etiqueta} | {s['exactitud']:.1%} | " + " | ".join(f"{s['recall'].get(c, 0):.1%}" for c in cl) + " |")
         a = salida["resultados"][b]["un_tamano"]["confusion"].get("sigatoka", {})
         d = salida["resultados"][b]["dos_tamanos"]["confusion"].get("sigatoka", {})
-        L += ["", f"Fotos de Sigatoka: antes {a}; ahora {d}.", ""]
+        e = salida["resultados"][b]["completa_primero"]["confusion"].get("sigatoka", {})
+        L += ["", f"Fotos de Sigatoka: un tamaño {a}; dos tamaños {d}; con foto completa primero {e}.", ""]
     if aereas:
         n = sum(aereas["un_tamano"].values())
         L += ["## Fotos aéreas con Sigatoka (sin etiqueta por foto)", "",
-              f"{n} fotos. Salen Sigatoka: antes {aereas['un_tamano'].get('sigatoka', 0)}, "
-              f"ahora {aereas['dos_tamanos'].get('sigatoka', 0)}.", ""]
+              f"{n} fotos. Salen Sigatoka: un tamaño {aereas['un_tamano'].get('sigatoka', 0)}, "
+              f"dos tamaños {aereas['dos_tamanos'].get('sigatoka', 0)}, "
+              f"con foto completa primero {aereas['completa_primero'].get('sigatoka', 0)}.", ""]
     args.salida.with_suffix(".md").write_text("\n".join(L), encoding="utf-8")
     print("\n".join(L))
 

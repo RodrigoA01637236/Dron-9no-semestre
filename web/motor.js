@@ -256,7 +256,7 @@ const Motor = (() => {
   // No se calcula la máscara de hoja: el v2 usa min_hoja 0 y su clase "sin_hoja" hace ese papel.
   // Tampoco se separan las hojas (eso lo hacen la estación y el dron); aquí basta el veredicto.
   const PARCHES = { lado_px: 384, lado_min_rel: .3, solape: .2, min_parches: 1, top_k: 2, max_parches: 64, ignorar: [],
-                    escala_gruesa: 0, fina_para: ["sigatoka"], mas_que_sana: [], prioridad: [] };
+                    escala_gruesa: 0, fina_para: ["sigatoka"], mas_que_sana: [], prioridad: [], completa_primero: false };
   const masAlto = p => p.indexOf(Math.max(...p));
   const media = a => a.reduce((s, v) => s + v, 0) / Math.max(1, a.length);
 
@@ -475,7 +475,19 @@ const Motor = (() => {
     return { clase: r.clase, confianza: r.confianza, seguro: r.confianza >= m.umbral, umbral: m.umbral, probs: r.probs, votos: r.votos,
              modo: "parches", escala: k ? "gruesa" : "fina", parches, ancho, alto, n_parches: r.n_hoja, n_cuadros: lista.length, n_filtrados: filtrados, modelo: m.nombre,
              ms: Math.round(performance.now() - inicio), calidad: revision, mejorado,
-             rasgos: muestras.length ? muestras.map(({ f, p }) => ({ f, p })) : null, rasgosEspejo: null };
+             rasgos: muestras.length ? muestras.map(({ f, p }) => ({ f, p })) : null, rasgosEspejo: null, ...await completaPrimero(m, archivo, r) };
+  }
+  // Como _completa_primero en vision/clasificador.py: con completa_primero, la foto completa decide si
+  // está segura, salvo que los cuadros encuentren Sigatoka con seguridad; entonces no hay cuadros que
+  // dibujar. Devuelve lo que cambia del resultado por cuadros (nada si deciden los cuadros).
+  async function completaPrimero(m, archivo, r) {
+    if (!m.cfg.completa_primero) return {};
+    const salida = await m.sesion.run({ [m.entrada]: await tensorDe(archivo, m.lado) });
+    const p = calibrar(Array.from(salida[m.salida].data), m.temperatura), top = masAlto(p);
+    const fotoCompleta = { clase: m.clases[top], confianza: p[top] };
+    if ((r.clase === "sigatoka" && r.confianza >= m.umbral) || p[top] < m.umbral) return { foto_completa: fotoCompleta };
+    return { ...fotoCompleta, seguro: true, probs: Object.fromEntries(m.clases.map((c, i) => [c, p[i]])), votos: {}, modo: "completa",
+             parches: [], escala: null, cuadros: { clase: r.clase, confianza: r.confianza } };
   }
 
   // Devuelve { clase, confianza, seguro, umbral, probs, ms, mejorado, rasgos, rasgosEspejo }.
