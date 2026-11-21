@@ -9,11 +9,13 @@ Uso (desde la raíz del repo):
     python vision/diagnosticar.py foto1.jpg foto2.jpg
     python vision/diagnosticar.py --ultimas 3          # las 3 fotos más nuevas del dron
     python vision/diagnosticar.py --comparar foto.jpg  # además, foto completa y v1
+    python vision/diagnosticar.py --ultimas 6 --comparar --guardar ~/diagnostico   # y dibuja los cuadros
 En la Jetson, con el Python del dron:
     ~/ZED_Pruebas/.venv/bin/python vision/diagnosticar.py --ultimas 3
 """
 import argparse
 import sys
+from collections import Counter
 from pathlib import Path
 
 import cv2
@@ -42,6 +44,7 @@ def main() -> None:
     ap.add_argument("fotos", nargs="*", type=Path)
     ap.add_argument("--ultimas", type=int, default=0, help=f"las N fotos más nuevas de {FOTOS_DRON}")
     ap.add_argument("--comparar", action="store_true", help="también la foto completa y el v1 (solo referencia)")
+    ap.add_argument("--guardar", metavar="CARPETA", help="guarda cada foto con sus cuadros dibujados (p. ej. ~/diagnostico)")
     args = ap.parse_args()
     fotos = list(args.fotos) + (ultimas(args.ultimas) if args.ultimas else [])
     if not fotos:
@@ -54,6 +57,12 @@ def main() -> None:
     print(f"v2: umbral {v2.umbral}, temperatura {v2.temperatura}, filtro de hoja "
           f"{'sí' if v2.filtro is not None else 'no'}")
 
+    cfg = v2.cfg_parches
+    COLOR = {"sana": (60, 180, 60), "sigatoka": (40, 40, 230), "otra_condicion": (0, 190, 255), "sin_hoja": (160, 160, 160)}
+    salida = Path(args.guardar).expanduser() if args.guardar else None
+    if salida:
+        salida.mkdir(parents=True, exist_ok=True)
+
     for f in fotos:
         img = leer_imagen(f)
         print(f"\n=== {f.name}")
@@ -61,23 +70,57 @@ def main() -> None:
             print("  no se pudo abrir")
             continue
         alto, ancho = img.shape[:2]
+
+        # Cómo viene la imagen: luz, color y enfoque (para comparar fotos que salen bien y mal)
+        gris = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        sat = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)[..., 1]
+        nitidez = cv2.Laplacian(cv2.resize(gris, (ancho // 2, alto // 2), interpolation=cv2.INTER_AREA), cv2.CV_64F).var()
+        b, g, r_ = img.reshape(-1, 3).mean(0)
+        quemado = float((gris > 245).mean())
+        print(f"  tamaño {ancho} x {alto} · brillo {gris.mean():.0f}/255 · saturación {sat.mean():.0f}/255 · "
+              f"nitidez {nitidez:.0f} · color medio R {r_:.0f} G {g:.0f} B {b:.0f} · quemado {quemado:.0%}")
+        avisos = [x for x, si in (("muy oscura", gris.mean() < 60), ("muy clara o con reflejo", gris.mean() > 200 or quemado > 0.05),
+                                  ("poco color (gris)", sat.mean() < 35)) if si]
+        if avisos:
+            print("  ojo: " + ", ".join(avisos))
+
         r = v2.predecir_bgr(img, "parches")
-        print(f"  tamaño {ancho} x {alto}; {r.get('n_cuadros')} cuadros, {r.get('n_parches')} de hoja"
-              f"{'; el filtro quitó ' + str(r['n_filtrados']) if r.get('n_filtrados') else ''}")
         print(f"  Resultado (el mismo del dron y la página): {r['clase']} {r['confianza']:.2f}"
-              f"{'' if r['confianza'] >= v2.umbral else ' (no seguro)'}")
-        print(f"     puntajes: {fmt(r['probs'])}")
-        print(f"     cuadros seguros por clase: {r.get('votos')}")
-        lista = r.get("parches") or []
-        if lista:
-            # Probabilidades de cada cuadro otra vez, para ver los que más parecen Sigatoka.
-            probs = v2.probabilidades([P.recortar(img, q) for q in lista], cv2.INTER_AREA)
-            k = cl.index("sigatoka")
-            orden = np.argsort(-probs[:, k])[:5]
-            print("     cuadros con más Sigatoka (x, y, lado: probabilidades):")
-            for i in orden:
-                q = lista[i]
-                print(f"       ({q['x']}, {q['y']}, {q['w']}): " + " ".join(f"{c} {p:.2f}" for c, p in zip(cl, probs[i])))
+              f"{'' if r['confianza'] >= v2.umbral or r['clase'] == 'sin_hoja' else ' (no seguro)'}"
+              f" · manda el cuadro {'grande' if r.get('escala') == 'gruesa' else 'chico'} ({r.get('lado')} px)")
+
+        # Lo que ve cada tamaño de cuadro, para saber cuál falla y dónde
+        m = P.mascara_hoja(img)
+        dibujo = img.copy() if salida else None
+        for nombre, c in (("chico", cfg), ("grande", P.cfg_gruesa(cfg))):
+            if c is None:
+                continue
+            lado = P.lado_cuadro(alto, ancho, c)
+            if nombre == "grande" and lado <= P.lado_cuadro(alto, ancho, cfg):
+                print("  cuadro grande: en esta foto mide lo mismo que el chico")
+                continue
+            rr, usar, probs, _ = v2._por_cuadros(img, c, m)
+            if rr is None:
+                print(f"  cuadro {nombre} ({lado} px): no encontró hoja")
+                continue
+            cuenta = dict(Counter(cl[i] for i in probs.argmax(1)).most_common())
+            print(f"  cuadro {nombre} ({lado} px, {len(usar)} cuadros): {rr['clase']} {rr['confianza']:.2f}")
+            print(f"     clase más probable por cuadro: {cuenta}; seguros (>= {v2.umbral:g}): {rr.get('votos')}")
+            print(f"     puntajes: {fmt(rr['probs'])}")
+            if dibujo is not None:
+                grosor = 3 if nombre == "chico" else 6
+                for q, p in zip(usar, probs):
+                    i = int(p.argmax())
+                    cv2.rectangle(dibujo, (q["x"] + grosor, q["y"] + grosor), (q["x"] + q["w"] - grosor, q["y"] + q["h"] - grosor),
+                                  COLOR[cl[i]], grosor)
+                    cv2.putText(dibujo, f"{cl[i][:4]} {p[i]:.2f}", (q["x"] + 10, q["y"] + (30 if nombre == "chico" else 70)),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.8, COLOR[cl[i]], 2)
+        if dibujo is not None:
+            destino = salida / (f.stem + "_cuadros.jpg")
+            cv2.imwrite(str(destino), dibujo, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            print(f"  cuadros dibujados en {destino} (delgados: chico; gruesos: grande; verde sana, rojo Sigatoka, "
+                  f"amarillo otra condición, gris sin hoja)")
+
         if not args.comparar:
             continue
         rv = v2.predecir_bgr(img, "imagen")
