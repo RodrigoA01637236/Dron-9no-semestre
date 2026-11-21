@@ -33,6 +33,9 @@
     "escala_gruesa": 0.5,
     "fina_para": [
       "sigatoka"
+    ],
+    "mas_que_sana": [
+      "otra_condicion"
     ]
   },
   "dataset": "C:\\dron\\data\\dataset_v2",

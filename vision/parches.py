@@ -32,6 +32,7 @@ CONFIG_DEFECTO = {
     "separacion_hojas": 0.08,  # distancia mínima entre centros de hojas (fracción del lado corto)
     "escala_gruesa": 0.0,  # segundo tamaño de cuadro (fracción del lado corto); 0 = solo uno
     "fina_para": ["sigatoka"],  # clases en las que manda el cuadro chico (ver elegir_escala)
+    "mas_que_sana": [],    # clases que necesitan más cuadros seguros que "sana" para marcar la foto
 }
 
 
@@ -318,6 +319,19 @@ def agregar(probs: np.ndarray, clases: list[str], cfg: dict, umbral: float) -> d
     if marcadas:
         clase = max(marcadas, key=lambda c: (votos[c], puntajes[c]))
         confianza = puntajes[clase]
+        # "Otra condición" se cuela con unos cuantos cuadros (un borde, una sombra, algo que no es
+        # hoja). Las clases de mas_que_sana solo marcan la foto si tienen más cuadros seguros que
+        # "sana"; si no, esos cuadros cuentan como sanos (su probabilidad pasa a "sana", no a otra
+        # enfermedad: así no aparece Sigatoka de la nada) y se decide otra vez.
+        if clase in (cfg.get("mas_que_sana") or []) and "sana" in clases and votos[clase] <= votos.get("sana", 0):
+            k, ks = clases.index(clase), clases.index("sana")
+            q = probs.copy()
+            q[:, ks] += q[:, k]
+            q[:, k] = 0.0
+            otra = {**cfg, "mas_que_sana": [c for c in cfg["mas_que_sana"] if c != clase]}
+            r = agregar(q, clases, otra, umbral)
+            r["sin_" + clase] = True
+            return r
     else:
         clase = max(puntajes, key=puntajes.get)
         confianza = puntajes[clase]

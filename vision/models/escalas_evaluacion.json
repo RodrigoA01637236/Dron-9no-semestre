@@ -1,5 +1,5 @@
 {
- "fecha": "2026-11-20",
+ "fecha": "2026-11-21",
  "modelo": "sigatoka_cls_v2.onnx",
  "umbral": 0.7,
  "gruesa": 0.5,
@@ -11,22 +11,22 @@
   "tal_cual": {
    "un_tamano": {
     "fotos": 787,
-    "exactitud": 0.9339,
+    "exactitud": 0.9352,
     "recall": {
-     "otra_condicion": 0.7829,
-     "sana": 0.9698,
+     "otra_condicion": 0.7674,
+     "sana": 0.9849,
      "sigatoka": 0.9464,
      "sin_hoja": 0.9654
     },
     "confusion": {
      "otra_condicion": {
-      "otra_condicion": 101,
+      "sana": 2,
+      "otra_condicion": 99,
       "sigatoka": 15,
       "no_seguro": 13
      },
      "sana": {
-      "sana": 193,
-      "otra_condicion": 3,
+      "sana": 196,
       "no_seguro": 3
      },
      "sigatoka": {
@@ -44,22 +44,22 @@
    },
    "dos_tamanos": {
     "fotos": 787,
-    "exactitud": 0.9339,
+    "exactitud": 0.9352,
     "recall": {
-     "otra_condicion": 0.7829,
-     "sana": 0.9698,
+     "otra_condicion": 0.7674,
+     "sana": 0.9849,
      "sigatoka": 0.9464,
      "sin_hoja": 0.9654
     },
     "confusion": {
      "otra_condicion": {
-      "otra_condicion": 101,
+      "sana": 2,
+      "otra_condicion": 99,
       "sigatoka": 15,
       "no_seguro": 13
      },
      "sana": {
-      "sana": 193,
-      "otra_condicion": 3,
+      "sana": 196,
       "no_seguro": 3
      },
      "sigatoka": {
@@ -79,28 +79,30 @@
   "a_1920": {
    "un_tamano": {
     "fotos": 787,
-    "exactitud": 0.8043,
+    "exactitud": 0.8247,
     "recall": {
-     "otra_condicion": 0.9302,
-     "sana": 0.8643,
-     "sigatoka": 0.75,
+     "otra_condicion": 0.8527,
+     "sana": 0.9849,
+     "sigatoka": 0.7679,
      "sin_hoja": 0.7406
     },
     "confusion": {
      "otra_condicion": {
-      "otra_condicion": 120,
+      "sana": 10,
+      "otra_condicion": 110,
       "sigatoka": 8,
       "no_seguro": 1
      },
      "sana": {
-      "otra_condicion": 25,
+      "sana": 196,
       "no_seguro": 1,
-      "sana": 172,
+      "otra_condicion": 1,
       "sigatoka": 1
      },
      "sigatoka": {
-      "otra_condicion": 28,
-      "sigatoka": 84
+      "otra_condicion": 25,
+      "sigatoka": 86,
+      "sana": 1
      },
      "sin_hoja": {
       "sin_hoja": 257,
@@ -113,22 +115,22 @@
    },
    "dos_tamanos": {
     "fotos": 787,
-    "exactitud": 0.9581,
+    "exactitud": 0.9593,
     "recall": {
-     "otra_condicion": 0.907,
-     "sana": 0.9648,
+     "otra_condicion": 0.876,
+     "sana": 0.9899,
      "sigatoka": 0.9464,
      "sin_hoja": 0.9769
     },
     "confusion": {
      "otra_condicion": {
-      "otra_condicion": 117,
-      "sigatoka": 11,
+      "sana": 3,
+      "otra_condicion": 113,
+      "sigatoka": 12,
       "sin_hoja": 1
      },
      "sana": {
-      "sana": 192,
-      "otra_condicion": 5,
+      "sana": 197,
       "no_seguro": 1,
       "sigatoka": 1
      },
@@ -148,10 +150,10 @@
   "mosaico": {
    "un_tamano": {
     "fotos": 787,
-    "exactitud": 0.9797,
+    "exactitud": 0.986,
     "recall": {
      "otra_condicion": 0.969,
-     "sana": 0.9749,
+     "sana": 1.0,
      "sigatoka": 1.0,
      "sin_hoja": 0.9798
     },
@@ -161,8 +163,7 @@
       "sigatoka": 4
      },
      "sana": {
-      "sana": 194,
-      "otra_condicion": 5
+      "sana": 199
      },
      "sigatoka": {
       "sigatoka": 112
@@ -176,10 +177,10 @@
    },
    "dos_tamanos": {
     "fotos": 787,
-    "exactitud": 0.9771,
+    "exactitud": 0.9822,
     "recall": {
      "otra_condicion": 0.8992,
-     "sana": 0.9799,
+     "sana": 1.0,
      "sigatoka": 1.0,
      "sin_hoja": 0.9971
     },
@@ -189,8 +190,7 @@
       "sigatoka": 13
      },
      "sana": {
-      "sana": 195,
-      "otra_condicion": 4
+      "sana": 199
      },
      "sigatoka": {
       "sigatoka": 112
@@ -205,9 +205,9 @@
  },
  "escala_usada": {
   "tal_cual|fina": 787,
-  "a_1920|gruesa": 691,
+  "a_1920|gruesa": 689,
   "mosaico|gruesa": 671,
-  "a_1920|fina": 96,
+  "a_1920|fina": 98,
   "mosaico|fina": 116
  },
  "aereas": {

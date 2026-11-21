@@ -42,7 +42,8 @@ El v2 hace lo que hace un agrónomo: mira la hoja por partes.
    exactitud en Barbedo (Biosystems Engineering 180:96–107, 2019,
    doi:10.1016/j.biosystemseng.2019.02.002).
 3. **Veredicto de la foto**: si al menos `min_parches` cuadros muestran con seguridad la
-   misma enfermedad, la foto tiene esa enfermedad. Si no, la foto es sana solo cuando la
+   misma enfermedad, la foto tiene esa enfermedad (para "otra condición", desde el 21 de
+   noviembre, además tiene que haber más cuadros seguros de ella que de "sana": `mas_que_sana`). Si no, la foto es sana solo cuando la
    hoja en promedio se ve sana. Si no alcanza la seguridad mínima, va a revisión humana.
 4. **Calibración**: con temperatura (Guo et al., ICML 2017), "80 % seguro" significa
    acertar alrededor del 80 % de las veces. Así el umbral se elige con datos.

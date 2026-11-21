@@ -256,7 +256,7 @@ const Motor = (() => {
   // No se calcula la máscara de hoja: el v2 usa min_hoja 0 y su clase "sin_hoja" hace ese papel.
   // Tampoco se separan las hojas (eso lo hacen la estación y el dron); aquí basta el veredicto.
   const PARCHES = { lado_px: 384, lado_min_rel: .3, solape: .2, min_parches: 1, top_k: 2, max_parches: 64, ignorar: [],
-                    escala_gruesa: 0, fina_para: ["sigatoka"] };
+                    escala_gruesa: 0, fina_para: ["sigatoka"], mas_que_sana: [] };
   const masAlto = p => p.indexOf(Math.max(...p));
   const media = a => a.reduce((s, v) => s + v, 0) / Math.max(1, a.length);
 
@@ -310,6 +310,14 @@ const Motor = (() => {
     if (marcadas.length) {
       clase = marcadas.reduce((a, c) => votos[c] > votos[a] || (votos[c] === votos[a] && puntajes[c] > puntajes[a]) ? c : a);
       confianza = puntajes[clase];
+      // Como en parches.py: las clases de mas_que_sana necesitan más cuadros seguros que "sana";
+      // si no, esos cuadros cuentan como sanos (su probabilidad pasa a "sana") y se decide otra vez.
+      const masQueSana = cfg.mas_que_sana || [];
+      if (masQueSana.includes(clase) && clases.includes("sana") && votos[clase] <= (votos.sana || 0)) {
+        const k = clases.indexOf(clase), ks = clases.indexOf("sana");
+        const q = probs.map(p => { const x = p.slice(); x[ks] += x[k]; x[k] = 0; return x; });
+        return { ...agregar(q, clases, { ...cfg, mas_que_sana: masQueSana.filter(c => c !== clase) }, umbral), ["sin_" + clase]: true };
+      }
     } else {
       clase = Object.keys(puntajes).reduce((a, c) => puntajes[c] > puntajes[a] ? c : a);
       confianza = puntajes[clase];
