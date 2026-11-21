@@ -43,6 +43,11 @@ ANALIZAR_FOTOS = True    # respaldo: sin revisión en vivo reciente, revisar la 
 # El modelo más nuevo que esté en vision/models; para volver a uno anterior:
 #   SIGATOKA_MODELO=sigatoka_cls_v1.onnx bash jetson/zed_control.sh reiniciar
 MODELOS = ("sigatoka_cls_v2.onnx", "sigatoka_cls_v1.onnx")
+# MODO DEMO (solo para grabar video): "otra condición" se muestra como Sigatoka; sana y sin hoja
+# no cambian. El EXIF guarda el resultado real (AnalisisReal). Se prende al arrancar:
+#   SIGATOKA_DEMO=1 bash jetson/zed_control.sh reiniciar
+# y se apaga reiniciando sin la variable. No usar estas fotos para evaluar ni para el reporte.
+DEMO = os.environ.get("SIGATOKA_DEMO") == "1"
 TEXTO_EN_FOTO = True     # la foto se guarda con FECHA/HORA/GPS y su resultado dibujados encima
 COPIA_SIN_TEXTO = True   # y una copia limpia en <CARPETA>/sin_texto/ para el modelo y el dataset
 # Sin monitor (en el dron) o con --sin-ventana: no abre ventana, solo la página.
@@ -211,7 +216,28 @@ def cargar_modelo():
 
     print(f"[MODELO] {onnx.name} cargado; clases {modelo.clases}; en vivo por cuadros: "
           f"{'sí' if ANALIZAR_EN_VIVO else 'no'}; filtro de hoja: {'sí' if getattr(modelo, 'filtro', None) else 'no'}")
+    if DEMO:
+        print("[DEMO] otra condición se muestra como Sigatoka (solo para video; el EXIF guarda AnalisisReal)")
     return modelo
+
+
+def modo_demo(r):
+    """Con DEMO: otra_condicion -> sigatoka en el resultado, sus cuadros y sus hojas (guarda clase_real)."""
+    if not DEMO or not r:
+        return r
+    r = dict(r)
+    if r.get("clase") == "otra_condicion":
+        r["clase_real"] = "otra_condicion"
+        r["clase"] = "sigatoka"
+    for clave in ("parches", "hojas", "cuadros"):
+        if isinstance(r.get(clave), list):
+            r[clave] = [{**x, "clase": "sigatoka"} if isinstance(x, dict) and x.get("clase") == "otra_condicion" else x
+                        for x in r[clave]]
+    if isinstance(r.get("fraccion"), dict) and "otra_condicion" in r["fraccion"]:
+        f = dict(r["fraccion"])
+        f["sigatoka"] = f.get("sigatoka", 0) + f.pop("otra_condicion")
+        r["fraccion"] = f
+    return r
 
 
 # CONVERTIR COORDENADAS A EXIF
@@ -257,6 +283,8 @@ def crear_exif(gps, instante, r=None, en_vivo=False):
             f"; HojasConSintomas={sum(h['clase'] not in ('sana', 'sin_hoja') for h in a.get('hojas') or [])}"
             f"; FraccionParches=" + ",".join(f"{k}:{v:.2f}" for k, v in (a.get("fraccion") or {}).items())
         )
+        if DEMO:
+            analisis += f"; ModoDemo=si; AnalisisReal={a.get('clase_real', a['clase'])}"
 
     comentario = (
         f"Proyecto=Dron Sigatoka; "
@@ -513,7 +541,7 @@ def analizar_en_vivo():
         inicio = time.perf_counter()
         try:
             with analisis_lock:
-                r = modelo.predecir_bgr(frame, "parches")
+                r = modo_demo(modelo.predecir_bgr(frame, "parches"))
         except Exception as e:
             print("[EN VIVO]", e)
             time.sleep(2)
@@ -537,7 +565,7 @@ def analizar_foto(ruta, frame, gps, instante, con_texto):
         try:
             # La misma imagen que revisa la página: la copia limpia ya guardada en JPEG
             img = cv2.imread(str(limpia))
-            r = modelo.predecir_bgr(frame if img is None else img, "parches")
+            r = modo_demo(modelo.predecir_bgr(frame if img is None else img, "parches"))
         except Exception as e:
             print("[PARCHES]", e)
             fotos["analisis"] = {"archivo": ruta.name, "error": str(e)}
@@ -652,7 +680,8 @@ def estado_actual(modelo):
             "umbral": modelo.umbral,
             "fotos_por_parches": ANALIZAR_FOTOS,
             "en_vivo": ANALIZAR_EN_VIVO,
-            "filtro_hoja": getattr(modelo, "filtro", None) is not None
+            "filtro_hoja": getattr(modelo, "filtro", None) is not None,
+            "demo": DEMO
         },
         # La revisión en vivo (por cuadros) y la de la última foto, que es la en vivo del momento de la foto
         "en_vivo": resultado_en_vivo(modelo),
