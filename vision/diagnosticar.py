@@ -48,7 +48,8 @@ def main() -> None:
     args = ap.parse_args()
     fotos = list(args.fotos) + (ultimas(args.ultimas) if args.ultimas else [])
     if not fotos:
-        sys.exit("Dime qué fotos revisar (rutas o --ultimas N).")
+        sys.exit(f"No encontré fotos en {FOTOS_DRON}: toma fotos primero (tecla S o botón de la página del dron)."
+                 if args.ultimas else "Dime qué fotos revisar (rutas o --ultimas N).")
 
     v2 = Clasificador(RAIZ / "vision/models/sigatoka_cls_v2.onnx")
     v1_ruta = RAIZ / "vision/models/sigatoka_cls_v1.onnx"
