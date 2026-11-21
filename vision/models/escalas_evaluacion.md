@@ -8,8 +8,8 @@ Generado por `vision/train/evaluar_escalas.py` el 2026-11-21. Un tamaño: cuadro
 
 | Regla | Exactitud | Acierto otra_condicion | Acierto sana | Acierto sigatoka | Acierto sin_hoja |
 |---|---|---|---|---|---|
-| Un tamaño (antes) | 93.5% | 76.7% | 98.5% | 94.6% | 96.5% |
-| Dos tamaños (ahora) | 93.5% | 76.7% | 98.5% | 94.6% | 96.5% |
+| Un tamaño (antes) | 93.4% | 76.0% | 98.5% | 94.6% | 96.5% |
+| Dos tamaños (ahora) | 93.4% | 76.0% | 98.5% | 94.6% | 96.5% |
 
 Fotos de Sigatoka: antes {'sigatoka': 106, 'no_seguro': 4, 'otra_condicion': 2}; ahora {'sigatoka': 106, 'no_seguro': 4, 'otra_condicion': 2}.
 
@@ -17,17 +17,17 @@ Fotos de Sigatoka: antes {'sigatoka': 106, 'no_seguro': 4, 'otra_condicion': 2};
 
 | Regla | Exactitud | Acierto otra_condicion | Acierto sana | Acierto sigatoka | Acierto sin_hoja |
 |---|---|---|---|---|---|
-| Un tamaño (antes) | 82.5% | 85.3% | 98.5% | 76.8% | 74.1% |
-| Dos tamaños (ahora) | 95.9% | 87.6% | 99.0% | 94.6% | 97.7% |
+| Un tamaño (antes) | 82.7% | 81.4% | 98.5% | 83.0% | 74.1% |
+| Dos tamaños (ahora) | 95.5% | 82.2% | 99.0% | 98.2% | 97.7% |
 
-Fotos de Sigatoka: antes {'otra_condicion': 25, 'sigatoka': 86, 'sana': 1}; ahora {'sigatoka': 106, 'otra_condicion': 6}.
+Fotos de Sigatoka: antes {'sigatoka': 93, 'otra_condicion': 18, 'sana': 1}; ahora {'sigatoka': 110, 'otra_condicion': 2}.
 
 ## Seis fotos por lienzo de 1920 x 1200 (hojas chicas, toma abierta)
 
 | Regla | Exactitud | Acierto otra_condicion | Acierto sana | Acierto sigatoka | Acierto sin_hoja |
 |---|---|---|---|---|---|
-| Un tamaño (antes) | 98.6% | 96.9% | 100.0% | 100.0% | 98.0% |
-| Dos tamaños (ahora) | 98.2% | 89.9% | 100.0% | 100.0% | 99.7% |
+| Un tamaño (antes) | 97.7% | 91.5% | 100.0% | 100.0% | 98.0% |
+| Dos tamaños (ahora) | 97.0% | 82.2% | 100.0% | 100.0% | 99.7% |
 
 Fotos de Sigatoka: antes {'sigatoka': 112}; ahora {'sigatoka': 112}.
 

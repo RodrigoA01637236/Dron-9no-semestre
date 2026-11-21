@@ -11,9 +11,9 @@
   "tal_cual": {
    "un_tamano": {
     "fotos": 787,
-    "exactitud": 0.9352,
+    "exactitud": 0.9339,
     "recall": {
-     "otra_condicion": 0.7674,
+     "otra_condicion": 0.7597,
      "sana": 0.9849,
      "sigatoka": 0.9464,
      "sin_hoja": 0.9654
@@ -21,8 +21,8 @@
     "confusion": {
      "otra_condicion": {
       "sana": 2,
-      "otra_condicion": 99,
-      "sigatoka": 15,
+      "otra_condicion": 98,
+      "sigatoka": 16,
       "no_seguro": 13
      },
      "sana": {
@@ -44,9 +44,9 @@
    },
    "dos_tamanos": {
     "fotos": 787,
-    "exactitud": 0.9352,
+    "exactitud": 0.9339,
     "recall": {
-     "otra_condicion": 0.7674,
+     "otra_condicion": 0.7597,
      "sana": 0.9849,
      "sigatoka": 0.9464,
      "sin_hoja": 0.9654
@@ -54,8 +54,8 @@
     "confusion": {
      "otra_condicion": {
       "sana": 2,
-      "otra_condicion": 99,
-      "sigatoka": 15,
+      "otra_condicion": 98,
+      "sigatoka": 16,
       "no_seguro": 13
      },
      "sana": {
@@ -79,18 +79,18 @@
   "a_1920": {
    "un_tamano": {
     "fotos": 787,
-    "exactitud": 0.8247,
+    "exactitud": 0.8272,
     "recall": {
-     "otra_condicion": 0.8527,
+     "otra_condicion": 0.814,
      "sana": 0.9849,
-     "sigatoka": 0.7679,
+     "sigatoka": 0.8304,
      "sin_hoja": 0.7406
     },
     "confusion": {
      "otra_condicion": {
       "sana": 10,
-      "otra_condicion": 110,
-      "sigatoka": 8,
+      "otra_condicion": 105,
+      "sigatoka": 13,
       "no_seguro": 1
      },
      "sana": {
@@ -100,8 +100,8 @@
       "sigatoka": 1
      },
      "sigatoka": {
-      "otra_condicion": 25,
-      "sigatoka": 86,
+      "sigatoka": 93,
+      "otra_condicion": 18,
       "sana": 1
      },
      "sin_hoja": {
@@ -115,18 +115,18 @@
    },
    "dos_tamanos": {
     "fotos": 787,
-    "exactitud": 0.9593,
+    "exactitud": 0.9555,
     "recall": {
-     "otra_condicion": 0.876,
+     "otra_condicion": 0.8217,
      "sana": 0.9899,
-     "sigatoka": 0.9464,
+     "sigatoka": 0.9821,
      "sin_hoja": 0.9769
     },
     "confusion": {
      "otra_condicion": {
       "sana": 3,
-      "otra_condicion": 113,
-      "sigatoka": 12,
+      "otra_condicion": 106,
+      "sigatoka": 19,
       "sin_hoja": 1
      },
      "sana": {
@@ -135,8 +135,8 @@
       "sigatoka": 1
      },
      "sigatoka": {
-      "sigatoka": 106,
-      "otra_condicion": 6
+      "sigatoka": 110,
+      "otra_condicion": 2
      },
      "sin_hoja": {
       "sin_hoja": 339,
@@ -150,17 +150,17 @@
   "mosaico": {
    "un_tamano": {
     "fotos": 787,
-    "exactitud": 0.986,
+    "exactitud": 0.9771,
     "recall": {
-     "otra_condicion": 0.969,
+     "otra_condicion": 0.9147,
      "sana": 1.0,
      "sigatoka": 1.0,
      "sin_hoja": 0.9798
     },
     "confusion": {
      "otra_condicion": {
-      "otra_condicion": 125,
-      "sigatoka": 4
+      "otra_condicion": 118,
+      "sigatoka": 11
      },
      "sana": {
       "sana": 199
@@ -177,17 +177,17 @@
    },
    "dos_tamanos": {
     "fotos": 787,
-    "exactitud": 0.9822,
+    "exactitud": 0.9695,
     "recall": {
-     "otra_condicion": 0.8992,
+     "otra_condicion": 0.8217,
      "sana": 1.0,
      "sigatoka": 1.0,
      "sin_hoja": 0.9971
     },
     "confusion": {
      "otra_condicion": {
-      "otra_condicion": 116,
-      "sigatoka": 13
+      "otra_condicion": 106,
+      "sigatoka": 23
      },
      "sana": {
       "sana": 199
@@ -205,10 +205,10 @@
  },
  "escala_usada": {
   "tal_cual|fina": 787,
-  "a_1920|gruesa": 689,
-  "mosaico|gruesa": 671,
-  "a_1920|fina": 98,
-  "mosaico|fina": 116
+  "a_1920|gruesa": 677,
+  "mosaico|gruesa": 664,
+  "a_1920|fina": 110,
+  "mosaico|fina": 123
  },
  "aereas": {
   "un_tamano": {

@@ -256,7 +256,7 @@ const Motor = (() => {
   // No se calcula la máscara de hoja: el v2 usa min_hoja 0 y su clase "sin_hoja" hace ese papel.
   // Tampoco se separan las hojas (eso lo hacen la estación y el dron); aquí basta el veredicto.
   const PARCHES = { lado_px: 384, lado_min_rel: .3, solape: .2, min_parches: 1, top_k: 2, max_parches: 64, ignorar: [],
-                    escala_gruesa: 0, fina_para: ["sigatoka"], mas_que_sana: [] };
+                    escala_gruesa: 0, fina_para: ["sigatoka"], mas_que_sana: [], prioridad: [] };
   const masAlto = p => p.indexOf(Math.max(...p));
   const media = a => a.reduce((s, v) => s + v, 0) / Math.max(1, a.length);
 
@@ -306,6 +306,18 @@ const Motor = (() => {
     });
     const enfermedades = Object.keys(puntajes).filter(c => c !== "sana");
     const marcadas = enfermedades.filter(c => votos[c] >= minimo && puntajes[c] >= umbral);
+    // Prioridad (Sigatoka), como en parches.py: gana a las demás enfermedades si tiene al menos
+    // minimo_prioridad cuadros y fraccion_prioridad de los cuadros seguros de la enfermedad rival.
+    const up = cfg.umbral_prioridad || umbral;
+    for (const c of cfg.prioridad || []) {
+      if (!(c in puntajes)) continue;
+      const i = clases.indexOf(c);
+      const v = hoja.filter((p, k) => ganaH[k] === i && p[i] >= up).length;
+      const s = media(hoja.map(p => p[i]).sort((a, b) => b - a).slice(0, Math.min(n, Math.max(minimo, Math.min(topK, v)))));
+      const rival = Math.max(0, ...enfermedades.filter(o => o !== c).map(o => votos[o]));
+      const necesita = Math.max(minimo, cfg.minimo_prioridad | 0, Math.ceil((cfg.fraccion_prioridad || 0) * rival));
+      if (v >= necesita && s >= up) return { clase: c, confianza: Math.max(s, puntajes[c]), probs: puntajes, votos, n_hoja: n, prioridad: c };
+    }
     let clase, confianza;
     if (marcadas.length) {
       clase = marcadas.reduce((a, c) => votos[c] > votos[a] || (votos[c] === votos[a] && puntajes[c] > puntajes[a]) ? c : a);

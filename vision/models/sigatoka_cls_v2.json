@@ -36,7 +36,11 @@
     ],
     "mas_que_sana": [
       "otra_condicion"
-    ]
+    ],
+    "prioridad": [
+      "sigatoka"
+    ],
+    "fraccion_prioridad": 0.5
   },
   "dataset": "C:\\dron\\data\\dataset_v2",
   "top1_test": 0.946,

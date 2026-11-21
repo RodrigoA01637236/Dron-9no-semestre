@@ -33,6 +33,10 @@ CONFIG_DEFECTO = {
     "escala_gruesa": 0.0,  # segundo tamaño de cuadro (fracción del lado corto); 0 = solo uno
     "fina_para": ["sigatoka"],  # clases en las que manda el cuadro chico (ver elegir_escala)
     "mas_que_sana": [],    # clases que necesitan más cuadros seguros que "sana" para marcar la foto
+    "prioridad": [],       # enfermedades que ganan a las demás si aparecen (p. ej. "sigatoka")
+    "umbral_prioridad": None,  # seguridad mínima de sus cuadros para ganar (None = el umbral del modelo)
+    "minimo_prioridad": 0,  # y cuántos cuadros como mínimo (además de min_parches)
+    "fraccion_prioridad": 0.0,  # y al menos esta fracción de los cuadros seguros de la enfermedad rival
 }
 
 
@@ -316,6 +320,24 @@ def agregar(probs: np.ndarray, clases: list[str], cfg: dict, umbral: float) -> d
 
     enfermedades = [c for c in puntajes if c != "sana"]
     marcadas = [c for c in enfermedades if votos[c] >= min_parches and puntajes[c] >= umbral]
+
+    # Prioridad (Sigatoka, lo que se busca): gana a las demás enfermedades aunque tenga menos
+    # cuadros, si tiene al menos fraccion_prioridad de los cuadros seguros de la rival (con 0.5:
+    # la mitad). Con un solo cuadro bastaría para volver Sigatoka casi cualquier otra enfermedad
+    # en tomas abiertas; ver docs/decisiones/2026-11-21-sigatoka-prioridad.md.
+    up = float(cfg.get("umbral_prioridad") or umbral)
+    for c in cfg.get("prioridad") or []:
+        if c not in puntajes:
+            continue
+        i = clases.index(c)
+        v = int(((gana == i) & (probs[:, i] >= up)).sum())
+        s = float(np.sort(probs[:, i])[::-1][:min(n, max(min_parches, min(top_k, v)))].mean())
+        rival = max([votos[o] for o in enfermedades if o != c] or [0])
+        minimo = max(min_parches, int(cfg.get("minimo_prioridad") or 0),
+                     math.ceil(float(cfg.get("fraccion_prioridad") or 0) * rival))
+        if v >= minimo and s >= up:
+            return {"clase": c, "confianza": max(s, puntajes[c]), "probs": puntajes,
+                    "votos": votos, "fraccion": fraccion, "n_hoja": int(n), "prioridad": c}
     if marcadas:
         clase = max(marcadas, key=lambda c: (votos[c], puntajes[c]))
         confianza = puntajes[clase]
