@@ -1181,8 +1181,9 @@ const Motor = (() => {
   }
 
   // Avisa a la variante con: aviso({ titulo, texto, error, local }), conectado({ host, video }),
-  // estado({ lectura, gps, ms, sinModelo, esperando, revisando, foto }), desconectado().
-  // La lectura es la de la última foto del dron, revisada por cuadros como aquí; el video no diagnostica.
+  // estado({ lectura, enVivo, edad, gps, ms, sinModelo, esperando, revisando, foto, ultima }), desconectado().
+  // La lectura es la detección en vivo del dron (revisa el video por cuadros, como aquí); la foto que se
+  // toma se queda con ese resultado (ultima). Con un dron sin detección en vivo, la de la última foto.
   function dron(avisar) {
     let d = null;
     async function pedir(ruta, opciones = {}, espera = 6000) {
@@ -1195,11 +1196,13 @@ const Motor = (() => {
       } finally { clearTimeout(t); }
     }
     function estado(est) {
-      const a = est.analisis_foto, umbral = est.modelo?.umbral ?? .65, lista = !!(a && a.clase && !a.pendiente && !a.error);
+      const a = est.analisis_foto, v = est.en_vivo, umbral = est.modelo?.umbral ?? .65, lista = !!(a && a.clase && !a.pendiente && !a.error);
+      const leer = x => ({ clase: x.clase, confianza: x.confianza, seguro: x.confianza >= umbral || x.clase === "sin_hoja", umbral, probs: x.probs || {} });
       avisar.estado?.({
-        sinModelo: !est.modelo, esperando: !!est.modelo && !lista, revisando: !!a?.pendiente, foto: a?.archivo || null,
-        gps: est.gps || null, ms: lista ? a.ms : null,
-        lectura: lista ? { clase: a.clase, confianza: a.confianza, seguro: a.confianza >= umbral || a.clase === "sin_hoja", umbral, probs: a.probs || {} } : null,
+        sinModelo: !est.modelo, enVivo: !!v, edad: v ? v.edad_s : null, esperando: !!est.modelo && !v && !lista,
+        revisando: !!a?.pendiente, foto: a?.archivo || null, gps: est.gps || null, ms: v ? v.ms : lista ? a.ms : null,
+        lectura: v ? leer(v) : lista ? leer(a) : null, ultima: v && lista ? leer(a) : null,
+        vivoActivo: !!est.modelo?.en_vivo,
       });
     }
     async function ciclo() {

@@ -1,5 +1,8 @@
 # 2026-11-18 — Un solo resultado por foto, el mismo que la página
 
+> **Actualizado el 21 de noviembre:** el video vuelve a revisar en vivo, con el mismo método que la
+> foto, y la foto se queda con ese resultado. Ver [la decisión](2026-11-21-deteccion-en-vivo.md).
+
 ## Contexto
 
 En el dron, una foto tenía dos resultados distintos:

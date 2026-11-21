@@ -47,7 +47,9 @@ def _proveedores() -> list[str]:
 
 
 class Clasificador:
-    def __init__(self, ruta_onnx):
+    def __init__(self, ruta_onnx, hilos: int | None = None):
+        """hilos: núcleos que puede usar el modelo (None = todos). En la Jetson se limita para
+        que el video y el GPS no se queden sin procesador mientras revisa en vivo."""
         self.ruta = Path(ruta_onnx)
         meta = json.loads(self.ruta.with_suffix(".json").read_text(encoding="utf-8"))
         self.clases: list[str] = meta["classes"]
@@ -61,16 +63,19 @@ class Clasificador:
         # penúltima capa, así que se le agrega esa salida al modelo. Si algo falla, sin filtro.
         self.filtro = None
         self._sess = None
+        opciones = ort.SessionOptions()
+        if hilos:
+            opciones.intra_op_num_threads = int(hilos)
         if meta.get("filtro_hoja") and "sin_hoja" in self.clases:
             try:
                 datos, _, W, _ = R.con_rasgos(self.ruta.read_bytes())
                 self.filtro = R.FiltroHoja(meta, W.shape[1])
-                self._sess = ort.InferenceSession(datos, providers=_proveedores())
+                self._sess = ort.InferenceSession(datos, sess_options=opciones, providers=_proveedores())
             except Exception as e:  # noqa: BLE001
                 print(f"[Clasificador] sin filtro de hoja: {e}")
                 self.filtro = None
         if self._sess is None:
-            self._sess = ort.InferenceSession(str(self.ruta), providers=_proveedores())
+            self._sess = ort.InferenceSession(str(self.ruta), sess_options=opciones, providers=_proveedores())
         entrada = self._sess.get_inputs()[0]
         self._entrada = entrada.name
         # Exportado con dynamic=True el lote es libre; el de v1 es fijo en 1.

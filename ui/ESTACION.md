@@ -39,15 +39,16 @@ imagen abierta. Borrar quita la imagen de la estación y del disco: no se puede 
 ## Cámara del dron (video y fotos revisadas a bordo)
 
 En la Jetson corre `jetson/zed_right.py` (ver `jetson/README.md`): abre la ZED X Mini, publica el
-video en `http://<ip-de-la-jetson>:8080` y **revisa cada foto a bordo**, por cuadros, con el mismo
-modelo y el mismo código que la estación y la página. Cada foto tiene un solo resultado; el video
-no diagnostica.
+video en `http://<ip-de-la-jetson>:8080` y **revisa el video en vivo**, por cuadros, con el mismo
+modelo y el mismo código que la estación y la página (una revisión cada 2–5 s). La foto que se toma
+se queda con ese resultado: cada foto tiene uno solo.
 
 1. Conecta la laptop a la misma red WiFi que la Jetson (o al hotspot de la Jetson).
 2. En **Cargar**, botón **Cámara del dron**, escribe la IP que imprime la Jetson en la línea
    `[WEB]` (por ejemplo `192.168.1.50`) y *Conectar*. La estación la recuerda.
-3. Ves el video en vivo, arriba a la izquierda el GPS de la Pixhawk, y a la derecha el
-   resultado de **la última foto** que revisó el dron, con su seguridad y cuánto tardó.
+3. Ves el video en vivo con los cuadros con síntomas marcados, arriba a la izquierda el GPS de la
+   Pixhawk, y a la derecha **la detección en vivo** del dron, con su seguridad, hace cuánto se
+   revisó y el resultado de la última foto.
 4. **Tomar foto con el dron** guarda la foto en la Jetson (1920×1200, con GPS y su resultado en
    el EXIF) y la trae a la estación como una imagen más de hoy, sin cerrar el video. De ahí
    sigue el flujo normal: Revisar y Mapa.

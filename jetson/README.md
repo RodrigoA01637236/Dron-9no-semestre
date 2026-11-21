@@ -11,23 +11,31 @@ Este directorio contiene el script de captura probado en la Jetson Orin Nano del
 - Ventana con GPS o `GPS: SIN SENAL` y **sin contador FPS**.
 - `S`: toma una fotografía JPEG con texto sobreimpreso y EXIF GPS cuando existe fix válido.
 - `Q`: cierra la aplicación.
-- **Un solo resultado por foto, el mismo que la página:** con un modelo en `vision/models/`
-  (usa el más nuevo: `sigatoka_cls_v2.onnx`, si no `v1`), cada foto se revisa en segundo plano
-  (1–3 s) por cuadros a resolución completa, sobre su copia limpia ya guardada: el mismo modelo,
-  el mismo código y la misma imagen que revisa la página web. Ese resultado es el único: se
-  dibuja en la foto con texto (`DIAG: SIGATOKA 100%`), va en el EXIF de las dos copias, en el
-  log (`[PARCHES] ...`) y en la página; los cuadros quedan en `Prueba#1/parches/<foto>.json`.
-  Mientras se revisa, la foto dice `DIAG: ANALIZANDO...`. Se apaga con `ANALIZAR_FOTOS = False`.
-- **El video en vivo no diagnostica.** Antes clasificaba la imagen completa reducida a
-  384 x 384, donde las manchas de Sigatoka no se ven, y daba un resultado distinto al de la
-  foto. Ahora la ventana muestra el resultado de la última foto (`ULTIMA FOTO: SIGATOKA 100%`).
-- **Página web en el puerto 8080:** video en vivo, GPS, resultado de la última foto y botón de foto. La
+- **Detección en vivo (desde el 21 de noviembre):** con un modelo en `vision/models/` (usa el más
+  nuevo: `sigatoka_cls_v2.onnx`, si no `v1`), un hilo revisa por cuadros el último cuadro de la
+  cámara una y otra vez, con el mismo modelo y el mismo código que la página (dos tamaños de
+  cuadro, filtro de hoja). En la Jetson tarda 2–5 s por revisión. La ventana dice
+  `EN VIVO: SIGATOKA 88%` y marca los cuadros con síntomas (rojo Sigatoka, amarillo otro
+  problema); el video de la página también los marca. Se apaga con `ANALIZAR_EN_VIVO = False`.
+- **La foto se queda con el análisis en vivo:** al tomar una foto se guarda el cuadro que se revisó
+  en vivo (con su hora y su GPS) y su resultado: dibujado en la foto (`DIAG: SIGATOKA 88%`), en el
+  EXIF de las dos copias (`ModeloYOLO=... por parches, en vivo`), en el log
+  (`[PARCHES] ... en vivo, revisado hace 1.2 s`), en la página y en el mapa. Cada foto tiene un
+  solo resultado. Como la revisión tarda unos segundos, la foto puede ser de 2–5 s antes de
+  apretar el botón; con `FOTO_DEL_CUADRO_ANALIZADO = False` se guarda el cuadro del momento
+  (y el resultado sería el de un cuadro anterior). Si no hay revisión en vivo de los últimos
+  10 s (`EDAD_MAX_VIVO`), la foto se revisa aparte como antes (`DIAG: ANALIZANDO...`).
+- **Procesador:** el modelo usa 4 núcleos (`HILOS_MODELO`) y descansa 0.3 s entre revisiones
+  (`PAUSA_EN_VIVO`), para que la cámara, el video y el GPS no se queden sin procesador. Si el video
+  se ve trabado, sube `PAUSA_EN_VIVO` o baja `HILOS_MODELO`.
+- **Página web en el puerto 8080:** video en vivo con los cuadros marcados, detección en vivo, GPS,
+  resultado de la última foto y botón de foto. La
   estación de tierra la usa desde *Cargar > Cámara del dron*; también abre en un celular.
 - Sin monitor (o con `--sin-ventana`) no abre ventana: se controla desde la página.
 - Directorio configurado en el script: `/home/jetsonnanoorin/Prueba#1`.
 - Nombre: `AA-MM-DD_HH-MM-SS-GPS.jpg`; si varias fotos coinciden en el mismo segundo, sufijos `_2`, `_3`, `_4` y siguientes.
 - Fecha (`FECHA`), hora (`HORA`), GPS y el resultado de la foto (`DIAG`) visibles sobre la
-  fotografía JPEG (`TEXTO_EN_FOTO = True`); en la ventana, el de la última foto.
+  fotografía JPEG (`TEXTO_EN_FOTO = True`); en la ventana, la detección en vivo (`EN VIVO`).
 - **Copia sin texto:** cada foto se guarda también, con el mismo nombre y EXIF, en
   `Prueba#1/sin_texto/`. El texto encima confunde al modelo, así que el dataset, el
   reentrenamiento y la estación de tierra usan esa copia (`COPIA_SIN_TEXTO = True`).
@@ -42,8 +50,9 @@ Este directorio contiene el script de captura probado en la Jetson Orin Nano del
 2. **Opcional, para que el mapa tenga solo las fotos de esta sesión:** mover las anteriores a
    otra carpeta (`mkdir -p ~/vuelos_anteriores/AAAA-MM-DD && mv ~/Prueba#1/* ~/vuelos_anteriores/AAAA-MM-DD/`).
    El programa vuelve a crear `sin_texto/` y `parches/` solo.
-3. **Tomar fotos** con `S` en la ventana o con el botón de `http://<ip>:8080`. Cada foto dice
-   `ANALIZANDO` y en 1–3 s su resultado. Para el mapa hace falta GPS: afuera, con satélites.
+3. **Tomar fotos** con `S` en la ventana o con el botón de `http://<ip>:8080`, cuando la detección
+   en vivo diga lo que estás viendo: la foto se queda con ese resultado. Para el mapa hace falta
+   GPS: afuera, con satélites.
 4. **Copiar las fotos a la laptop** (`scp`, ver [Revisar las fotos del dron en la página](#página-web-video-para-la-estación)).
 5. **Abrir la página** (dron-sigatoka.netlify.app con internet, o `http://10.42.0.1:8000` con el
    hotspot), **Analizar un vuelo** y elegir la carpeta copiada. El mapa y la tabla muestran el
@@ -58,9 +67,10 @@ Se tomó y verificó una fotografía en la Jetson con nombre `26-10-16_19-33-19-
 - Software: `Dron Sigatoka - Jetson`.
 - Descripción: `ZED X Mini RIGHT; GPS desde Pixhawk HERE4`.
 - Comentario EXIF: `Proyecto=Dron Sigatoka; Camara=ZED X Mini RIGHT; FechaHora=2026-10-16T19:33:19.128640-06:00; GPS=SIN_SENAL; FuenteGPS=Pixhawk 6C HERE4; AnalisisYOLO=NO_REALIZADO`.
-- Con el modelo cargado, mientras se revisa la foto dice `AnalisisYOLO=PENDIENTE`. Entre 1 y 3 s
-  después queda su único resultado, el de la revisión por cuadros:
-  `AnalisisYOLO=sigatoka; ConfianzaYOLO=0.870; ModeloYOLO=sigatoka_cls_v2 a bordo, por parches; ParchesHoja=18; Hojas=3; HojasConSintomas=2; FraccionParches=...`.
+- Con el modelo cargado, la foto lleva su único resultado, el de la detección en vivo de ese cuadro:
+  `AnalisisYOLO=sigatoka; ConfianzaYOLO=0.870; ModeloYOLO=sigatoka_cls_v2 a bordo, por parches, en vivo; ParchesHoja=18; Hojas=3; HojasConSintomas=2; FraccionParches=...`.
+  Si no había detección en vivo reciente, la foto dice `AnalisisYOLO=PENDIENTE` unos segundos y
+  luego el resultado de revisarla aparte (sin `, en vivo`).
   La página (Analizar un vuelo) y la estación ponen ese resultado en el mapa, sin volver a
   analizar la foto. Las fotos tomadas antes del 18 de noviembre traen la lectura del video
   (`AnalisisYOLO`) y, aparte, `AnalisisParches`; para ellas se muestra `AnalisisYOLO`, lo que
@@ -188,9 +198,9 @@ Al arrancar imprime la dirección, por ejemplo:
 
 | Ruta | Qué da |
 | --- | --- |
-| `/` | Página sencilla para celular: video, resultado de la última foto, GPS y botón de foto |
+| `/` | Página sencilla para celular: video con los cuadros marcados, detección en vivo, última foto, GPS y botón de foto |
 | `/video` | Video MJPEG (960 px de ancho, ~12 cuadros/s; solo se codifica si alguien lo ve) |
-| `/estado` | JSON con GPS, modelo y el resultado de la última foto (`analisis_foto`; `prediccion` repite ese resultado para páginas viejas). El video no diagnostica |
+| `/estado` | JSON con GPS, modelo, la detección en vivo (`en_vivo`: clase, confianza, cuadros, `edad_s`, `ms`) y la última foto (`analisis_foto`); `prediccion` repite la de en vivo para páginas viejas |
 | `POST /foto` | Toma una foto como la tecla `S` y responde el nombre del archivo |
 | `/fotos/<nombre>.jpg` | Descarga una foto de la carpeta de fotos |
 

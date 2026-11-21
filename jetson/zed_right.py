@@ -30,10 +30,16 @@ PUERTO = "/dev/ttyACM0"   # si no existe, se busca la Pixhawk en /dev/serial/by-
 PUERTO_WEB = 8080        # video y diagnóstico en http://<ip-de-la-jetson>:8080
 ANCHO_WEB = 960          # ancho del video que se manda por WiFi (más chico = más fluido)
 FPS_WEB = 12
-# Cada foto tiene UN solo resultado: el análisis por parches de su copia limpia, el mismo
-# código y el mismo modelo que usa la página web. El video en vivo no diagnostica: con la
-# imagen completa reducida las manchas de Sigatoka no se ven y daba otro resultado.
-ANALIZAR_FOTOS = True    # analizar cada foto por parches, en segundo plano (~1-3 s)
+# Detección en vivo: un hilo revisa por cuadros el último cuadro de la cámara una y otra vez (el
+# mismo método y el mismo modelo que la página: dos tamaños de cuadro, filtro de hoja). Al tomar
+# una foto, la foto guarda ESE cuadro con su resultado: lo que se veía en vivo es lo que queda en
+# la foto, en el EXIF, en el log y en el mapa. Cada foto sigue teniendo un solo resultado.
+ANALIZAR_EN_VIVO = True  # revisar el video sin parar (en la Jetson, una revisión cada 2-5 s)
+PAUSA_EN_VIVO = 0.3      # segundos entre una revisión y la siguiente (deja procesador al video)
+HILOS_MODELO = 4         # núcleos para el modelo; los demás quedan para la cámara, el video y el GPS
+FOTO_DEL_CUADRO_ANALIZADO = True  # la foto es el cuadro revisado en vivo (puede ser de hace 2-5 s)
+EDAD_MAX_VIVO = 10       # si la última revisión en vivo es más vieja (s), la foto se revisa aparte
+ANALIZAR_FOTOS = True    # respaldo: sin revisión en vivo reciente, revisar la foto (~2-4 s)
 # El modelo más nuevo que esté en vision/models; para volver a uno anterior:
 #   SIGATOKA_MODELO=sigatoka_cls_v1.onnx bash jetson/zed_control.sh reiniciar
 MODELOS = ("sigatoka_cls_v2.onnx", "sigatoka_cls_v1.onnx")
@@ -60,6 +66,10 @@ clientes_lock = threading.Lock()
 
 foto_lock = threading.Lock()
 fotos = {"ultima": None, "total": 0}
+
+# Última revisión en vivo: el resultado y el cuadro, la hora y el GPS con que se revisó
+vivo = {"r": None, "frame": None, "instante": None, "gps": None, "ms": None, "fin": None, "n": 0}
+vivo_lock = threading.Lock()
 
 NOMBRES = {"sana": "SANA", "sigatoka": "SIGATOKA", "otra_condicion": "OTRA CONDICION", "sin_hoja": "SIN HOJA"}
 COLORES = {"sana": (80, 200, 80), "sigatoka": (60, 60, 230), "otra_condicion": (60, 200, 230),
@@ -192,15 +202,15 @@ def cargar_modelo():
 
     try:
         from vision.clasificador import Clasificador
-        modelo = Clasificador(onnx)
+        modelo = Clasificador(onnx, hilos=HILOS_MODELO)
     except Exception as e:
         print("[MODELO] No se pudo cargar:", e)
         return None
 
     nombre_modelo = onnx.stem
 
-    print(f"[MODELO] {onnx.name} cargado; clases {modelo.clases}; fotos por parches: "
-          f"{'sí' if ANALIZAR_FOTOS else 'no'}; filtro de hoja: {'sí' if getattr(modelo, 'filtro', None) else 'no'}")
+    print(f"[MODELO] {onnx.name} cargado; clases {modelo.clases}; en vivo por cuadros: "
+          f"{'sí' if ANALIZAR_EN_VIVO else 'no'}; filtro de hoja: {'sí' if getattr(modelo, 'filtro', None) else 'no'}")
     return modelo
 
 
@@ -224,14 +234,15 @@ def coordenada_exif(valor):
     )
 
 
-def crear_exif(gps, instante, r=None):
-    """EXIF de la foto. r = resultado del análisis por parches (None mientras se analiza)."""
+def crear_exif(gps, instante, r=None, en_vivo=False):
+    """EXIF de la foto. r = resultado del análisis por parches (None mientras se analiza);
+    en_vivo = el resultado es el de la revisión en vivo de ese mismo cuadro."""
     import piexif.helper
 
     fecha_exif = instante.strftime("%Y:%m:%d %H:%M:%S")
     fecha_iso = instante.isoformat(timespec="microseconds")
 
-    if modelo is None or not ANALIZAR_FOTOS:
+    if modelo is None or not (ANALIZAR_FOTOS or ANALIZAR_EN_VIVO):
         analisis = "AnalisisYOLO=NO_REALIZADO"
     elif r is None:
         analisis = "AnalisisYOLO=PENDIENTE"
@@ -240,7 +251,7 @@ def crear_exif(gps, instante, r=None):
         analisis = (
             f"AnalisisYOLO={a['clase']}; "
             f"ConfianzaYOLO={a['confianza']:.3f}; "
-            f"ModeloYOLO={nombre_modelo} a bordo, por parches"
+            f"ModeloYOLO={nombre_modelo} a bordo, por parches{', en vivo' if en_vivo else ''}"
             f"; ParchesHoja={a.get('n_parches', 0)}"
             f"; Hojas={len(a.get('hojas') or [])}"
             f"; HojasConSintomas={sum(h['clase'] not in ('sana', 'sin_hoja') for h in a.get('hojas') or [])}"
@@ -307,15 +318,15 @@ def crear_exif(gps, instante, r=None):
 
 
 # GUARDAR FOTOGRAFIA
-def texto_resultado(a, prefijo="DIAG"):
-    """La línea de resultado (texto y color) para la pantalla o la foto, con el análisis de una foto."""
+def texto_resultado(a, prefijo="DIAG", vacio="TOMA UNA FOTO"):
+    """La línea de resultado (texto y color) para la pantalla o la foto."""
     gris = (200, 200, 200)
     if modelo is None:
         return f"{prefijo}: SIN MODELO", gris
-    if not ANALIZAR_FOTOS:
+    if not (ANALIZAR_FOTOS or ANALIZAR_EN_VIVO):
         return f"{prefijo}: SIN ANALISIS", gris
     if a is None:
-        return f"{prefijo}: TOMA UNA FOTO", gris
+        return f"{prefijo}: {vacio}", gris
     if a.get("pendiente"):
         return f"{prefijo}: ANALIZANDO...", gris
     if a.get("error"):
@@ -352,16 +363,72 @@ def dibujar_textos(frame, gps, instante, resultado):
     return pantalla
 
 
+def dibujar_cuadros(img, r, escala=1.0):
+    """Marca sobre la imagen (en su lugar) los cuadros con síntomas de una revisión por cuadros."""
+    if not r or modelo is None:
+        return img
+    for c in r.get("parches") or []:
+        if c["clase"] in ("sana", "sin_hoja") or c["confianza"] < modelo.umbral:
+            continue
+        x, y = int(c["x"] * escala), int(c["y"] * escala)
+        x1, y1 = int((c["x"] + c["w"]) * escala), int((c["y"] + c["h"]) * escala)
+        cv2.rectangle(img, (x, y), (x1 - 1, y1 - 1), COLORES.get(c["clase"], (255, 255, 255)), max(2, int(4 * escala)))
+    return img
+
+
+def resumen_analisis(nombre, r, ms, en_vivo=False):
+    """Lo que se guarda en fotos["analisis"] y se manda en /estado."""
+    sintomas = [c for c in r.get("parches", []) if c["clase"] not in ("sana", "sin_hoja")]
+    hojas = r.get("hojas") or []
+    return {"archivo": nombre, "clase": r["clase"], "confianza": r["confianza"], "probs": r.get("probs"),
+            "n_parches": r.get("n_parches", 0), "n_sintomas": len(sintomas), "n_hojas": len(hojas),
+            "n_hojas_sintomas": sum(h["clase"] not in ("sana", "sin_hoja") for h in hojas),
+            "fraccion": r.get("fraccion"), "ms": round(ms), "lado": r.get("lado"), "en_vivo": en_vivo}
+
+
+def guardar_cuadros_json(ruta, r):
+    """Los cuadros de la revisión en un JSON al lado, por si se quieren dibujar después."""
+    (CARPETA / "parches").mkdir(exist_ok=True)
+    (CARPETA / "parches" / (ruta.stem + ".json")).write_text(json.dumps({
+        "archivo": ruta.name, "modelo": nombre_modelo, "clase": r["clase"],
+        "confianza": r["confianza"], "probs": r["probs"], "modo": r.get("modo"),
+        "escala": r.get("escala"), "lado": r.get("lado"),
+        "fraccion": r.get("fraccion"), "ancho": r.get("ancho"), "alto": r.get("alto"),
+        "hojas": r.get("hojas") or [], "parches": r.get("parches", [])
+    }, indent=1), encoding="utf-8")
+
+
+def linea_parches(nombre, a, detalle=""):
+    print(f"[PARCHES] {nombre}: {a['clase']} {a['confianza']:.0%} · "
+          f"{a['n_sintomas']}/{a['n_parches']} trozos con síntomas · "
+          f"{a['n_hojas_sintomas']}/{a['n_hojas']} hojas con síntomas · cuadro de {a.get('lado') or '?'} px · "
+          f"{a['ms']} ms{detalle}")
+
+
+def ultimo_en_vivo():
+    """La última revisión en vivo si es reciente (EDAD_MAX_VIVO), o None."""
+    with vivo_lock:
+        if vivo["r"] is None or vivo["fin"] is None or time.time() - vivo["fin"] > EDAD_MAX_VIVO:
+            return None
+        return dict(vivo)
+
+
 def guardar_foto(frame, gps, instante):
     from PIL import Image
 
+    # La foto se queda con la revisión en vivo: el cuadro que se revisó, con su hora, GPS y resultado.
+    v = ultimo_en_vivo() if ANALIZAR_EN_VIVO else None
+    if v is not None and FOTO_DEL_CUADRO_ANALIZADO:
+        frame, gps, instante = v["frame"], v["gps"], v["instante"]
+    r = v["r"] if v is not None else None
+
     marca = instante.strftime("%y-%m-%d_%H-%M-%S")
+    exif = crear_exif(gps, instante, r, en_vivo=r is not None)
+    analisis = resumen_analisis("", r, v["ms"], en_vivo=True) if r is not None else {"pendiente": True}
 
-    exif = crear_exif(gps, instante)
-
-    # Con texto: mientras se analiza dice "ANALIZANDO"; al terminar se vuelve a dibujar con el resultado.
+    # Con texto: el resultado en vivo, o "ANALIZANDO" si hay que revisar la foto aparte.
     con_texto = TEXTO_EN_FOTO
-    pantalla = dibujar_textos(frame, gps, instante, texto_resultado({"pendiente": True})) if con_texto else None
+    pantalla = dibujar_textos(frame, gps, instante, texto_resultado(analisis)) if con_texto else None
 
     imagen = Image.fromarray(cv2.cvtColor(
         pantalla if con_texto else frame, cv2.COLOR_BGR2RGB
@@ -409,7 +476,16 @@ def guardar_foto(frame, gps, instante):
     else:
         print("[FOTO] GPS:", gps["lat"], gps["lon"])
 
-    if ANALIZAR_FOTOS and modelo is not None:
+    if r is not None:
+        analisis["archivo"] = ruta.name
+        fotos["analisis"] = analisis
+        try:
+            guardar_cuadros_json(ruta, r)
+        except OSError as e:
+            print("[PARCHES] JSON:", e)
+        edad = time.time() - v["fin"]
+        linea_parches(ruta.name, analisis, f" · en vivo, revisado hace {edad:.1f} s")
+    elif ANALIZAR_FOTOS and modelo is not None:
         fotos["analisis"] = {"archivo": ruta.name, "pendiente": True}
         threading.Thread(target=analizar_foto, args=(ruta, frame, gps, instante, con_texto),
                          daemon=True).start()
@@ -417,17 +493,44 @@ def guardar_foto(frame, gps, instante):
     return ruta
 
 
-# ANALISIS POR PARCHES DE LA FOTO (en segundo plano: tarda ~1-3 s en la Jetson)
+# ANALISIS POR PARCHES (en la Jetson, 2-5 s por revisión). Una revisión a la vez.
 analisis_lock = threading.Lock()
 
 
+def analizar_en_vivo():
+    """Revisa por cuadros el último cuadro de la cámara, una y otra vez. El resultado se ve en la
+    ventana, en el video, en /estado y en las páginas; la foto que se tome se queda con él."""
+    visto = -1
+    while True:
+        with cuadro_lock:
+            frame, instante, n = ultimo["frame"], ultimo["instante"], ultimo["n"]
+        if frame is None or n == visto:
+            time.sleep(0.05)
+            continue
+        visto = n
+        gps = obtener_gps()
+        inicio = time.perf_counter()
+        try:
+            with analisis_lock:
+                r = modelo.predecir_bgr(frame, "parches")
+        except Exception as e:
+            print("[EN VIVO]", e)
+            time.sleep(2)
+            continue
+        ms = (time.perf_counter() - inicio) * 1000
+        with vivo_lock:
+            vivo.update(r=r, frame=frame, instante=instante, gps=gps, ms=ms, fin=time.time(), n=vivo["n"] + 1)
+        time.sleep(PAUSA_EN_VIVO)
+
+
 def analizar_foto(ruta, frame, gps, instante, con_texto):
+    """Respaldo cuando no hay revisión en vivo reciente: revisa la copia limpia ya guardada."""
     import piexif
     from PIL import Image
 
     limpia = CARPETA / "sin_texto" / ruta.name if con_texto and COPIA_SIN_TEXTO else ruta
 
-    with analisis_lock:  # una foto a la vez; si toman varias seguidas, hacen fila
+    with analisis_lock:
         inicio = time.perf_counter()
 
         try:
@@ -444,16 +547,7 @@ def analizar_foto(ruta, frame, gps, instante, con_texto):
             return
 
         ms = (time.perf_counter() - inicio) * 1000
-        sintomas = [p for p in r.get("parches", []) if p["clase"] not in ("sana", "sin_hoja")]
-        hojas = r.get("hojas") or []
-        hojas_mal = [h for h in hojas if h["clase"] not in ("sana", "sin_hoja")]
-
-        fotos_analisis = {
-            "archivo": ruta.name, "clase": r["clase"], "confianza": r["confianza"],
-            "probs": r.get("probs"), "n_parches": r.get("n_parches", 0), "n_sintomas": len(sintomas),
-            "n_hojas": len(hojas), "n_hojas_sintomas": len(hojas_mal),
-            "fraccion": r.get("fraccion"), "ms": round(ms)
-        }
+        fotos_analisis = resumen_analisis(ruta.name, r, ms)
 
         # El resultado va en el EXIF de la foto y de su copia limpia, y dibujado en la foto con texto
         exif = crear_exif(gps, instante, r)
@@ -470,21 +564,10 @@ def analizar_foto(ruta, frame, gps, instante, con_texto):
                 except Exception as e:
                     print("[PARCHES] EXIF:", e)
 
-        # Cuadros en un JSON al lado, por si se quieren dibujar después
-        (CARPETA / "parches").mkdir(exist_ok=True)
-        (CARPETA / "parches" / (ruta.stem + ".json")).write_text(json.dumps({
-            "archivo": ruta.name, "modelo": nombre_modelo, "clase": r["clase"],
-            "confianza": r["confianza"], "probs": r["probs"], "modo": r.get("modo"),
-            "escala": r.get("escala"), "lado": r.get("lado"),
-            "fraccion": r.get("fraccion"), "ancho": r.get("ancho"), "alto": r.get("alto"),
-            "hojas": hojas, "parches": r.get("parches", [])
-        }, indent=1), encoding="utf-8")
-
+        guardar_cuadros_json(ruta, r)
         fotos["analisis"] = fotos_analisis
 
-    print(f"[PARCHES] {ruta.name}: {r['clase']} {r['confianza']:.0%} · "
-          f"{len(sintomas)}/{r.get('n_parches', 0)} trozos con síntomas · "
-          f"{len(hojas_mal)}/{len(hojas)} hojas con síntomas · cuadro de {r.get('lado', '?')} px · {ms:.0f} ms")
+    linea_parches(ruta.name, fotos_analisis, " · revisada aparte (no había revisión en vivo reciente)")
 
 
 def tomar_foto():
@@ -518,6 +601,9 @@ def codificar_video():
         visto = n
         alto = int(frame.shape[0] * ANCHO_WEB / frame.shape[1])
         chico = cv2.resize(frame, (ANCHO_WEB, alto), interpolation=cv2.INTER_AREA)
+        with vivo_lock:
+            r_vivo = vivo["r"]
+        dibujar_cuadros(chico, r_vivo, ANCHO_WEB / frame.shape[1])   # lo que se detecta en vivo
         ok, buf = cv2.imencode(".jpg", chico, [cv2.IMWRITE_JPEG_QUALITY, 75])
 
         if ok:
@@ -537,6 +623,18 @@ def resultado_ultima_foto(modelo):
             "foto": a["archivo"], "diagnosticable": a["confianza"] >= modelo.umbral or a["clase"] == "sin_hoja"}
 
 
+def resultado_en_vivo(modelo):
+    """La última revisión en vivo para /estado (sin el cuadro), con su edad en segundos."""
+    with vivo_lock:
+        r, ms, fin, n = vivo["r"], vivo["ms"], vivo["fin"], vivo["n"]
+    if modelo is None or r is None:
+        return None
+    a = resumen_analisis(None, r, ms, en_vivo=True)
+    a.update(edad_s=round(time.time() - fin, 1), n=n,
+             diagnosticable=a["confianza"] >= modelo.umbral or a["clase"] == "sin_hoja")
+    return a
+
+
 def estado_actual(modelo):
     gps = obtener_gps()
 
@@ -552,10 +650,12 @@ def estado_actual(modelo):
             "clases": modelo.clases,
             "umbral": modelo.umbral,
             "fotos_por_parches": ANALIZAR_FOTOS,
+            "en_vivo": ANALIZAR_EN_VIVO,
             "filtro_hoja": getattr(modelo, "filtro", None) is not None
         },
-        # El resultado de la última foto (no hay diagnóstico del video en vivo)
-        "prediccion": resultado_ultima_foto(modelo),
+        # La revisión en vivo (por cuadros) y la de la última foto, que es la en vivo del momento de la foto
+        "en_vivo": resultado_en_vivo(modelo),
+        "prediccion": resultado_en_vivo(modelo) or resultado_ultima_foto(modelo),
         "fotos": {k: v for k, v in fotos.items() if k != "analisis"},
         "analisis_foto": fotos.get("analisis")
     }
@@ -573,18 +673,19 @@ button{font:inherit;font-weight:700;padding:.8rem 1.2rem;border-radius:10px;bord
 </style></head><body><main>
 <img src="/video" alt="Video en vivo del dron">
 <div id="diag">Conectando...</div>
-<div class="nota">El resultado es el de la última foto, revisada por cuadros como en la página. El video no diagnostica.</div>
+<div class="nota" id="vivo"></div>
+<div class="nota">En vivo, el dron revisa el video por cuadros, como la página; los cuadros con síntomas se marcan en el video. La foto se queda con ese resultado.</div>
 <div class="nota" id="gps"></div>
 <div><button id="foto">Tomar foto</button> <span class="nota" id="msg"></span></div>
 <div class="nota" id="analisis"></div>
 <p class="nota">Para revisar y guardar en el mapa, usa la estación de tierra: pestaña Cargar, botón Cámara del dron.</p>
 </main><script>
 const N={sana:"Sana",sigatoka:"Sigatoka",otra_condicion:"Otra condición",sin_hoja:"Sin hojas de plátano"};
-async function estado(){try{const e=await (await fetch("/estado")).json();const a=e.analisis_foto;
-document.getElementById("diag").textContent=!e.modelo?"Sin modelo en el dron":!a?"Toma una foto para revisar la hoja":
-a.pendiente?"Revisando la foto...":a.error?"No se pudo revisar la foto":
-(a.confianza>=e.modelo.umbral||a.clase==="sin_hoja")?`${N[a.clase]||a.clase} · ${Math.round(a.confianza*100)} %`:`No está seguro (${N[a.clase]||a.clase} ${Math.round(a.confianza*100)} %)`;
-document.getElementById("analisis").textContent=!a||a.pendiente||a.error?"":`Foto ${a.archivo} · `+
+const txt=(a,u)=>(a.confianza>=u||a.clase==="sin_hoja")?`${N[a.clase]||a.clase} · ${Math.round(a.confianza*100)} %`:`No está seguro (${N[a.clase]||a.clase} ${Math.round(a.confianza*100)} %)`;
+async function estado(){try{const e=await (await fetch("/estado")).json();const a=e.analisis_foto,v=e.en_vivo;
+document.getElementById("diag").textContent=!e.modelo?"Sin modelo en el dron":v?"En vivo: "+txt(v,e.modelo.umbral):"Revisando el video...";
+document.getElementById("vivo").textContent=v?`${v.n_parches} trozos de hoja, ${v.n_sintomas} con síntomas · cuadro de ${v.lado} px · revisado hace ${v.edad_s} s · tarda ${(v.ms/1000).toFixed(1)} s`:"";
+document.getElementById("analisis").textContent=!a?"":a.pendiente?"Revisando la foto...":a.error?"No se pudo revisar la foto":`Última foto ${a.archivo}: ${txt(a,e.modelo.umbral)} · `+
 `${a.n_hojas?`${a.n_hojas} hojas, ${a.n_hojas_sintomas} con síntomas · `:""}${a.n_parches} trozos de hoja, ${a.n_sintomas} con síntomas · ${(a.ms/1000).toFixed(1)} s`;
 document.getElementById("gps").textContent=e.gps?`GPS ${e.gps.lat.toFixed(6)}, ${e.gps.lon.toFixed(6)} · ${e.gps.satelites} satélites`:"GPS: sin señal";
 }catch(x){document.getElementById("diag").textContent="Sin conexión con el dron";}}
@@ -763,6 +864,8 @@ print("Camara RIGHT conectada")
 modelo = cargar_modelo()
 
 threading.Thread(target=codificar_video, daemon=True).start()
+if modelo is not None and ANALIZAR_EN_VIVO:
+    threading.Thread(target=analizar_en_vivo, daemon=True).start()
 
 try:
     servidor = crear_servidor(modelo)
@@ -810,9 +913,15 @@ try:
         if not CON_VENTANA:
             continue
 
-        # La ventana muestra fecha, hora, GPS y el resultado de la última foto
+        # La ventana muestra fecha, hora, GPS y la detección en vivo (texto y cuadros con síntomas)
         gps = obtener_gps()
-        pantalla = dibujar_textos(frame, gps, instante, texto_resultado(fotos.get("analisis"), "ULTIMA FOTO"))
+        if ANALIZAR_EN_VIVO and modelo is not None:
+            with vivo_lock:
+                r_vivo = vivo["r"]
+            a_vivo = resumen_analisis(None, r_vivo, 0) if r_vivo is not None else None
+            pantalla = dibujar_cuadros(dibujar_textos(frame, gps, instante, texto_resultado(a_vivo, "EN VIVO", "REVISANDO...")), r_vivo)
+        else:
+            pantalla = dibujar_textos(frame, gps, instante, texto_resultado(fotos.get("analisis"), "ULTIMA FOTO"))
 
         cv2.imshow(
             "ZED X Mini - RIGHT + GPS",
